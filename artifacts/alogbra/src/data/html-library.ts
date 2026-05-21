@@ -29,6 +29,7 @@
 // ── ייבוא קבצי HTML ────────────────────────────────────────────
 import trapezoidKite from './html-tools/trapezoids-kite-g9.html?raw';
 import parallelogramFamily from './html-tools/parallelogram-family-g9.html?raw';
+import trinomial from './html-tools/trinomial-g9.html?raw';
 // הוסף import נוסף כאן לכל כלי חדש ↑
 
 // ── טיפוס ─────────────────────────────────────────────────────
@@ -46,6 +47,19 @@ export interface HtmlTool {
 
 // ── רשימת הכלים ───────────────────────────────────────────────
 export const htmlLibrary: HtmlTool[] = [
+
+  // ── כיתה ט׳ — אלגברה ─────────────────────────────────────────
+
+  {
+    id: "trinomial-g9",
+    title: "פירוק הטרינום",
+    grade: 9,
+    category: "algebra",
+    premium: false,
+    emoji: "🔢",
+    description: "לומדים שלב-אחר-שלב איך הופכים שלושה איברים למכפלת סוגריים — ואז מבחן מסכם",
+    html: trinomial,
+  },
 
   // ── כיתה ט׳ — גאומטריה ──────────────────────────────────────
 
@@ -65,7 +79,7 @@ export const htmlLibrary: HtmlTool[] = [
     title: "משפחת המקביליות",
     grade: 9,
     category: "geometry",
-    premium: true,
+    premium: false,
     emoji: "🔷",
     description: "מסע אינטראקטיבי: מקבילית, מלבן, מעויין וריבוע — עץ משפחה, טבלת השוואה ומבחן זמן",
     html: parallelogramFamily,

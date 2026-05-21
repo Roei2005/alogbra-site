@@ -2,24 +2,23 @@ import { useParams, Link } from "wouter";
 import { getGradeWithLibrary } from "@/data/tools";
 import { htmlLibrary } from "@/data/html-library";
 import { ArrowRight } from "lucide-react";
-import { useState, useEffect, useRef } from "react";
+import { useState, useEffect } from "react";
 
 export default function ToolViewer() {
   const { gradeId, toolId } = useParams();
-  const grade = getGradeWithLibrary(Number(gradeId));
 
   const [iframeSrc, setIframeSrc] = useState<string | null>(null);
+  const [iframeSrcdoc, setIframeSrcdoc] = useState<string | null>(null);
   const [title, setTitle] = useState<string>("");
-  const blobUrlRef = useRef<string | null>(null);
 
   useEffect(() => {
-    if (!grade || !toolId) return;
+    if (!gradeId || !toolId) return;
 
-    // Revoke previous blob URL to avoid memory leaks
-    if (blobUrlRef.current) {
-      URL.revokeObjectURL(blobUrlRef.current);
-      blobUrlRef.current = null;
-    }
+    const grade = getGradeWithLibrary(Number(gradeId));
+    if (!grade) return;
+
+    setIframeSrc(null);
+    setIframeSrcdoc(null);
 
     // Final exam shortcut
     if (toolId === "mivhan" && grade.finalExam) {
@@ -35,13 +34,10 @@ export default function ToolViewer() {
         setTitle(tool.title);
 
         if (tool.file.startsWith("__html__")) {
-          // Inline HTML from html-library.ts — render via blob URL
+          // Inline HTML from html-library.ts — render via srcdoc to preserve CDN access
           const libraryEntry = htmlLibrary.find((t) => t.id === toolId);
           if (libraryEntry) {
-            const blob = new Blob([libraryEntry.html], { type: "text/html" });
-            const url = URL.createObjectURL(blob);
-            blobUrlRef.current = url;
-            setIframeSrc(url);
+            setIframeSrcdoc(libraryEntry.html);
           }
         } else {
           // Static file from public/tools/
@@ -50,16 +46,9 @@ export default function ToolViewer() {
         return;
       }
     }
-  }, [grade, toolId]);
+  }, [gradeId, toolId]);
 
-  // Cleanup blob URL on unmount
-  useEffect(() => {
-    return () => {
-      if (blobUrlRef.current) URL.revokeObjectURL(blobUrlRef.current);
-    };
-  }, []);
-
-  if (!grade || !iframeSrc) {
+  if (!grade || (!iframeSrc && !iframeSrcdoc)) {
     return (
       <div className="min-h-screen flex flex-col items-center justify-center">
         <h1 className="text-2xl font-bold mb-4">הכלי לא נמצא</h1>
@@ -84,13 +73,23 @@ export default function ToolViewer() {
         <div className="w-20" />
       </div>
       <div className="flex-1 bg-white relative">
-        <iframe
-          key={iframeSrc}
-          src={iframeSrc}
-          className="w-full h-full border-none absolute inset-0"
-          sandbox="allow-scripts allow-same-origin allow-forms"
-          title={title}
-        />
+        {iframeSrcdoc ? (
+          <iframe
+            key={iframeSrcdoc.slice(0, 40)}
+            srcDoc={iframeSrcdoc}
+            className="w-full h-full border-none absolute inset-0"
+            sandbox="allow-scripts allow-same-origin allow-forms allow-popups"
+            title={title}
+          />
+        ) : (
+          <iframe
+            key={iframeSrc!}
+            src={iframeSrc!}
+            className="w-full h-full border-none absolute inset-0"
+            sandbox="allow-scripts allow-same-origin allow-forms"
+            title={title}
+          />
+        )}
       </div>
     </div>
   );

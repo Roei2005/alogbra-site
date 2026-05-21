@@ -1,0 +1,726 @@
+<!DOCTYPE html>
+<html lang="he" dir="rtl">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>פירוק הטרינום | אלוגברה</title>
+
+<script src="https://cdn.tailwindcss.com"></script>
+<script crossorigin src="https://unpkg.com/react@18/umd/react.production.min.js"></script>
+<script crossorigin src="https://unpkg.com/react-dom@18/umd/react-dom.production.min.js"></script>
+<script src="https://unpkg.com/@babel/standalone/babel.min.js"></script>
+<link href="https://fonts.googleapis.com/css2?family=Rubik:wght@400;500;600;700;800;900&display=swap" rel="stylesheet">
+
+<style>
+  :root{
+    --brand:#4338ca; --brand-dark:#3730a3; --brand-soft:#eef2ff;
+    --ink:#1e1b4b; --muted:#64748b; --paper:#f6f7fb; --line:#e2e8f0;
+    --ok:#059669; --ok-soft:#ecfdf5; --err:#e11d48; --err-soft:#fff1f2;
+    --gold:#d97706; --gold-soft:#fffbeb;
+  }
+  *{box-sizing:border-box;}
+  body{font-family:'Rubik',sans-serif;background:var(--paper);color:var(--ink);margin:0;}
+  /* כל המתמטיקה - תמיד שמאל לימין */
+  .math{font-family:'Courier New',monospace;font-weight:700;letter-spacing:.02em;
+        direction:ltr;unicode-bidi:isolate;display:inline-block;}
+
+  @keyframes fadeIn{from{opacity:0}to{opacity:1}}
+  @keyframes riseIn{from{opacity:0;transform:translateY(18px)}to{opacity:1;transform:translateY(0)}}
+  @keyframes pop{0%{transform:scale(.5);opacity:0}70%{transform:scale(1.12)}100%{transform:scale(1);opacity:1}}
+  @keyframes shake{0%,100%{transform:translateX(0)}20%,60%{transform:translateX(-7px)}40%,80%{transform:translateX(7px)}}
+  @keyframes glowOk{0%{box-shadow:0 0 0 0 rgba(5,150,105,.5)}100%{box-shadow:0 0 0 16px rgba(5,150,105,0)}}
+  @keyframes drift{0%,100%{transform:translateY(0) rotate(0)}50%{transform:translateY(-14px) rotate(4deg)}}
+  .a-fade{animation:fadeIn .4s ease-out both;}
+  .a-rise{animation:riseIn .5s ease-out both;}
+  .a-pop{animation:pop .5s cubic-bezier(.18,.89,.32,1.28) both;}
+  .a-shake{animation:shake .45s ease-in-out both;}
+
+  /* איורי רקע עדינים */
+  .deco{position:fixed;pointer-events:none;opacity:.05;z-index:0;
+        font-family:'Courier New',monospace;font-weight:900;
+        color:var(--brand);animation:drift 9s ease-in-out infinite;}
+</style>
+</head>
+<body>
+<!-- איורי מתמטיקה עדינים ברקע -->
+<div class="deco" style="top:14%;right:6%;font-size:90px;">x²</div>
+<div class="deco" style="top:62%;right:3%;font-size:64px;animation-delay:-3s;">+</div>
+<div class="deco" style="top:30%;left:5%;font-size:78px;animation-delay:-5s;">( )</div>
+<div class="deco" style="top:78%;left:8%;font-size:58px;animation-delay:-7s;">×</div>
+
+<div id="root" style="position:relative;z-index:1;"></div>
+
+<script type="text/babel" data-presets="env,react">
+const { useState, useEffect, useRef } = React;
+
+/* ============================================================
+   אלוגברה — ליבת מותג משותפת
+   ============================================================ */
+const Ic = ({d,size=22,sw=2.2,fill="none"}) => (
+  <svg width={size} height={size} viewBox="0 0 24 24" fill={fill}
+    stroke="currentColor" strokeWidth={sw} strokeLinecap="round" strokeLinejoin="round">{d}</svg>
+);
+const IconBrain  =(p)=><Ic {...p} d={<><path d="M9.5 2A2.5 2.5 0 0112 4.5v15a2.5 2.5 0 01-4.96.44 2.5 2.5 0 01-2.96-3.08 3 3 0 01-.34-5.58 2.5 2.5 0 011.32-4.24 2.5 2.5 0 011.98-3A2.5 2.5 0 019.5 2z"/><path d="M14.5 2A2.5 2.5 0 0012 4.5v15a2.5 2.5 0 004.96.44 2.5 2.5 0 002.96-3.08 3 3 0 00.34-5.58 2.5 2.5 0 00-1.32-4.24 2.5 2.5 0 00-1.98-3A2.5 2.5 0 0014.5 2z"/></>}/>;
+const IconCheck =(p)=><Ic {...p} d={<><path d="M22 11.08V12a10 10 0 11-5.93-9.14"/><polyline points="22 4 12 14.01 9 11.01"/></>}/>;
+const IconX     =(p)=><Ic {...p} d={<><circle cx="12" cy="12" r="10"/><line x1="15" y1="9" x2="9" y2="15"/><line x1="9" y1="9" x2="15" y2="15"/></>}/>;
+const IconRight =(p)=><Ic {...p} d={<polyline points="15 18 9 12 15 6"/>}/>;   /* "הבא" בכיוון RTL */
+const IconLeft  =(p)=><Ic {...p} d={<polyline points="9 18 15 12 9 6"/>}/>;    /* "הקודם" בכיוון RTL */
+const IconPlay  =(p)=><Ic {...p} fill="currentColor" sw={0} d={<polygon points="6 3 20 12 6 21 6 3"/>}/>;
+const IconBook  =(p)=><Ic {...p} d={<><path d="M2 3h6a4 4 0 014 4v14a3 3 0 00-3-3H2z"/><path d="M22 3h-6a4 4 0 00-4 4v14a3 3 0 013-3h7z"/></>}/>;
+const IconTrophy=(p)=><Ic {...p} d={<><path d="M6 9H4.5a2.5 2.5 0 010-5H6M18 9h1.5a2.5 2.5 0 000-5H18M4 22h16M10 14.66V17c0 .55-.47.98-.97 1.21C7.85 18.75 7 20.24 7 22M14 14.66V17c0 .55.47.98.97 1.21C16.15 18.75 17 20.24 17 22M18 2H6v7a6 6 0 0012 0V2z"/></>}/>;
+const IconRefresh=(p)=><Ic {...p} d={<><path d="M3 12a9 9 0 019-9 9.75 9.75 0 016.74 2.74L21 8"/><path d="M21 3v5h-5"/><path d="M21 12a9 9 0 01-9 9 9.75 9.75 0 01-6.74-2.74L3 16"/><path d="M8 16H3v5"/></>}/>;
+const IconHome  =(p)=><Ic {...p} d={<><path d="M3 9l9-7 9 7v11a2 2 0 01-2 2H5a2 2 0 01-2-2z"/><polyline points="9 22 9 12 15 12 15 22"/></>}/>;
+const IconBulb  =(p)=><Ic {...p} d={<><path d="M9 18h6M10 22h4M15 14c.2-1 .7-1.7 1.5-2.5A4.65 4.65 0 0017 8a5 5 0 00-10 0c0 1.5.6 2.6 1.5 3.5.8.8 1.3 1.5 1.5 2.5"/></>}/>;
+
+/* לוגו מקצועי - פרבולה גאומטרית */
+const Logo = ({size="md"}) => {
+  const big=size==="lg";
+  const s = big?46:36;
+  return (
+    <div className="flex items-center gap-2.5 select-none">
+      <div className="grid place-items-center rounded-2xl"
+        style={{background:'var(--brand)',width:s,height:s,
+                boxShadow:'0 4px 14px rgba(67,56,202,.4)'}}>
+        <svg width={s*0.62} height={s*0.62} viewBox="0 0 24 24" fill="none">
+          {/* פרבולה */}
+          <path d="M3 19 Q12 1 21 19" stroke="#fff" strokeWidth="2.6"
+            strokeLinecap="round" fill="none"/>
+          {/* נקודת קודקוד */}
+          <circle cx="12" cy="7.4" r="2.1" fill="#fbbf24"/>
+        </svg>
+      </div>
+      <span className="font-extrabold tracking-tight"
+        style={{fontSize:big?28:21,color:'var(--ink)'}}>
+        אלוגברה
+      </span>
+    </div>
+  );
+};
+const TopBar = ({subject}) => (
+  <header className="sticky top-0 z-30 bg-white/88 backdrop-blur border-b" style={{borderColor:'var(--line)'}}>
+    <div className="max-w-4xl mx-auto px-4 h-16 flex items-center justify-between">
+      <Logo/>
+      <span className="text-sm font-bold px-3.5 py-1.5 rounded-full"
+        style={{background:'var(--brand-soft)',color:'var(--brand)'}}>{subject}</span>
+    </div>
+  </header>
+);
+const Footer = () => (
+  <footer className="mt-10 py-6 text-center border-t" style={{borderColor:'var(--line)'}}>
+    <div className="flex justify-center"><Logo size="sm"/></div>
+    <p className="mt-2 text-sm font-medium" style={{color:'var(--muted)'}}>
+      © כל הזכויות שמורות לאלוגברה
+    </p>
+  </footer>
+);
+const Btn = ({children,onClick,disabled,variant="primary",className=""}) => {
+  const st={primary:{background:'var(--brand)',color:'#fff'},
+            soft:{background:'var(--brand-soft)',color:'var(--brand)'},
+            ghost:{background:'#eef0f4',color:'var(--ink)'}};
+  return (
+    <button onClick={onClick} disabled={disabled}
+      className={`px-7 py-3.5 rounded-2xl font-extrabold text-lg transition-all
+        disabled:opacity-35 disabled:cursor-not-allowed
+        enabled:hover:-translate-y-0.5 enabled:active:translate-y-0
+        flex items-center justify-center gap-2 ${className}`}
+      style={{...st[variant],boxShadow:variant==="primary"?'0 8px 20px rgba(67,56,202,.32)':'none'}}>
+      {children}
+    </button>
+  );
+};
+
+/* פס ניווט תחתון אחיד — קדימה / אחורה / מונה */
+const NavBar = ({onBack,onNext,backLabel="הקודם",nextLabel="הבא",
+                 backDisabled,nextDisabled,centerText}) => (
+  <div className="p-4 flex items-center justify-between border-t"
+    style={{borderColor:'var(--line)',background:'#fcfcfd'}}>
+    <Btn variant="ghost" disabled={backDisabled} onClick={onBack}>
+      <IconRight size={18}/> {backLabel}
+    </Btn>
+    {centerText && <span className="text-sm font-bold" style={{color:'var(--muted)'}}>{centerText}</span>}
+    <Btn disabled={nextDisabled} onClick={onNext}>
+      {nextLabel} <IconLeft size={18}/>
+    </Btn>
+  </div>
+);
+
+/* ============================================================
+   עזרי מתמטיקה — מינוס תמיד משמאל, ללא בעיות RTL
+   ============================================================ */
+// מספר בודד: מינוס נדבק משמאל. בסוגריים אם שלילי בתוך ביטוי.
+const N = (n)=> String(n);
+// זוג מספרים בעברית: "3 ו-4"  /  "3- ו-5-"
+const PairHe = ({a,b})=> (
+  <span>
+    <span className="math">{a}</span>
+    <span> ו-</span>
+    <span className="math">{b}</span>
+  </span>
+);
+// פתיחת סוגריים מהמספרים: (x+3)(x+4)
+const factorStr = (a,b)=>{
+  const part = (n)=> n<0 ? `(x - ${Math.abs(n)})` : `(x + ${n})`;
+  return part(a)+part(b);
+};
+
+/* ============================================================
+   נתוני התוכן
+   ============================================================ */
+const SUBJECT="אלגברה · כיתה ט׳";
+
+// דוגמאות לימוד מודרכות (אחרי 7/12 — עוד שתיים, אותה שיטה)
+const guided = [
+  { exp:"x² + 7x + 12",  mid:7,  end:12,
+    pairs:[[1,12],[2,6],[3,4]], answer:[3,4],
+    story:"מחפשים שני מספרים: המכפלה שלהם 12, והסכום שלהם 7." },
+  { exp:"x² + 8x + 15",  mid:8,  end:15,
+    pairs:[[1,15],[5,3],[2,13]], answer:[5,3],
+    story:"אותה שיטה בדיוק: מכפלה 15, סכום 8. ננסה זוגות עד שנמצא." },
+  { exp:"x² + 10x + 21", mid:10, end:21,
+    pairs:[[1,21],[3,7],[2,19]], answer:[3,7],
+    story:"שוב — אותה דרך: מכפלה 21, סכום 10. נבדוק זוגות." },
+];
+
+// כרטיסי הסברת סימנים (במקום "משחק הסימנים" — הסבר ברור ואיטי)
+const signLessons = [
+  { title:"כשהכל חיובי", exp:"x² + 5x + 6", answer:[2,3], res:"(x + 2)(x + 3)",
+    text:"כשהמספר באמצע והמספר בסוף שניהם חיוביים — שני המספרים שאנחנו מחפשים גם הם חיוביים. פשוט.",
+    check:"2 × 3 = 6   וגם   2 + 3 = 5" },
+  { title:"כשהמספר באמצע שלילי", exp:"x² - 5x + 6", answer:[-2,-3], res:"(x - 2)(x - 3)",
+    text:"המספר בסוף חיובי (6), אבל המספר באמצע שלילי (5-). זה מתאפשר רק אם שני המספרים שליליים — כי מינוס כפול מינוס נותן פלוס, ומינוס ועוד מינוס נותן מינוס.",
+    check:"-2 × -3 = 6   וגם   -2 + -3 = -5" },
+  { title:"כשהמספר בסוף שלילי", exp:"x² + 2x - 8", answer:[4,-2], res:"(x + 4)(x - 2)",
+    text:"כשהמספר בסוף שלילי (8-) — מספר אחד חיובי ואחד שלילי. המספר באמצע אומר לנו מי גדול יותר: כאן הוא חיובי (2), אז המספר החיובי גדול יותר.",
+    check:"4 × -2 = -8   וגם   4 + -2 = 2" },
+];
+
+// מבחן מסכם — כל שאלה עם דרך פתרון מלאה
+const examQs = [
+  { exp:"x² + 6x + 8", mid:6, end:8,
+    options:["(x + 2)(x + 4)","(x + 1)(x + 8)","(x + 3)(x + 5)","(x + 6)(x + 8)"],
+    correct:0, answer:[2,4],
+    steps:[
+      "המספר באמצע 6, המספר בסוף 8.",
+      "מחפשים שני מספרים: מכפלה 8, סכום 6.",
+      "נבדוק זוגות למכפלה 8:  1 ו-8 (סכום 9, לא),  2 ו-4 (סכום 6, כן!).",
+      "המספרים הם 2 ו-4. הפירוק:  (x + 2)(x + 4)."
+    ] },
+  { exp:"x² - 7x + 12", mid:-7, end:12,
+    options:["(x - 3)(x - 4)","(x + 3)(x + 4)","(x - 2)(x - 6)","(x - 1)(x - 12)"],
+    correct:0, answer:[-3,-4],
+    steps:[
+      "המספר באמצע 7-, המספר בסוף 12.",
+      "המספר בסוף חיובי אך האמצע שלילי → שני המספרים שליליים.",
+      "מחפשים מכפלה 12 וסכום 7-:  3- ו-4-  (מכפלה 12, סכום 7-).",
+      "הפירוק:  (x - 3)(x - 4)."
+    ] },
+  { exp:"x² + 3x - 10", mid:3, end:-10,
+    options:["(x + 5)(x - 2)","(x - 5)(x + 2)","(x + 1)(x - 10)","(x + 10)(x - 1)"],
+    correct:0, answer:[5,-2],
+    steps:[
+      "המספר באמצע 3, המספר בסוף 10-.",
+      "המספר בסוף שלילי → מספר אחד חיובי ואחד שלילי.",
+      "מחפשים מכפלה 10- וסכום 3:  5 ו-2-  (מכפלה 10-, סכום 3).",
+      "הפירוק:  (x + 5)(x - 2)."
+    ] },
+  { exp:"x² - 2x - 15", mid:-2, end:-15,
+    options:["(x - 5)(x + 3)","(x + 5)(x - 3)","(x - 15)(x + 1)","(x - 1)(x + 15)"],
+    correct:0, answer:[-5,3],
+    steps:[
+      "המספר באמצע 2-, המספר בסוף 15-.",
+      "המספר בסוף שלילי → סימנים שונים. הסכום שלילי → השלילי גדול יותר.",
+      "מחפשים מכפלה 15- וסכום 2-:  5- ו-3  (מכפלה 15-, סכום 2-).",
+      "הפירוק:  (x - 5)(x + 3)."
+    ] },
+  { exp:"x² + 9x + 14", mid:9, end:14,
+    options:["(x + 2)(x + 7)","(x + 1)(x + 14)","(x + 3)(x + 6)","(x + 7)(x + 7)"],
+    correct:0, answer:[2,7],
+    steps:[
+      "המספר באמצע 9, המספר בסוף 14.",
+      "מחפשים מכפלה 14 וסכום 9.",
+      "זוגות למכפלה 14:  1 ו-14 (סכום 15),  2 ו-7 (סכום 9, כן!).",
+      "הפירוק:  (x + 2)(x + 7)."
+    ] },
+];
+
+/* ============================================================
+   רכיב: ריבוע יעד (מכפלה / סכום) — עזר קבוע ליד התרגיל
+   ============================================================ */
+function TargetSlot({label,target,state,shownValue}){
+  const c = {
+    idle:{bg:'#fff',border:'var(--line)',txt:'var(--ink)',badge:'var(--muted)'},
+    ok:  {bg:'var(--ok-soft)',border:'var(--ok)',txt:'var(--ok)',badge:'var(--ok)'},
+    err: {bg:'var(--err-soft)',border:'var(--err)',txt:'var(--err)',badge:'var(--err)'},
+  }[state];
+  const anim = state==='ok'?'glowOk .8s ease-out'
+             : state==='err'?'shake .45s ease-in-out':'none';
+  return (
+    <div className="flex flex-col items-center gap-1.5" style={{minWidth:120}}>
+      <span className="text-sm font-extrabold" style={{color:c.badge}}>{label}</span>
+      <div className="rounded-2xl border-[3px] grid place-items-center relative"
+        style={{background:c.bg,borderColor:c.border,width:116,height:84,animation:anim,
+                transition:'background .35s,border-color .35s'}}>
+        <span className="absolute top-1.5 left-2 text-xs font-bold math"
+          style={{color:'var(--muted)'}}>= {target}</span>
+        {shownValue!==null
+          ? <span className="math text-3xl font-black"
+              style={{color:c.txt,animation:'pop .4s ease-out'}}>{shownValue}</span>
+          : <span className="text-2xl" style={{color:'var(--line)'}}>?</span>}
+        {state!=='idle' && (
+          <div className="absolute -top-3 -right-3 rounded-full p-1 text-white a-pop"
+            style={{background:c.border}}>
+            {state==='ok'?<IconCheck size={18}/>:<IconX size={18}/>}
+          </div>
+        )}
+      </div>
+    </div>
+  );
+}
+
+/* כרטיס תרגיל + שני ריבועי העזר — משותף ללימוד ולמבחן */
+function TrinomialBoard({exp,mid,end,prodState,sumState,prodVal,sumVal}){
+  return (
+    <div className="flex flex-col lg:flex-row items-center justify-center gap-5 lg:gap-7">
+      <div className="math font-black rounded-2xl bg-white border px-7 py-5 text-4xl md:text-5xl"
+        style={{borderColor:'var(--line)',color:'var(--brand-dark)',
+                boxShadow:'0 6px 18px rgba(30,27,75,.06)'}}>{exp}</div>
+      <div className="hidden lg:block" style={{color:'var(--brand)'}}><IconLeft size={32}/></div>
+      <div className="flex gap-4">
+        <TargetSlot label="מכפלה" target={end} state={prodState} shownValue={prodVal}/>
+        <TargetSlot label="סכום"  target={mid} state={sumState}  shownValue={sumVal}/>
+      </div>
+    </div>
+  );
+}
+
+/* ============================================================
+   מסך פתיחה
+   ============================================================ */
+function StartScreen({onStart}){
+  return (
+    <div className="min-h-[80vh] grid place-items-center px-4">
+      <div className="max-w-2xl text-center a-rise">
+        <div className="inline-grid place-items-center rounded-3xl mb-6 text-white a-pop"
+          style={{background:'var(--brand)',width:84,height:84,
+                  boxShadow:'0 16px 36px rgba(67,56,202,.45)'}}>
+          <IconBrain size={46}/>
+        </div>
+        <h1 className="text-5xl md:text-6xl font-black tracking-tight mb-4">פירוק הטרינום</h1>
+        <p className="text-xl md:text-2xl leading-relaxed mb-9" style={{color:'var(--muted)'}}>
+          לומדים שלב-אחר-שלב איך הופכים שלושה איברים למכפלת סוגריים — ואז מבחן מסכם.
+        </p>
+        <div className="flex flex-col sm:flex-row gap-4 justify-center">
+          <Btn onClick={()=>onStart('learn')} className="text-xl px-9 py-4">
+            <IconBook size={22}/> מתחילים ללמוד
+          </Btn>
+          <Btn variant="soft" onClick={()=>onStart('exam')} className="text-xl px-9 py-4">
+            <IconPlay size={20}/> ישר למבחן
+          </Btn>
+        </div>
+      </div>
+    </div>
+  );
+}
+
+/* ============================================================
+   מסך לימוד — רב-שלבי עם ניווט מלא קדימה/אחורה
+   שלבים: מבוא → דוגמה מודרכת ×3 → סימנים ×3
+   ============================================================ */
+function LearnScreen({onToExam,onHome}){
+  // רשימת כל "העמודים" בלימוד — ניווט אחיד ביניהם
+  const pages = [
+    {type:'intro'},
+    ...guided.map((g,i)=>({type:'guided',idx:i})),
+    ...signLessons.map((s,i)=>({type:'sign',idx:i})),
+  ];
+  const [p,setP] = useState(0);
+  const page = pages[p];
+  const isLast = p===pages.length-1;
+
+  return (
+    <div className="max-w-3xl mx-auto px-4 py-8">
+      {/* מד התקדמות לימוד */}
+      <div className="flex items-center gap-3 mb-5">
+        <button onClick={onHome}
+          className="p-2 rounded-xl transition hover:bg-white"
+          style={{color:'var(--muted)'}} title="בית"><IconHome size={20}/></button>
+        <div className="flex-1 h-2.5 rounded-full overflow-hidden" style={{background:'var(--line)'}}>
+          <div className="h-full rounded-full transition-all duration-500"
+            style={{width:`${((p+1)/pages.length)*100}%`,background:'var(--brand)'}}/>
+        </div>
+        <span className="text-sm font-bold whitespace-nowrap" style={{color:'var(--muted)'}}>
+          {p+1} / {pages.length}
+        </span>
+      </div>
+
+      {page.type==='intro' && <IntroPage/>}
+      {page.type==='guided' && <GuidedPage key={'g'+page.idx} data={guided[page.idx]}/>}
+      {page.type==='sign'   && <SignPage   key={'s'+page.idx} data={signLessons[page.idx]}/>}
+
+      {/* ניווט אחיד */}
+      <div className="mt-5 bg-white rounded-2xl border overflow-hidden"
+        style={{borderColor:'var(--line)'}}>
+        <NavBar
+          onBack={()=>setP(Math.max(0,p-1))}
+          backDisabled={p===0}
+          onNext={()=> isLast ? onToExam() : setP(p+1)}
+          nextLabel={isLast?'למבחן המסכם':'הבא'}
+          centerText={page.type==='guided'?'דוגמה מודרכת':page.type==='sign'?'משחקי סימנים':'הקדמה'}
+        />
+      </div>
+      <Footer/>
+    </div>
+  );
+}
+
+/* --- עמוד מבוא --- */
+function IntroPage(){
+  return (
+    <div className="bg-white rounded-3xl border p-9 text-center a-fade"
+      style={{borderColor:'var(--line)',boxShadow:'0 12px 44px rgba(30,27,75,.07)'}}>
+      <h2 className="text-3xl font-black mb-3">מה זה טרינום?</h2>
+      <p className="text-xl leading-relaxed mb-7" style={{color:'var(--muted)'}}>
+        טרינום הוא ביטוי עם שלושה איברים. המטרה שלנו: למצוא שני מספרים
+        שיהפכו אותו למכפלה של שני סוגריים.
+      </p>
+      <div className="math text-4xl md:text-5xl font-black mb-3">x² + 7x + 12</div>
+      <div className="text-3xl font-black mb-3" style={{color:'var(--brand)'}}>=</div>
+      <div className="math text-4xl md:text-5xl font-black">
+        (x + <span style={{color:'#0ea5e9'}}>?</span>)(x + <span style={{color:'var(--ok)'}}>?</span>)
+      </div>
+      <div className="mt-7 p-5 rounded-2xl text-lg font-bold inline-block text-right"
+        style={{background:'var(--gold-soft)',color:'var(--gold)',
+                borderRight:'5px solid var(--gold)'}}>
+        הכלל: מחפשים שני מספרים שה<b>סכום</b> שלהם הוא המספר באמצע,
+        וה<b>מכפלה</b> שלהם היא המספר בסוף.
+      </div>
+    </div>
+  );
+}
+
+/* --- עמוד דוגמה מודרכת — אינטראקטיבי, אותה מכניקה כמו המבחן --- */
+function GuidedPage({data}){
+  const [picked,setPicked]   = useState(null);
+  const [prodState,setProd]  = useState('idle');
+  const [sumState,setSum]    = useState('idle');
+  const [pv,setPv]=useState(null), [sv,setSv]=useState(null);
+  const [solved,setSolved]   = useState(false);
+  const timers = useRef([]);
+
+  useEffect(()=>()=>timers.current.forEach(clearTimeout),[]);
+  // איפוס בעת מעבר דוגמה
+  useEffect(()=>{
+    timers.current.forEach(clearTimeout); timers.current=[];
+    setPicked(null);setProd('idle');setSum('idle');setPv(null);setSv(null);setSolved(false);
+  },[data]);
+
+  const tryPair = (idx)=>{
+    timers.current.forEach(clearTimeout); timers.current=[];
+    const [a,b]=data.pairs[idx];
+    setPicked(idx);
+    setProd('idle');setSum('idle');setPv(null);setSv(null);setSolved(false);
+    timers.current.push(setTimeout(()=>{ setPv(a*b); setProd(a*b===data.end?'ok':'err'); },550));
+    timers.current.push(setTimeout(()=>{
+      setSv(a+b); setSum(a+b===data.mid?'ok':'err');
+      if(a*b===data.end && a+b===data.mid) setSolved(true);
+    },1250));
+  };
+
+  return (
+    <div className="bg-white rounded-3xl border overflow-hidden a-fade"
+      style={{borderColor:'var(--line)',boxShadow:'0 12px 44px rgba(30,27,75,.07)'}}>
+      <div className="p-7" style={{background:'var(--brand-soft)'}}>
+        <p className="text-center text-lg font-bold mb-5">{data.story}</p>
+        <TrinomialBoard exp={data.exp} mid={data.mid} end={data.end}
+          prodState={prodState} sumState={sumState} prodVal={pv} sumVal={sv}/>
+      </div>
+
+      <div className="p-6">
+        <p className="text-center text-base font-bold mb-3" style={{color:'var(--muted)'}}>
+          נסו זוגות — לחצו וצפו אם הם ממלאים את שני הריבועים:
+        </p>
+        <div className="grid sm:grid-cols-3 gap-3">
+          {data.pairs.map((pr,k)=>(
+            <button key={k} onClick={()=>tryPair(k)}
+              className="p-5 rounded-2xl border-[3px] text-2xl font-black transition-all
+                hover:-translate-y-1"
+              style={{borderColor:k===picked?'var(--brand)':'var(--line)',
+                      background:k===picked?'var(--brand-soft)':'#fff'}}>
+              <PairHe a={pr[0]} b={pr[1]}/>
+            </button>
+          ))}
+        </div>
+      </div>
+
+      {solved && (
+        <div className="px-6 pb-7 a-fade">
+          <div className="p-5 rounded-2xl text-center"
+            style={{background:'var(--ok-soft)',border:'2px solid var(--ok)'}}>
+            <p className="text-lg font-extrabold mb-2" style={{color:'var(--ok)'}}>
+              ✓ מצאתם! המספרים <PairHe a={data.answer[0]} b={data.answer[1]}/> ממלאים את שני הריבועים.
+            </p>
+            <div className="text-base font-bold mb-1" style={{color:'var(--muted)'}}>
+              ולכן הפירוק לסוגריים הוא:
+            </div>
+            <div className="math text-3xl font-black" style={{color:'var(--ink)'}}>
+              {data.exp} = {factorStr(data.answer[0],data.answer[1])}
+            </div>
+          </div>
+        </div>
+      )}
+    </div>
+  );
+}
+
+/* --- עמוד הסבר סימנים — ברור ואיטי, ללא משחק מבלבל --- */
+function SignPage({data}){
+  return (
+    <div className="bg-white rounded-3xl border overflow-hidden a-fade"
+      style={{borderColor:'var(--line)',boxShadow:'0 12px 44px rgba(30,27,75,.07)'}}>
+      <div className="p-7" style={{background:'var(--brand-soft)'}}>
+        <h2 className="text-2xl font-black text-center mb-2">{data.title}</h2>
+        <p className="text-lg leading-relaxed text-center" style={{color:'var(--ink)'}}>
+          {data.text}
+        </p>
+      </div>
+      <div className="p-8 text-center">
+        <div className="math text-4xl font-black mb-3">{data.exp}</div>
+        <div className="text-2xl font-black mb-3" style={{color:'var(--brand)'}}>=</div>
+        <div className="inline-block bg-white border-2 rounded-2xl px-7 py-5"
+          style={{borderColor:'var(--brand-soft)'}}>
+          <div className="math text-3xl md:text-4xl font-black"
+            style={{color:'var(--brand-dark)'}}>{data.res}</div>
+        </div>
+        <div className="mt-5 inline-block px-5 py-3 rounded-2xl"
+          style={{background:'var(--gold-soft)',borderRight:'4px solid var(--gold)'}}>
+          <span className="text-sm font-bold" style={{color:'var(--muted)'}}>בדיקה: </span>
+          <span className="math text-lg font-black" style={{color:'var(--gold)'}}>{data.check}</span>
+        </div>
+      </div>
+    </div>
+  );
+}
+
+/* ============================================================
+   מבחן מסכם — בלי חשיפת תשובה אוטומטית, עם הסבר דרך מלאה
+   ============================================================ */
+function ExamScreen({onFinish,onHome}){
+  const [qi,setQi]       = useState(0);
+  const [score,setScore] = useState(0);
+  // מצב לכל שאלה: רשימת אינדקסים שכבר ניסה (כדי לא לחזור)
+  const [tried,setTried] = useState([]);
+  const [solved,setSolved] = useState(false);   // ענה נכון
+  const [gaveUp,setGaveUp] = useState(false);   // ביקש לראות פתרון
+  const [scored,setScored] = useState(false);   // האם כבר נספרה נקודה לשאלה הזו
+
+  const q = examQs[qi];
+
+  const reset = ()=>{ setTried([]); setSolved(false); setGaveUp(false); setScored(false); };
+
+  const pick = (idx)=>{
+    if(solved||gaveUp) return;
+    if(tried.includes(idx)) return;
+    if(idx===q.correct){
+      setSolved(true);
+      if(!scored){ setScore(s=>s+1); setScored(true); }
+    } else {
+      // תשובה שגויה: מסמנים אותה כ"נוסתה" — אבל לא חושפים את הנכונה,
+      // ולא מסתירים שום אפשרות אחרת. התלמיד ממשיך לנסות.
+      setTried(t=>[...t,idx]);
+    }
+  };
+
+  const next = ()=>{
+    if(qi<examQs.length-1){ setQi(qi+1); reset(); }
+    else onFinish(score);
+  };
+  const back = ()=>{
+    if(qi>0){ setQi(qi-1); reset(); }
+  };
+
+  const revealed = solved || gaveUp;
+
+  return (
+    <div className="max-w-3xl mx-auto px-4 py-8">
+      {/* פס עליון */}
+      <div className="flex items-center gap-3 mb-2">
+        <button onClick={onHome} className="p-2 rounded-xl hover:bg-white transition"
+          style={{color:'var(--muted)'}} title="בית"><IconHome size={20}/></button>
+        <span className="text-base font-bold flex-1" style={{color:'var(--muted)'}}>
+          שאלה {qi+1} מתוך {examQs.length}
+        </span>
+        <span className="text-base font-extrabold px-4 py-1.5 rounded-full"
+          style={{background:'var(--brand-soft)',color:'var(--brand)'}}>
+          ניקוד: {score}
+        </span>
+      </div>
+      <div className="h-2.5 rounded-full mb-6 overflow-hidden" style={{background:'var(--line)'}}>
+        <div className="h-full rounded-full transition-all duration-500"
+          style={{width:`${((qi)/examQs.length)*100}%`,background:'var(--brand)'}}/>
+      </div>
+
+      <div className="bg-white rounded-3xl border overflow-hidden a-fade"
+        style={{borderColor:'var(--line)',boxShadow:'0 12px 44px rgba(30,27,75,.08)'}}>
+        {/* שאלה */}
+        <div className="p-7 text-center" style={{background:'var(--brand-soft)'}}>
+          <p className="text-lg font-bold mb-4">פרקו את הטרינום הבא לגורמים:</p>
+          <div className="math font-black text-4xl md:text-5xl rounded-2xl bg-white border
+            inline-block px-7 py-4"
+            style={{borderColor:'var(--line)',color:'var(--brand-dark)'}}>{q.exp}</div>
+        </div>
+
+        {/* אפשרויות — שגויות נשארות גלויות, רק מסומנות */}
+        <div className="p-6 grid sm:grid-cols-2 gap-3.5">
+          {q.options.map((opt,k)=>{
+            const wasTried = tried.includes(k);
+            const isRightRevealed = revealed && k===q.correct;
+            let st={borderColor:'var(--line)',background:'#fff',color:'var(--ink)'};
+            if(wasTried)
+              st={borderColor:'var(--err)',background:'var(--err-soft)',color:'var(--err)'};
+            if(isRightRevealed)
+              st={borderColor:'var(--ok)',background:'var(--ok-soft)',color:'var(--ok)'};
+            const clickable = !revealed && !wasTried;
+            return (
+              <button key={k} disabled={!clickable} onClick={()=>pick(k)}
+                className={`p-5 rounded-2xl border-[3px] math text-2xl font-black transition-all
+                  relative ${clickable?'hover:-translate-y-1 hover:shadow-md':''}
+                  ${wasTried?'a-shake':''}`}
+                style={st}>
+                {opt}
+                {wasTried &&
+                  <span className="absolute left-3 top-1/2 -translate-y-1/2"><IconX size={20}/></span>}
+                {isRightRevealed &&
+                  <span className="absolute left-3 top-1/2 -translate-y-1/2"><IconCheck size={20}/></span>}
+              </button>
+            );
+          })}
+        </div>
+
+        {/* רמז עדין כשטעו — בלי לחשוף תשובה */}
+        {!revealed && tried.length>0 && (
+          <div className="px-6 pb-2 -mt-1">
+            <p className="text-center text-base font-bold" style={{color:'var(--err)'}}>
+              לא מדויק — נסו אפשרות אחרת. בדקו: מכפלה {q.end} וסכום {q.mid}.
+            </p>
+          </div>
+        )}
+
+        {/* כפתור "להראות פתרון" — בחירה של המורה/תלמיד, לא אוטומטי */}
+        {!revealed && (
+          <div className="px-6 pb-6 flex justify-center">
+            <button onClick={()=>setGaveUp(true)}
+              className="text-base font-bold flex items-center gap-1.5 px-4 py-2 rounded-xl
+                transition hover:bg-amber-50"
+              style={{color:'var(--gold)'}}>
+              <IconBulb size={18}/> רוצים לראות את דרך הפתרון?
+            </button>
+          </div>
+        )}
+
+        {/* הסבר דרך הפתרון המלאה — מופיע רק אחרי הצלחה או בקשה מפורשת */}
+        {revealed && (
+          <div className="p-6 border-t a-fade" style={{borderColor:'var(--line)',
+            background:solved?'var(--ok-soft)':'var(--gold-soft)'}}>
+            <h4 className="font-extrabold text-lg mb-3 flex items-center gap-2"
+              style={{color:solved?'var(--ok)':'var(--gold)'}}>
+              {solved
+                ? <><IconCheck size={22}/> כל הכבוד! הנה דרך הפתרון:</>
+                : <><IconBulb size={22}/> דרך הפתרון:</>}
+            </h4>
+            <ol className="space-y-2.5">
+              {q.steps.map((s,i)=>(
+                <li key={i} className="flex gap-3 items-start a-fade"
+                  style={{animationDelay:`${i*120}ms`}}>
+                  <span className="shrink-0 grid place-items-center rounded-full w-7 h-7
+                    text-sm font-black text-white"
+                    style={{background:'var(--brand)'}}>{i+1}</span>
+                  <span className="text-lg leading-relaxed pt-0.5">{s}</span>
+                </li>
+              ))}
+            </ol>
+            <div className="mt-4 text-center bg-white rounded-2xl py-3 border"
+              style={{borderColor:'var(--line)'}}>
+              <span className="math text-2xl font-black" style={{color:'var(--ink)'}}>
+                {q.exp} = {q.options[q.correct]}
+              </span>
+            </div>
+          </div>
+        )}
+
+        {/* ניווט קדימה/אחורה — תמיד זמין */}
+        <NavBar
+          onBack={back} backDisabled={qi===0}
+          onNext={next}
+          nextLabel={qi<examQs.length-1 ? 'לשאלה הבאה' : 'סיום ותוצאות'}
+        />
+      </div>
+      <Footer/>
+    </div>
+  );
+}
+
+/* ============================================================
+   מסך סיכום
+   ============================================================ */
+function SummaryScreen({score,onRetry,onHome}){
+  const total=examQs.length;
+  const pct=Math.round((score/total)*100);
+  const msg = pct===100?"מושלם! שליטה מלאה בפירוק טרינום."
+            : pct>=60 ?"כל הכבוד! עוד תרגול קטן ואתם שם."
+            :          "לא נורא — שווה לחזור על שלבי הלימוד.";
+  return (
+    <div className="min-h-[80vh] grid place-items-center px-4">
+      <div className="max-w-md w-full text-center a-rise">
+        <div className="bg-white rounded-3xl border p-9"
+          style={{borderColor:'var(--line)',boxShadow:'0 16px 48px rgba(30,27,75,.12)'}}>
+          <div className="inline-grid place-items-center rounded-3xl mb-5 text-white a-pop"
+            style={{background:'var(--gold)',width:78,height:78,
+                    boxShadow:'0 12px 30px rgba(217,119,6,.45)'}}>
+            <IconTrophy size={40}/>
+          </div>
+          <h2 className="text-3xl font-black mb-1">סיימת את המבחן!</h2>
+          <p className="text-lg mb-5" style={{color:'var(--muted)'}}>{msg}</p>
+          <div className="text-7xl font-black mb-1" style={{color:'var(--brand)'}}>
+            {score}<span className="text-3xl" style={{color:'var(--muted)'}}>/{total}</span>
+          </div>
+          <div className="h-3.5 rounded-full overflow-hidden my-5" style={{background:'var(--line)'}}>
+            <div className="h-full rounded-full transition-all duration-700"
+              style={{width:`${pct}%`,background:'var(--brand)'}}/>
+          </div>
+          <div className="flex flex-col sm:flex-row gap-3 justify-center mt-6">
+            <Btn onClick={onRetry}><IconRefresh size={20}/> מבחן חוזר</Btn>
+            <Btn variant="ghost" onClick={onHome}>למסך הבית</Btn>
+          </div>
+        </div>
+        <div className="mt-6"><Footer/></div>
+      </div>
+    </div>
+  );
+}
+
+/* ============================================================
+   אפליקציה
+   ============================================================ */
+function App(){
+  const [screen,setScreen]=useState('start'); // start|learn|exam|summary
+  const [score,setScore]=useState(0);
+  return (
+    <div className="min-h-screen flex flex-col" dir="rtl">
+      <TopBar subject={SUBJECT}/>
+      <main className="flex-grow">
+        {screen==='start'  && <StartScreen onStart={setScreen}/>}
+        {screen==='learn'  && <LearnScreen onToExam={()=>setScreen('exam')}
+                                 onHome={()=>setScreen('start')}/>}
+        {screen==='exam'   && <ExamScreen onFinish={(s)=>{setScore(s);setScreen('summary');}}
+                                 onHome={()=>setScreen('start')}/>}
+        {screen==='summary'&& <SummaryScreen score={score}
+                                 onRetry={()=>setScreen('exam')}
+                                 onHome={()=>setScreen('start')}/>}
+      </main>
+    </div>
+  );
+}
+ReactDOM.createRoot(document.getElementById('root')).render(<App/>);
+</script>
+</body>
+</html>
