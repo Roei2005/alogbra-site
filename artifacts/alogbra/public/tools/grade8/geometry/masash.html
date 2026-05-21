@@ -1,0 +1,764 @@
+<!DOCTYPE html>
+<html lang="he" dir="rtl">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <title>לומדים משולש שווה שוקיים - כיתה ח'</title>
+    
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link href="https://fonts.googleapis.com/css2?family=Rubik:wght@400;500;700;900&display=swap" rel="stylesheet">
+    
+    <style>
+        body {
+            font-family: 'Rubik', sans-serif;
+            background-color: #f0f9ff;
+            touch-action: manipulation;
+            -webkit-tap-highlight-color: transparent;
+        }
+        
+        /* כפתור חזרה ללובי */
+        .home-btn {
+            position: absolute;
+            top: 1rem;
+            left: 1rem;
+            background: white;
+            padding: 0.5rem 1rem;
+            border-radius: 0.75rem;
+            box-shadow: 0 2px 5px rgba(0,0,0,0.05);
+            font-weight: bold;
+            color: #4b5563;
+            display: flex;
+            align-items: center;
+            gap: 0.5rem;
+            transition: all 0.2s;
+            border: 1px solid #e5e7eb;
+            z-index: 50;
+            text-decoration: none;
+        }
+        .home-btn:hover {
+            color: #2563eb;
+            transform: translateY(-1px);
+            box-shadow: 0 4px 6px -1px rgba(0,0,0,0.1);
+        }
+
+        .tab-btn {
+            transition: all 0.3s ease;
+            border-bottom: 4px solid transparent;
+            color: #64748b;
+        }
+        .tab-btn.active {
+            border-bottom-color: #3b82f6;
+            color: #1e3a8a;
+            font-weight: 800;
+            background-color: rgba(59, 130, 246, 0.05);
+        }
+        
+        .fade-in {
+            animation: fadeIn 0.5s ease-out;
+        }
+        @keyframes fadeIn {
+            from { opacity: 0; transform: translateY(10px); }
+            to { opacity: 1; transform: translateY(0); }
+        }
+        
+        /* גאומטריה וטקסטים */
+        .vertex-label { font-weight: 900; font-family: 'Rubik', sans-serif; fill: #1e3a8a; font-size: 22px; text-shadow: 1px 1px 0 #fff; }
+        .measurement-text { font-family: 'Rubik', sans-serif; font-weight: 700; font-size: 16px; text-shadow: 0px 0px 3px rgba(255,255,255,0.9); }
+        .angle-number { font-family: 'Rubik', sans-serif; font-weight: 900; font-size: 20px; fill: #059669; }
+        .angle-val-text { font-family: 'Rubik', sans-serif; font-weight: 700; font-size: 14px; fill: #4b5563; }
+
+        /* סליידרים */
+        input[type=range] {
+            -webkit-appearance: none;
+            width: 100%;
+            background: transparent;
+        }
+        input[type=range]::-webkit-slider-thumb {
+            -webkit-appearance: none;
+            height: 20px;
+            width: 20px;
+            border-radius: 50%;
+            background: #2563eb;
+            margin-top: -8px;
+            cursor: pointer;
+            box-shadow: 0 2px 4px rgba(0,0,0,0.2);
+            border: 2px solid white;
+        }
+        input[type=range]::-webkit-slider-runnable-track {
+            width: 100%;
+            height: 6px;
+            cursor: pointer;
+            background: #bfdbfe;
+            border-radius: 3px;
+        }
+        
+        /* סליידר כתום ללשונית החדשה */
+        .slider-orange::-webkit-slider-thumb { background: #f97316; }
+        .slider-orange::-webkit-slider-runnable-track { background: #fed7aa; }
+
+        .summary-card {
+            background: white;
+            border-right: 4px solid #3b82f6;
+            padding: 1rem;
+            border-radius: 0.5rem;
+            box-shadow: 0 2px 4px rgba(0,0,0,0.05);
+            margin-bottom: 0.75rem;
+        }
+        
+        .answer-btn { transition: all 0.2s; }
+        .answer-btn:active { transform: scale(0.98); }
+        .answer-btn:disabled { opacity: 0.7; cursor: not-allowed; }
+    </style>
+</head>
+<body class="text-gray-800 min-h-screen flex flex-col">
+
+    <!-- כפתור חזרה ללובי -->
+    <a href="../index.html" class="home-btn">
+        <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M3 9l9-7 9 7v11a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z"></path><polyline points="9 22 9 12 15 12 15 22"></polyline></svg>
+        חזרה ללובי
+    </a>
+
+    <!-- Header -->
+    <header class="bg-white shadow-sm pt-16 pb-4 px-4 text-center sticky top-0 z-40">
+        <h1 class="text-3xl md:text-4xl font-black text-slate-800 mb-1 tracking-tight">משולש שווה שוקיים 📐</h1>
+        <p class="text-slate-500 font-medium text-sm">הכלי האינטראקטיבי לכיתה ח'</p>
+    </header>
+
+    <!-- Navigation -->
+    <nav class="bg-white border-b border-gray-100 shadow-sm mb-6 sticky top-[110px] z-30">
+        <div class="max-w-3xl mx-auto flex justify-around">
+            <button onclick="switchTab('explore')" id="btn-explore" class="tab-btn active w-1/3 py-4 text-lg text-center focus:outline-none leading-tight">
+                <span class="block text-2xl mb-1">🧪</span>
+                חקר מש"ש
+            </button>
+            <button onclick="switchTab('sum180')" id="btn-sum180" class="tab-btn w-1/3 py-4 text-lg text-center focus:outline-none leading-tight">
+                <span class="block text-2xl mb-1">🔥</span>
+                סכום 180
+            </button>
+            <button onclick="switchTab('practice')" id="btn-practice" class="tab-btn w-1/3 py-4 text-lg text-center focus:outline-none leading-tight">
+                <span class="block text-2xl mb-1">📝</span>
+                סיכום ותרגול
+            </button>
+        </div>
+    </nav>
+
+    <main class="max-w-3xl mx-auto px-4 pb-12 flex-grow w-full">
+
+        <!-- SECTION 1: EXPLORE LAB (Isosceles) -->
+        <div id="section-explore" class="fade-in">
+            
+            <!-- Controls Area -->
+            <div class="bg-white p-5 rounded-2xl shadow-md border border-slate-100 mb-6">
+                <h3 class="font-bold text-slate-700 mb-4 flex items-center gap-2 text-sm uppercase tracking-wide">
+                    <span class="bg-blue-100 p-1 rounded">🎛️</span> שחקו עם המשולש:
+                </h3>
+                
+                <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
+                    <div>
+                        <label class="flex justify-between text-sm font-bold text-blue-700 mb-2">
+                            <span>גובה (AD)</span>
+                            <span id="val-h" class="bg-blue-50 px-2 py-0.5 rounded text-blue-600"></span>
+                        </label>
+                        <input type="range" id="input-height" min="140" max="280" value="220" oninput="updateTriangle()">
+                    </div>
+                    <div>
+                        <label class="flex justify-between text-sm font-bold text-blue-700 mb-2">
+                            <span>רוחב הבסיס (BC)</span>
+                            <span id="val-w" class="bg-blue-50 px-2 py-0.5 rounded text-blue-600"></span>
+                        </label>
+                        <input type="range" id="input-width" min="100" max="300" value="200" oninput="updateTriangle()">
+                    </div>
+                </div>
+            </div>
+
+            <!-- The Interactive Triangle Container -->
+            <div class="relative bg-white rounded-3xl shadow-xl border border-slate-200 overflow-hidden mb-8">
+                
+                <!-- Toggles inside the canvas area -->
+                <div class="absolute top-4 right-4 z-10 flex flex-col gap-2">
+                    <button id="btn-prop-1" onclick="toggleView('altitude')" class="px-4 py-2 bg-white/90 backdrop-blur border border-gray-200 rounded-lg shadow-sm text-sm font-bold text-gray-600 hover:bg-purple-50 hover:text-purple-600 hover:border-purple-200 transition flex items-center gap-2">
+                        <span class="w-2 h-2 rounded-full bg-purple-500"></span> גובה (90°)
+                    </button>
+                    <button id="btn-prop-2" onclick="toggleView('median')" class="px-4 py-2 bg-white/90 backdrop-blur border border-gray-200 rounded-lg shadow-sm text-sm font-bold text-gray-600 hover:bg-blue-50 hover:text-blue-600 hover:border-blue-200 transition flex items-center gap-2">
+                        <span class="w-2 h-2 rounded-full bg-blue-500"></span> תיכון (צלעות)
+                    </button>
+                    <button id="btn-prop-3" onclick="toggleView('bisector')" class="px-4 py-2 bg-white/90 backdrop-blur border border-gray-200 rounded-lg shadow-sm text-sm font-bold text-gray-600 hover:bg-green-50 hover:text-green-600 hover:border-green-200 transition flex items-center gap-2">
+                        <span class="w-2 h-2 rounded-full bg-green-500"></span> חוצה זווית
+                    </button>
+                </div>
+
+                <div class="h-[450px] w-full flex justify-center items-end pb-8" id="canvas-container">
+                    <svg id="main-svg" width="100%" height="100%" viewBox="0 0 400 400" class="overflow-visible">
+                        <defs>
+                            <marker id="arrow" markerWidth="10" markerHeight="10" refX="5" refY="5" orient="auto">
+                                <path d="M0,0 L10,5 L0,10" fill="#2563eb" />
+                            </marker>
+                        </defs>
+
+                        <!-- Main Triangle Lines -->
+                        <path id="line-AB" stroke="#374151" stroke-width="4" stroke-linecap="round" fill="none" />
+                        <path id="line-AC" stroke="#374151" stroke-width="4" stroke-linecap="round" fill="none" />
+                        <path id="line-BC" stroke="#374151" stroke-width="4" stroke-linecap="round" fill="none" />
+                        
+                        <!-- The Magic Line AD -->
+                        <line id="line-AD" stroke="#6b7280" stroke-width="2" stroke-dasharray="6,4" />
+
+                        <!-- 90 Degree Mark -->
+                        <path id="mark-90" stroke="#a855f7" stroke-width="2" fill="none" />
+
+                        <!-- Vertices Labels -->
+                        <text id="label-A" class="vertex-label" text-anchor="middle">A</text>
+                        <text id="label-B" class="vertex-label" text-anchor="end">B</text>
+                        <text id="label-C" class="vertex-label" text-anchor="start">C</text>
+                        <text id="label-D" class="vertex-label" text-anchor="middle" font-size="16" fill="#6b7280">D</text>
+
+                        <!-- Ticks for Equal Legs -->
+                        <line id="tick-AB" stroke="#ef4444" stroke-width="3" />
+                        <line id="tick-AC" stroke="#ef4444" stroke-width="3" />
+
+                        <!-- Angle Values (Base) -->
+                        <path id="arc-B" fill="none" stroke="#10b981" stroke-width="2" />
+                        <path id="arc-C" fill="none" stroke="#10b981" stroke-width="2" />
+                        <text id="text-angle-B" class="measurement-text" fill="#1e40af" text-anchor="start"></text>
+                        <text id="text-angle-C" class="measurement-text" fill="#1e40af" text-anchor="end"></text>
+                        
+                        <!-- Head Angle Numbers (1 and 2) -->
+                        <text id="text-angle-A1" class="angle-number" text-anchor="end"></text>
+                        <text id="text-angle-A2" class="angle-number" text-anchor="start"></text>
+
+                        <!-- Base Segments (Median) -->
+                        <text id="text-seg-BD" class="measurement-text" fill="#1d4ed8" text-anchor="middle" y="380"></text>
+                        <text id="text-seg-DC" class="measurement-text" fill="#1d4ed8" text-anchor="middle" y="380"></text>
+                        
+                        <path id="bracket-BD" stroke="#3b82f6" stroke-width="1" fill="none" />
+                        <path id="bracket-DC" stroke="#3b82f6" stroke-width="1" fill="none" />
+
+                    </svg>
+                </div>
+            </div>
+        </div>
+
+        <!-- SECTION 2: SUM 180 LAB -->
+        <div id="section-sum180" class="hidden fade-in">
+            <div class="bg-orange-50 p-6 rounded-2xl border-l-8 border-orange-500 shadow-sm mb-8">
+                <h3 class="font-black text-2xl text-orange-900 mb-2">משפט המפתח: סכום זוויות</h3>
+                <p class="text-lg text-orange-800">
+                    לא משנה איך נזיז את המשולש, אם נחבר את שלוש הזוויות (A + B + C) תמיד נקבל <strong>180 מעלות</strong>.
+                </p>
+            </div>
+
+            <!-- Controls for Free Triangle -->
+            <div class="bg-white p-5 rounded-2xl shadow-md border border-slate-100 mb-6">
+                <h4 class="font-bold text-slate-700 mb-4 text-center">הזיזו את קודקוד A לכל כיוון:</h4>
+                <div class="grid grid-cols-1 gap-4">
+                    <div>
+                        <label class="flex justify-between text-sm font-bold text-orange-700 mb-1">
+                            <span>הזזה ימינה/שמאלה</span>
+                        </label>
+                        <input type="range" id="sum-input-x" min="50" max="350" value="200" oninput="updateSumTriangle()" class="slider-orange">
+                    </div>
+                    <div>
+                        <label class="flex justify-between text-sm font-bold text-orange-700 mb-1">
+                            <span>הזזה למעלה/למטה</span>
+                        </label>
+                        <input type="range" id="sum-input-y" min="50" max="250" value="100" oninput="updateSumTriangle()" class="slider-orange">
+                    </div>
+                </div>
+            </div>
+
+            <div class="relative bg-white rounded-3xl shadow-xl border border-slate-200 overflow-hidden mb-8">
+                <div class="h-[400px] w-full flex justify-center items-end pb-8">
+                    <svg id="sum-svg" width="100%" height="100%" viewBox="0 0 400 400" class="overflow-visible">
+                        <!-- Triangle Lines -->
+                        <path id="sum-lines" stroke="#f97316" stroke-width="4" stroke-linejoin="round" fill="rgba(255, 237, 213, 0.5)" />
+                        
+                        <!-- Arcs -->
+                        <path id="sum-arc-A" fill="none" stroke="#f97316" stroke-width="2" />
+                        <path id="sum-arc-B" fill="none" stroke="#f97316" stroke-width="2" />
+                        <path id="sum-arc-C" fill="none" stroke="#f97316" stroke-width="2" />
+                        
+                        <!-- Angle Texts -->
+                        <text id="sum-text-A" class="angle-val-text" text-anchor="middle"></text>
+                        <text id="sum-text-B" class="angle-val-text" text-anchor="start"></text>
+                        <text id="sum-text-C" class="angle-val-text" text-anchor="end"></text>
+
+                        <!-- Vertices Labels -->
+                        <text id="sum-label-A" class="vertex-label" text-anchor="middle">A</text>
+                        <text id="sum-label-B" class="vertex-label" text-anchor="end" x="40" y="325">B</text>
+                        <text id="sum-label-C" class="vertex-label" text-anchor="start" x="360" y="325">C</text>
+                    </svg>
+                </div>
+            </div>
+
+            <!-- The Calculation Display -->
+            <div class="text-center bg-slate-800 text-white p-6 rounded-2xl shadow-lg">
+                <div class="text-sm text-slate-400 mb-2 font-bold tracking-widest uppercase">המחשבון מוכיח:</div>
+                <div class="flex justify-center items-center gap-2 text-2xl md:text-4xl font-mono font-bold" dir="ltr">
+                    <span id="calc-A" class="text-orange-400">60°</span>
+                    <span>+</span>
+                    <span id="calc-B" class="text-orange-400">60°</span>
+                    <span>+</span>
+                    <span id="calc-C" class="text-orange-400">60°</span>
+                    <span>=</span>
+                    <span class="text-green-400">180°</span>
+                </div>
+            </div>
+        </div>
+
+        <!-- SECTION 3: PRACTICE -->
+        <div id="section-practice" class="hidden fade-in">
+            
+            <!-- Summary Section -->
+            <div class="mb-8">
+                <h3 class="text-xl font-black text-slate-800 border-b-2 border-slate-200 pb-2 mb-4">📜 סיכום: משפטי המפתח</h3>
+                
+                <div class="grid md:grid-cols-2 gap-4">
+                    <div class="summary-card" style="border-color: #3b82f6;">
+                        <h4 class="font-bold text-lg text-blue-700">1. השוקיים שוות</h4>
+                        <p class="text-gray-600 text-sm">במשולש שווה שוקיים, שתי הצלעות (השוקיים) תמיד שוות זו לזו. <br><span dir="ltr" class="font-mono text-xs bg-gray-100 px-1 rounded">AB = AC</span></p>
+                    </div>
+
+                    <div class="summary-card" style="border-color: #10b981;">
+                        <h4 class="font-bold text-lg text-green-700">2. זוויות הבסיס שוות</h4>
+                        <p class="text-gray-600 text-sm">הזוויות שנמצאות מול השוקיים השוות הן תמיד שוות בגודלן. <br><span dir="ltr" class="font-mono text-xs bg-gray-100 px-1 rounded">∠B = ∠C</span></p>
+                    </div>
+
+                    <div class="summary-card md:col-span-2" style="border-color: #a855f7;">
+                        <h4 class="font-bold text-lg text-purple-700">3. משפט "שלושת המוסקטרים" (הקסם)</h4>
+                        <p class="text-gray-600 text-sm">במשולש שווה שוקיים, הקו שיוצא מהקודקוד לבסיס (AD) הוא <strong>בו-זמנית</strong>:</p>
+                        <ul class="list-disc list-inside text-sm text-gray-700 mt-2 space-y-1 font-medium bg-purple-50 p-2 rounded-lg">
+                            <li>📐 <strong>גובה:</strong> יוצר 90 מעלות עם הבסיס.</li>
+                            <li>📏 <strong>תיכון:</strong> חוצה את הבסיס לשני חלקים שווים.</li>
+                            <li>✂️ <strong>חוצה זווית:</strong> מחלק את זווית הראש לשתי זוויות שוות (1 ו-2).</li>
+                        </ul>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Quiz Section -->
+            <div class="max-w-2xl mx-auto">
+                <div class="w-full bg-gray-200 rounded-full h-3 mb-6 overflow-hidden">
+                    <div id="progress-bar" class="bg-blue-600 h-3 rounded-full transition-all duration-500" style="width: 0%"></div>
+                </div>
+
+                <div id="quiz-container" class="bg-white rounded-3xl shadow-xl p-6 md:p-10 border border-gray-100">
+                    <div class="flex justify-between items-center mb-6">
+                        <span id="question-number" class="text-sm font-bold text-gray-500 bg-gray-100 px-3 py-1 rounded-full">שאלה 1 / 5</span>
+                        <div class="text-blue-600 font-bold flex items-center gap-1">
+                            🏆 <span id="score-display">0</span> נקודות
+                        </div>
+                    </div>
+
+                    <h3 id="question-text" class="text-2xl font-bold mb-8 text-gray-800 text-center leading-relaxed">...</h3>
+                    <div id="options-container" class="grid grid-cols-1 gap-4"></div>
+
+                    <div id="feedback" class="mt-6 hidden rounded-2xl p-6 border-2 animate-pulse-once">
+                        <h4 id="feedback-title" class="text-xl font-bold mb-2"></h4>
+                        <p id="feedback-text" class="text-lg"></p>
+                        <button onclick="nextQuestion()" id="next-btn" class="mt-6 w-full bg-blue-600 text-white font-bold py-3 rounded-xl text-lg hover:bg-blue-700 shadow-lg transition transform hover:-translate-y-1">
+                            לשאלה הבאה
+                        </button>
+                    </div>
+                </div>
+
+                <div id="completion-screen" class="hidden bg-white rounded-3xl shadow-2xl p-10 text-center border-t-8 border-blue-500">
+                    <div class="text-7xl mb-6 animate-bounce">🏆</div>
+                    <h2 class="text-3xl font-black mb-4 text-gray-800">אלופי המשולשים!</h2>
+                    <p class="text-xl text-gray-600 mb-8">סיימתם את התרגול בהצלחה.</p>
+                    <div class="text-5xl font-black text-blue-600 mb-8" id="final-score-big">100</div>
+                    <button onclick="restartQuiz()" class="bg-gray-100 hover:bg-gray-200 text-gray-800 font-bold py-3 px-8 rounded-2xl text-xl transition border border-gray-300">
+                        תרגול מחדש
+                    </button>
+                </div>
+            </div>
+        </div>
+
+    </main>
+
+    <script>
+        // --- Navigation ---
+        function switchTab(tabName) {
+            ['explore', 'sum180', 'practice'].forEach(t => {
+                document.getElementById(`btn-${t}`).classList.remove('active');
+                document.getElementById(`section-${t}`).classList.add('hidden');
+            });
+            document.getElementById(`btn-${tabName}`).classList.add('active');
+            document.getElementById(`section-${tabName}`).classList.remove('hidden');
+
+            if (tabName === 'sum180') updateSumTriangle();
+        }
+
+        // --- LAB LOGIC (Isosceles) ---
+        let activeLayers = {
+            altitude: false,
+            median: false,
+            bisector: false
+        };
+
+        function toggleView(layer) {
+            activeLayers[layer] = !activeLayers[layer];
+            const btn = {
+                'altitude': 'btn-prop-1',
+                'median': 'btn-prop-2',
+                'bisector': 'btn-prop-3'
+            }[layer];
+            
+            const el = document.getElementById(btn);
+            if(activeLayers[layer]) {
+                el.classList.add('bg-gray-100', 'ring-2', 'ring-blue-400');
+                if(layer === 'altitude') { el.classList.add('text-purple-700', 'border-purple-300'); }
+                if(layer === 'median') { el.classList.add('text-blue-700', 'border-blue-300'); }
+                if(layer === 'bisector') { el.classList.add('text-green-700', 'border-green-300'); }
+            } else {
+                el.className = "px-4 py-2 bg-white/90 backdrop-blur border border-gray-200 rounded-lg shadow-sm text-sm font-bold text-gray-600 hover:bg-gray-50 transition flex items-center gap-2";
+                if (layer === 'altitude') el.classList.add('hover:text-purple-600');
+                if (layer === 'median') el.classList.add('hover:text-blue-600');
+                if (layer === 'bisector') el.classList.add('hover:text-green-600');
+            }
+            updateTriangle();
+        }
+
+        function updateTriangle() {
+            const height = parseInt(document.getElementById('input-height').value);
+            const baseW = parseInt(document.getElementById('input-width').value);
+            
+            const displayScale = 20; 
+            document.getElementById('val-h').innerText = (height/displayScale).toFixed(1) + " ס\"מ";
+            document.getElementById('val-w').innerText = (baseW/displayScale).toFixed(1) + " ס\"מ";
+
+            const cx = 200;
+            const bottomY = 350;
+            const topY = bottomY - height;
+            
+            const Ax = cx; 
+            const Ay = topY;
+            const Bx = cx - baseW/2; 
+            const By = bottomY;
+            const Cx = cx + baseW/2; 
+            const Cy = bottomY;
+            const Dx = cx; 
+            const Dy = bottomY;
+
+            const setAttr = (id, attr, val) => {
+                const el = document.getElementById(id);
+                if(el) el.setAttribute(attr, val);
+            };
+            const setText = (id, val) => {
+                const el = document.getElementById(id);
+                if(el) el.textContent = val;
+            };
+
+            setAttr('label-A', 'x', Ax); setAttr('label-A', 'y', Ay - 25);
+            setAttr('label-B', 'x', Bx - 15); setAttr('label-B', 'y', By + 5);
+            setAttr('label-C', 'x', Cx + 15); setAttr('label-C', 'y', Cy + 5);
+            setAttr('label-D', 'x', Dx); setAttr('label-D', 'y', Dy + 25);
+
+            setAttr('line-AB', 'd', `M${Ax},${Ay} L${Bx},${By}`);
+            setAttr('line-AC', 'd', `M${Ax},${Ay} L${Cx},${Cy}`);
+            setAttr('line-BC', 'd', `M${Bx},${By} L${Cx},${Cy}`);
+            setAttr('line-AD', 'x1', Ax); setAttr('line-AD', 'y1', Ay);
+            setAttr('line-AD', 'x2', Dx); setAttr('line-AD', 'y2', Dy);
+
+            const tickLen = 8;
+            const midAB = {x: (Ax+Bx)/2, y: (Ay+By)/2};
+            const midAC = {x: (Ax+Cx)/2, y: (Ay+Cy)/2};
+            const angleAB = Math.atan2(By-Ay, Bx-Ax);
+            const angleTick = angleAB + Math.PI/2;
+            const angleAC = Math.atan2(Cy-Ay, Cx-Ax);
+            const angleTickC = angleAC - Math.PI/2;
+
+            setAttr('tick-AB', 'x1', midAB.x - tickLen * Math.cos(angleTick)); 
+            setAttr('tick-AB', 'y1', midAB.y - tickLen * Math.sin(angleTick));
+            setAttr('tick-AB', 'x2', midAB.x + tickLen * Math.cos(angleTick));
+            setAttr('tick-AB', 'y2', midAB.y + tickLen * Math.sin(angleTick));
+
+            setAttr('tick-AC', 'x1', midAC.x - tickLen * Math.cos(angleTickC));
+            setAttr('tick-AC', 'y1', midAC.y - tickLen * Math.sin(angleTickC));
+            setAttr('tick-AC', 'x2', midAC.x + tickLen * Math.cos(angleTickC));
+            setAttr('tick-AC', 'y2', midAC.y + tickLen * Math.sin(angleTickC));
+
+            const angleBaseRad = Math.atan2(height, baseW/2);
+            const angleBaseDeg = Math.round(angleBaseRad * 180 / Math.PI);
+            const angleHeadDeg = 180 - (2 * angleBaseDeg);
+            const angleHeadHalf = angleHeadDeg / 2;
+            const halfBaseVal = (baseW/2 / displayScale).toFixed(1);
+
+            const wSize = 40;
+            const bx2 = Bx + wSize * Math.cos(-angleBaseRad);
+            const by2 = By + wSize * Math.sin(-angleBaseRad);
+            setAttr('arc-B', 'd', `M${Bx+wSize},${By} A${wSize},${wSize} 0 0,0 ${bx2},${by2}`);
+            setText('text-angle-B', angleBaseDeg + "°");
+            setAttr('text-angle-B', 'x', Bx + 40); setAttr('text-angle-B', 'y', By - 10);
+
+            const cx1 = Cx - wSize; 
+            const cx2 = Cx + wSize * Math.cos(Math.PI + angleBaseRad);
+            const cy2 = Cy + wSize * Math.sin(Math.PI + angleBaseRad);
+            setAttr('arc-C', 'd', `M${cx1},${Cy} A${wSize},${wSize} 0 0,1 ${cx2},${cy2}`);
+            setText('text-angle-C', angleBaseDeg + "°");
+            setAttr('text-angle-C', 'x', Cx - 40); setAttr('text-angle-C', 'y', Cy - 10);
+
+            const clear = (id) => { 
+                const el = document.getElementById(id);
+                if(el) { el.textContent = ''; el.setAttribute('d', ''); }
+            };
+            clear('text-angle-A1'); clear('text-angle-A2');
+            clear('text-seg-BD'); clear('text-seg-DC');
+            clear('bracket-BD'); clear('bracket-DC');
+            clear('mark-90');
+
+            if (activeLayers.bisector) {
+                setText('text-angle-A1', "1");
+                setText('text-angle-A2', "2");
+                
+                const labelDist = 100; 
+                const halfRad = (angleHeadHalf / 2) * Math.PI / 180;
+                
+                const x1 = Ax + labelDist * Math.sin(halfRad);
+                const y1 = Ay + labelDist * Math.cos(halfRad);
+                setAttr('text-angle-A1', 'x', x1); 
+                setAttr('text-angle-A1', 'y', y1);
+                
+                const x2 = Ax - labelDist * Math.sin(halfRad);
+                const y2 = Ay + labelDist * Math.cos(halfRad);
+                setAttr('text-angle-A2', 'x', x2); 
+                setAttr('text-angle-A2', 'y', y2);
+            }
+
+            if (activeLayers.median) {
+                setText('text-seg-BD', halfBaseVal + ' ס"מ');
+                setText('text-seg-DC', halfBaseVal + ' ס"מ');
+                setAttr('text-seg-BD', 'x', (Bx+Dx)/2);
+                setAttr('text-seg-DC', 'x', (Cx+Dx)/2);
+                
+                const bY = By + 15;
+                setAttr('bracket-BD', 'd', `M${Bx},${By+5} L${Bx},${bY} L${Dx},${bY} L${Dx},${By+5}`);
+                setAttr('bracket-DC', 'd', `M${Dx},${By+5} L${Dx},${bY} L${Cx},${bY} L${Cx},${By+5}`);
+            }
+
+            if (activeLayers.altitude) {
+                setAttr('mark-90', 'd', `M${Dx+15},${Dy} L${Dx+15},${Dy-15} L${Dx},${Dy-15}`);
+            }
+        }
+
+        // --- SUM 180 LOGIC (General Triangle) ---
+        function updateSumTriangle() {
+            // Sliders for Vertex A position
+            const ax = parseInt(document.getElementById('sum-input-x').value); // 50-350
+            const ay = parseInt(document.getElementById('sum-input-y').value); // 50-250
+            
+            // Fixed base BC
+            const Bx = 50, By = 300;
+            const Cx = 350, Cy = 300;
+            const Ax = ax, Ay = ay;
+
+            // Update Labels
+            const setAttr = (id, attr, val) => document.getElementById(id).setAttribute(attr, val);
+            const setText = (id, val) => document.getElementById(id).textContent = val;
+
+            setAttr('sum-lines', 'd', `M${Bx},${By} L${Ax},${Ay} L${Cx},${Cy} Z`);
+            setAttr('sum-label-A', 'x', Ax); setAttr('sum-label-A', 'y', Ay - 15);
+
+            // Calc Angles using simple Law of Cosines or atan2
+            const dist = (x1, y1, x2, y2) => Math.sqrt((x2-x1)**2 + (y2-y1)**2);
+            const c = dist(Ax, Ay, Bx, By);
+            const b = dist(Ax, Ay, Cx, Cy);
+            const a = dist(Bx, By, Cx, Cy);
+
+            // Cosine Rule: a^2 = b^2 + c^2 - 2bc cosA -> cosA = (b^2+c^2-a^2)/(2bc)
+            const radA = Math.acos((b*b + c*c - a*a) / (2*b*c));
+            const radB = Math.acos((a*a + c*c - b*b) / (2*a*c));
+            const radC = Math.acos((a*a + b*b - c*c) / (2*a*b));
+
+            let degA = Math.round(radA * 180 / Math.PI);
+            let degB = Math.round(radB * 180 / Math.PI);
+            let degC = 180 - degA - degB; // Force sum to 180 for rounding errors
+
+            // Draw Arcs
+            const r = 30;
+            
+            // Arc A (start angle from line AB to AC)
+            // Angle of AB vector: atan2(By-Ay, Bx-Ax)
+            const angAB = Math.atan2(By-Ay, Bx-Ax);
+            const angAC = Math.atan2(Cy-Ay, Cx-Ax);
+            // Draw arc from angAB to angAC?
+            // Need correct sweep flag. A is top. 
+            // AB goes down-left, AC goes down-right.
+            // SVG Arc: M start A r r 0 0 1 end
+            const startAx = Ax + r * Math.cos(angAB);
+            const startAy = Ay + r * Math.sin(angAB);
+            const endAx = Ax + r * Math.cos(angAC);
+            const endAy = Ay + r * Math.sin(angAC);
+            setAttr('sum-arc-A', 'd', `M${startAx},${startAy} A${r},${r} 0 0,0 ${endAx},${endAy}`); // Sweep 0 for CCW top
+
+            // Arc B
+            const angBC = 0; // Horizontal right
+            const angBA = Math.atan2(Ay-By, Ax-Bx);
+            const startBx = Bx + r * Math.cos(angBC);
+            const startBy = By + r * Math.sin(angBC);
+            const endBx = Bx + r * Math.cos(angBA);
+            const endBy = By + r * Math.sin(angBA);
+            setAttr('sum-arc-B', 'd', `M${startBx},${startBy} A${r},${r} 0 0,0 ${endBx},${endBy}`); // Sweep 0 CCW
+
+            // Arc C
+            const angCB = Math.PI; // Horizontal left
+            const angCA = Math.atan2(Ay-Cy, Ax-Cx);
+            const startCx = Cx + r * Math.cos(angCA);
+            const startCy = Cy + r * Math.sin(angCA);
+            const endCx = Cx + r * Math.cos(angCB);
+            const endCy = Cy + r * Math.sin(angCB);
+            setAttr('sum-arc-C', 'd', `M${startCx},${startCy} A${r},${r} 0 0,0 ${endCx},${endCy}`);
+
+            // Text Positions
+            setText('sum-text-A', degA + "°");
+            setAttr('sum-text-A', 'x', Ax); setAttr('sum-text-A', 'y', Ay + 45);
+            
+            setText('sum-text-B', degB + "°");
+            setAttr('sum-text-B', 'x', Bx + 40); setAttr('sum-text-B', 'y', By - 10);
+            
+            setText('sum-text-C', degC + "°");
+            setAttr('sum-text-C', 'x', Cx - 40); setAttr('sum-text-C', 'y', Cy - 10);
+
+            // Update Calc Display
+            setText('calc-A', degA + "°");
+            setText('calc-B', degB + "°");
+            setText('calc-C', degC + "°");
+        }
+
+        // --- Quiz Logic ---
+        const questions = [
+            {
+                q: "במשולש שווה שוקיים ABC, אילו זוויות שוות תמיד?",
+                options: ["זווית הראש וזווית הבסיס", "שתי זוויות הבסיס (B ו-C)", "כל שלוש הזוויות", "אין זוויות שוות"],
+                correct: 1,
+                explanation: "במשולש שווה שוקיים, הזוויות שמול השוקיים השוות (זוויות הבסיס) הן שוות."
+            },
+            {
+                q: "נתון משולש שווה שוקיים שבו זווית הראש היא 80 מעלות. מה גודל כל אחת מזוויות הבסיס?",
+                options: ["50 מעלות", "80 מעלות", "100 מעלות", "40 מעלות"],
+                correct: 0,
+                explanation: "סכום זוויות במשולש הוא 180. נחסר את הראש: 180-80=100. נחלק ב-2 כי זוויות הבסיס שוות: 100:2=50."
+            },
+            {
+                q: "במשולש שווה שוקיים העבירו גובה לבסיס (AD). מה עוד אנחנו יודעים על הקו הזה?",
+                options: ["שהוא מקביל לשוק", "שהוא גם תיכון וגם חוצה זווית הראש", "שהוא שווה באורכו לבסיס", "שהוא ארוך יותר מהשוקיים"],
+                correct: 1,
+                explanation: "נכון מאוד! המשפט החשוב אומר שבמשולש שווה שוקיים הגובה לבסיס, התיכון לבסיס וחוצה זווית הראש מתלכדים."
+            },
+            {
+                q: "אורך שוק AB הוא 10 ס''מ ואורך הבסיס BC הוא 6 ס''מ. מהו היקף המשולש?",
+                options: ["16 ס''מ", "22 ס''מ", "26 ס''מ", "32 ס''מ"],
+                correct: 2,
+                explanation: "שתי השוקיים שוות (AB=AC), אז גם השוק השנייה היא 10. ההיקף: 10 + 10 + 6 = 26 ס\"מ."
+            },
+            {
+                q: "התיכון לבסיס במשולש שווה שוקיים יוצר זווית של...?",
+                options: ["30 מעלות עם הבסיס", "45 מעלות עם הבסיס", "90 מעלות עם הבסיס", "180 מעלות עם הבסיס"],
+                correct: 2,
+                explanation: "מכיוון שהתיכון לבסיס הוא גם גובה, הוא מאונך לבסיס ויוצר זווית של 90 מעלות."
+            }
+        ];
+
+        let currentQuestion = 0;
+        let score = 0;
+        let answered = false;
+
+        function loadQuestion() {
+            answered = false;
+            const q = questions[currentQuestion];
+            
+            document.getElementById('question-number').innerText = `שאלה ${currentQuestion + 1} / ${questions.length}`;
+            document.getElementById('question-text').innerText = q.q;
+            document.getElementById('feedback').classList.add('hidden');
+            document.getElementById('progress-bar').style.width = `${((currentQuestion) / questions.length) * 100}%`;
+
+            const container = document.getElementById('options-container');
+            container.innerHTML = '';
+            
+            q.options.forEach((opt, index) => {
+                const btn = document.createElement('button');
+                btn.className = "answer-btn w-full text-right p-4 rounded-xl border-2 border-gray-200 hover:border-blue-400 bg-white text-lg font-medium shadow-sm text-gray-700";
+                btn.innerText = opt;
+                btn.onclick = () => checkAnswer(index, btn);
+                container.appendChild(btn);
+            });
+        }
+
+        function checkAnswer(selectedIndex, btnElement) {
+            if (answered) return;
+            answered = true;
+
+            const q = questions[currentQuestion];
+            const isCorrect = selectedIndex === q.correct;
+            const feedbackBox = document.getElementById('feedback');
+            const feedbackTitle = document.getElementById('feedback-title');
+            const feedbackText = document.getElementById('feedback-text');
+
+            const buttons = document.getElementById('options-container').children;
+            for(let btn of buttons) {
+                btn.disabled = true;
+                btn.classList.add('opacity-70');
+            }
+
+            if (isCorrect) {
+                score += 20; 
+                document.getElementById('score-display').innerText = score;
+                btnElement.classList.remove('border-gray-200', 'bg-white');
+                btnElement.classList.add('border-green-500', 'bg-green-100', 'text-green-800');
+                
+                feedbackBox.className = "mt-6 rounded-2xl p-6 border-2 border-green-200 bg-green-50 block fade-in";
+                feedbackTitle.innerText = "נכון מאוד! ✅";
+                feedbackTitle.className = "text-xl font-bold mb-2 text-green-700";
+            } else {
+                btnElement.classList.remove('border-gray-200', 'bg-white');
+                btnElement.classList.add('border-red-500', 'bg-red-100', 'text-red-800');
+                buttons[q.correct].classList.remove('border-gray-200', 'bg-white', 'opacity-70');
+                buttons[q.correct].classList.add('border-green-500', 'bg-green-50', 'text-green-800');
+
+                feedbackBox.className = "mt-6 rounded-2xl p-6 border-2 border-red-200 bg-red-50 block fade-in";
+                feedbackTitle.innerText = "לא נורא, נלמד מזה 💡";
+                feedbackTitle.className = "text-xl font-bold mb-2 text-red-700";
+            }
+
+            feedbackText.innerText = q.explanation;
+            
+            const nextBtn = document.getElementById('next-btn');
+            if (currentQuestion === questions.length - 1) {
+                nextBtn.innerText = "סיום וקבלת ציון";
+            } else {
+                nextBtn.innerText = "לשאלה הבאה";
+            }
+            feedbackBox.classList.remove('hidden');
+        }
+
+        function nextQuestion() {
+            if (currentQuestion < questions.length - 1) {
+                currentQuestion++;
+                loadQuestion();
+            } else {
+                showResults();
+            }
+        }
+
+        function showResults() {
+            document.getElementById('quiz-container').classList.add('hidden');
+            document.getElementById('completion-screen').classList.remove('hidden');
+            document.getElementById('progress-bar').style.width = '100%';
+            document.getElementById('final-score-big').innerText = score;
+        }
+
+        function restartQuiz() {
+            currentQuestion = 0;
+            score = 0;
+            document.getElementById('score-display').innerText = "0";
+            document.getElementById('completion-screen').classList.add('hidden');
+            document.getElementById('quiz-container').classList.remove('hidden');
+            loadQuestion();
+        }
+
+        // Init
+        updateTriangle();
+        updateSumTriangle();
+        loadQuestion();
+    </script>
+</body>
+</html>

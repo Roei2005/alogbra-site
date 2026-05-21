@@ -1,0 +1,465 @@
+<!DOCTYPE html>
+<html lang="he" dir="rtl">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>המעבדה המלאה לפרבולות</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script src="https://unpkg.com/lucide@latest"></script>
+    <style>
+        .math-serif { font-family: 'Times New Roman', serif; }
+        /* עיצוב סליידרים */
+        input[type=range] {
+            -webkit-appearance: none; 
+            background: transparent; 
+        }
+        input[type=range]::-webkit-slider-thumb {
+            -webkit-appearance: none;
+            height: 18px;
+            width: 18px;
+            border-radius: 50%;
+            background: currentColor; /* משתמש בצבע הטקסט של האלמנט */
+            cursor: pointer;
+            margin-top: -7px; 
+            box-shadow: 0 1px 2px rgba(0,0,0,0.3);
+        }
+        input[type=range]::-webkit-slider-runnable-track {
+            width: 100%;
+            height: 4px;
+            cursor: pointer;
+            background: #cbd5e1;
+            border-radius: 2px;
+        }
+        
+        /* הסתרת אלמנטים לפי טאב */
+        .tab-content { display: none; }
+        .tab-content.active { display: block; }
+        
+        .tab-btn.active { 
+            background-color: white; 
+            color: #4338ca; 
+            border-bottom: 2px solid #4338ca;
+            font-weight: bold;
+        }
+    </style>
+</head>
+<body class="min-h-screen bg-slate-100 text-slate-900 font-sans">
+
+    <!-- Header -->
+    <header class="bg-indigo-700 text-white shadow-md sticky top-0 z-50">
+        <div class="container mx-auto px-4 py-3 flex justify-between items-center">
+            <h1 class="text-lg font-bold flex items-center gap-2">
+                <i data-lucide="function-square"></i>
+                המעבדה המלאה לפרבולות
+            </h1>
+        </div>
+        
+        <!-- Tabs Navigation -->
+        <div class="container mx-auto px-4 flex gap-4 mt-2 overflow-x-auto">
+            <button onclick="switchTab('vertex')" id="btn-vertex" class="tab-btn active px-4 py-2 text-indigo-100 hover:text-white transition-colors">
+                הצגה קודקודית (p, k)
+            </button>
+            <button onclick="switchTab('standard')" id="btn-standard" class="tab-btn px-4 py-2 text-indigo-100 hover:text-white transition-colors">
+                הצגה סטנדרטית (a, b, c)
+            </button>
+        </div>
+    </header>
+
+    <main class="container mx-auto px-4 py-6 max-w-6xl">
+        
+        <div class="grid grid-cols-1 lg:grid-cols-12 gap-6 items-start">
+            
+            <!-- Controls Panel (Right Side) -->
+            <div class="lg:col-span-4 space-y-4">
+                
+                <!-- Vertex Form Controls -->
+                <div id="ctrl-vertex" class="tab-content active bg-white p-5 rounded-xl shadow-sm border border-slate-200">
+                    <div class="flex items-center justify-between mb-4 border-b pb-2">
+                        <h2 class="font-bold text-gray-700">פרמטרים (קודקודית)</h2>
+                        <span class="text-xs bg-indigo-100 text-indigo-800 px-2 py-1 rounded math-serif" dir="ltr">y = a(x-p)² + k</span>
+                    </div>
+
+                    <!-- Slider a -->
+                    <div class="mb-5 text-blue-600">
+                        <div class="flex justify-between mb-1">
+                            <label class="font-bold">a (מפתח וכיוון)</label>
+                            <span id="val-a-v" class="font-mono font-bold bg-blue-50 px-2 rounded" dir="ltr">1.0</span>
+                        </div>
+                        <input type="range" id="input-a-v" min="-3" max="3" step="0.1" value="1" class="w-full">
+                    </div>
+
+                    <!-- Slider p -->
+                    <div class="mb-5 text-green-600">
+                        <div class="flex justify-between mb-1">
+                            <label class="font-bold">p (הזזה אופקית)</label>
+                            <span id="val-p" class="font-mono font-bold bg-green-50 px-2 rounded" dir="ltr">0.0</span>
+                        </div>
+                        <input type="range" id="input-p" min="-5" max="5" step="0.5" value="0" class="w-full">
+                    </div>
+
+                    <!-- Slider k -->
+                    <div class="mb-5 text-purple-600">
+                        <div class="flex justify-between mb-1">
+                            <label class="font-bold">k (הזזה אנכית)</label>
+                            <span id="val-k" class="font-mono font-bold bg-purple-50 px-2 rounded" dir="ltr">0.0</span>
+                        </div>
+                        <input type="range" id="input-k" min="-5" max="5" step="0.5" value="0" class="w-full">
+                    </div>
+                    
+                    <!-- Important Note for P -->
+                    <div class="bg-amber-50 border-r-4 border-amber-400 p-3 rounded text-sm text-amber-800 mt-6">
+                        <p class="font-bold flex items-center gap-1 mb-1">
+                            <i data-lucide="alert-triangle" width="16"></i>
+                            שים לב להזזה האופקית!
+                        </p>
+                        <p>במשוואה כתוב <span dir="ltr">(x - p)</span>. לכן הסימן עובד <strong>"הפוך"</strong> להיגיון:</p>
+                        <ul class="list-disc list-inside mt-1 text-xs">
+                            <li>מינוס בסוגריים <span dir="ltr">(x-3)</span> ← הזזה <strong>ימינה</strong>.</li>
+                            <li>פלוס בסוגריים <span dir="ltr">(x+3)</span> ← הזזה <strong>שמאלה</strong>.</li>
+                        </ul>
+                    </div>
+
+                    <button onclick="resetValues()" class="w-full mt-4 py-2 bg-slate-100 hover:bg-slate-200 text-slate-600 rounded-lg text-sm font-bold transition">איפוס</button>
+                </div>
+
+                <!-- Standard Form Controls -->
+                <div id="ctrl-standard" class="tab-content bg-white p-5 rounded-xl shadow-sm border border-slate-200">
+                    <div class="flex items-center justify-between mb-4 border-b pb-2">
+                        <h2 class="font-bold text-gray-700">פרמטרים (סטנדרטית)</h2>
+                        <span class="text-xs bg-indigo-100 text-indigo-800 px-2 py-1 rounded math-serif" dir="ltr">y = ax² + bx + c</span>
+                    </div>
+
+                    <!-- Slider a -->
+                    <div class="mb-5 text-blue-600">
+                        <div class="flex justify-between mb-1">
+                            <label class="font-bold">a (מפתח)</label>
+                            <span id="val-a-s" class="font-mono font-bold bg-blue-50 px-2 rounded" dir="ltr">1.0</span>
+                        </div>
+                        <input type="range" id="input-a-s" min="-3" max="3" step="0.1" value="1" class="w-full">
+                    </div>
+
+                    <!-- Slider b -->
+                    <div class="mb-5 text-orange-600">
+                        <div class="flex justify-between mb-1">
+                            <label class="font-bold">b (מיקום הקודקוד)</label>
+                            <span id="val-b" class="font-mono font-bold bg-orange-50 px-2 rounded" dir="ltr">0.0</span>
+                        </div>
+                        <input type="range" id="input-b" min="-6" max="6" step="0.5" value="0" class="w-full">
+                        <p class="text-xs text-gray-500 mt-1">מזיז את הקודקוד ימינה/שמאלה ולמעלה/למטה בו זמנית.</p>
+                    </div>
+
+                    <!-- Slider c -->
+                    <div class="mb-5 text-pink-600">
+                        <div class="flex justify-between mb-1">
+                            <label class="font-bold">c (חיתוך עם Y)</label>
+                            <span id="val-c" class="font-mono font-bold bg-pink-50 px-2 rounded" dir="ltr">0.0</span>
+                        </div>
+                        <input type="range" id="input-c" min="-5" max="5" step="0.5" value="0" class="w-full">
+                        <p class="text-xs text-gray-500 mt-1">נקודת המפגש עם ציר ה-y.</p>
+                    </div>
+
+                    <button onclick="resetValues()" class="w-full mt-4 py-2 bg-slate-100 hover:bg-slate-200 text-slate-600 rounded-lg text-sm font-bold transition">איפוס</button>
+                </div>
+            </div>
+
+            <!-- Visualization Panel (Left Side) -->
+            <div class="lg:col-span-8 sticky top-36">
+                <div class="bg-white rounded-xl shadow-lg border border-slate-200 overflow-hidden">
+                    
+                    <!-- Equation Display -->
+                    <div class="bg-slate-50 border-b border-slate-200 p-4 text-center min-h-[80px] flex items-center justify-center">
+                        <div id="equation-display" class="text-2xl md:text-3xl font-bold text-slate-800 math-serif" dir="ltr">
+                            y = x²
+                        </div>
+                    </div>
+
+                    <!-- Graph Area -->
+                    <div class="relative w-full h-[350px] md:h-[500px] bg-white cursor-crosshair" id="graph-container">
+                        <!-- SVG injected via JS -->
+                    </div>
+
+                    <!-- Analysis Footer -->
+                    <div class="bg-indigo-50 border-t border-indigo-100 p-3 flex flex-wrap gap-4 text-sm justify-center md:justify-start">
+                        <div class="flex items-center gap-2 bg-white px-3 py-1 rounded shadow-sm border border-indigo-100">
+                            <span class="font-bold text-indigo-900">קודקוד:</span>
+                            <span id="analysis-vertex" class="font-mono text-indigo-700 font-bold" dir="ltr">(0, 0)</span>
+                        </div>
+                        <div id="analysis-y-intercept" class="hidden flex items-center gap-2 bg-white px-3 py-1 rounded shadow-sm border border-indigo-100">
+                            <span class="font-bold text-pink-700">חיתוך Y:</span>
+                            <span id="val-y-int" class="font-mono text-pink-700 font-bold" dir="ltr">(0, 0)</span>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+        </div>
+    </main>
+
+    <script>
+        // --- State Management ---
+        let mode = 'vertex'; // 'vertex' or 'standard'
+        
+        let stateV = { a: 1, p: 0, k: 0 };
+        let stateS = { a: 1, b: 0, c: 0 };
+
+        // --- DOM Elements ---
+        const els = {
+            // Vertex inputs
+            inputAv: document.getElementById('input-a-v'),
+            inputP: document.getElementById('input-p'),
+            inputK: document.getElementById('input-k'),
+            valAv: document.getElementById('val-a-v'),
+            valP: document.getElementById('val-p'),
+            valK: document.getElementById('val-k'),
+            
+            // Standard inputs
+            inputAs: document.getElementById('input-a-s'),
+            inputB: document.getElementById('input-b'),
+            inputC: document.getElementById('input-c'),
+            valAs: document.getElementById('val-a-s'),
+            valB: document.getElementById('val-b'),
+            valC: document.getElementById('val-c'),
+
+            // Display
+            eq: document.getElementById('equation-display'),
+            container: document.getElementById('graph-container'),
+            vertexDisp: document.getElementById('analysis-vertex'),
+            yIntBox: document.getElementById('analysis-y-intercept'),
+            yIntDisp: document.getElementById('val-y-int'),
+            
+            // Tabs
+            tabV: document.getElementById('btn-vertex'),
+            tabS: document.getElementById('btn-standard'),
+            contentV: document.getElementById('ctrl-vertex'),
+            contentS: document.getElementById('ctrl-standard')
+        };
+
+        // --- Initialize Listeners ---
+        // Vertex listeners
+        [els.inputAv, els.inputP, els.inputK].forEach(el => el.addEventListener('input', updateState));
+        // Standard listeners
+        [els.inputAs, els.inputB, els.inputC].forEach(el => el.addEventListener('input', updateState));
+
+        // --- Functions ---
+
+        function switchTab(newMode) {
+            mode = newMode;
+            
+            // Update Tab Styles
+            if (mode === 'vertex') {
+                els.tabV.classList.add('active');
+                els.tabS.classList.remove('active');
+                els.contentV.classList.add('active');
+                els.contentS.classList.remove('active');
+                els.yIntBox.classList.add('hidden'); // Hide Y intercept in vertex mode (less relevant usually)
+            } else {
+                els.tabS.classList.add('active');
+                els.tabV.classList.remove('active');
+                els.contentS.classList.add('active');
+                els.contentV.classList.remove('active');
+                els.yIntBox.classList.remove('hidden');
+            }
+            render();
+        }
+
+        function updateState() {
+            if (mode === 'vertex') {
+                stateV.a = parseFloat(els.inputAv.value);
+                stateV.p = parseFloat(els.inputP.value);
+                stateV.k = parseFloat(els.inputK.value);
+            } else {
+                stateS.a = parseFloat(els.inputAs.value);
+                stateS.b = parseFloat(els.inputB.value);
+                stateS.c = parseFloat(els.inputC.value);
+            }
+            render();
+        }
+
+        function render() {
+            // 1. Update Sliders Display
+            els.valAv.innerText = stateV.a;
+            els.valP.innerText = stateV.p;
+            els.valK.innerText = stateV.k;
+            
+            els.valAs.innerText = stateS.a;
+            els.valB.innerText = stateS.b;
+            els.valC.innerText = stateS.c;
+
+            // 2. Determine Logic based on mode
+            let a, vx, vy, equationHtml;
+            
+            if (mode === 'vertex') {
+                a = stateV.a;
+                vx = stateV.p;
+                vy = stateV.k;
+                equationHtml = getVertexEquationHtml();
+            } else {
+                a = stateS.a;
+                // Calculate vertex from Standard Form: x = -b/2a
+                if (a !== 0) {
+                    vx = -stateS.b / (2 * a);
+                    // y = ax^2 + bx + c
+                    vy = (a * vx * vx) + (stateS.b * vx) + stateS.c;
+                } else {
+                    vx = 0; vy = stateS.c; // Fallback for line
+                }
+                equationHtml = getStandardEquationHtml();
+                
+                // Update Y intercept display for standard mode
+                els.yIntDisp.innerText = `(0, ${stateS.c})`;
+            }
+
+            // 3. Update UI
+            els.eq.innerHTML = equationHtml;
+            // Round displayed vertex to 2 decimals if needed
+            const dispVx = Number.isInteger(vx) ? vx : vx.toFixed(2);
+            const dispVy = Number.isInteger(vy) ? vy : vy.toFixed(2);
+            els.vertexDisp.innerText = `(${dispVx}, ${dispVy})`;
+
+            // 4. Draw Graph
+            drawGraph(a, vx, vy);
+        }
+
+        function getVertexEquationHtml() {
+            let aStr = stateV.a === -1 ? '-' : (stateV.a === 1 ? '' : stateV.a);
+            let inside = 'x';
+            if (stateV.p !== 0) {
+                const sign = stateV.p > 0 ? '-' : '+';
+                inside = `(x ${sign} ${Math.abs(stateV.p)})`;
+            }
+            let mainPart = stateV.p === 0 ? `x<sup class="text-sm">2</sup>` : `${inside}<sup class="text-sm">2</sup>`;
+            let kStr = '';
+            if (stateV.k !== 0) {
+                const kSign = stateV.k > 0 ? '+' : '-';
+                kStr = ` ${kSign} ${Math.abs(stateV.k)}`;
+            }
+            return `y = ${aStr}${mainPart}${kStr}`;
+        }
+
+        function getStandardEquationHtml() {
+            let a = stateS.a;
+            let b = stateS.b;
+            let c = stateS.c;
+
+            let aStr = a === -1 ? '-x<sup class="text-sm">2</sup>' : (a === 1 ? 'x<sup class="text-sm">2</sup>' : `${a}x<sup class="text-sm">2</sup>`);
+            
+            if (a === 0) aStr = ''; // Linear case
+
+            let bStr = '';
+            if (b !== 0) {
+                let sign = (b > 0 && a !== 0) ? '+' : (b < 0 ? '-' : ''); // Add + only if a exists
+                if (a === 0 && b > 0) sign = ''; // Start of string
+                bStr = ` ${sign} ${Math.abs(b)}x`;
+            }
+
+            let cStr = '';
+            if (c !== 0) {
+                let sign = (c > 0 && (a!==0 || b!==0)) ? '+' : (c < 0 ? '-' : '');
+                if (a===0 && b===0 && c>0) sign = '';
+                cStr = ` ${sign} ${Math.abs(c)}`;
+            }
+            
+            if (a===0 && b===0 && c===0) return 'y = 0';
+
+            return `y = ${aStr}${bStr}${cStr}`;
+        }
+
+        function drawGraph(a, vx, vy) {
+            const w = els.container.offsetWidth;
+            const h = els.container.offsetHeight;
+            const scale = 30; 
+            const originX = w / 2;
+            const originY = h / 2;
+
+            let path = "";
+            let isDrawing = false;
+
+            // Render loop
+            for (let screenX = 0; screenX <= w; screenX += 2) {
+                const mathX = (screenX - originX) / scale;
+                let mathY;
+
+                // We calculate Y based on the Vertex Form formula for simplicity in drawing 
+                // (since any parabola can be represented as such once we have a, vx, vy)
+                // y = a(x - vx)^2 + vy
+                mathY = a * Math.pow((mathX - vx), 2) + vy;
+
+                const screenY = originY - (mathY * scale);
+
+                if (screenY > -h && screenY < h * 2) {
+                    if (!isDrawing) {
+                        path += `M ${screenX} ${screenY}`;
+                        isDrawing = true;
+                    } else {
+                        path += ` L ${screenX} ${screenY}`;
+                    }
+                } else {
+                    isDrawing = false;
+                }
+            }
+
+            const vScreenX = originX + (vx * scale);
+            const vScreenY = originY - (vy * scale);
+            
+            // Format vertex text
+            const labelVx = Number.isInteger(vx) ? vx : vx.toFixed(1);
+            const labelVy = Number.isInteger(vy) ? vy : vy.toFixed(1);
+
+            // Determine if label should be above or below vertex based on 'a' (to avoid covering line)
+            const labelYOffset = a > 0 ? 25 : -15;
+
+            const svg = `
+                <svg width="100%" height="100%" viewBox="0 0 ${w} ${h}" xmlns="http://www.w3.org/2000/svg">
+                    <!-- Grid -->
+                    <defs>
+                        <pattern id="grid" width="${scale}" height="${scale}" patternUnits="userSpaceOnUse">
+                            <path d="M ${scale} 0 L 0 0 0 ${scale}" fill="none" stroke="#f1f5f9" stroke-width="1"/>
+                        </pattern>
+                    </defs>
+                    <rect width="100%" height="100%" fill="url(#grid)" />
+
+                    <!-- Axes -->
+                    <line x1="0" y1="${originY}" x2="${w}" y2="${originY}" stroke="#94a3b8" stroke-width="2" />
+                    <line x1="${originX}" y1="0" x2="${originX}" y2="${h}" stroke="#94a3b8" stroke-width="2" />
+                    
+                    <text x="${w - 20}" y="${originY - 8}" fill="#64748b" font-weight="bold">x</text>
+                    <text x="${originX + 8}" y="20" fill="#64748b" font-weight="bold">y</text>
+
+                    <!-- Parabola -->
+                    <path d="${path}" fill="none" stroke="#4f46e5" stroke-width="3" stroke-linecap="round" stroke-linejoin="round" />
+
+                    <!-- Vertex Point & Label -->
+                    <circle cx="${vScreenX}" cy="${vScreenY}" r="5" fill="#ef4444" stroke="white" stroke-width="2" />
+                    <rect x="${vScreenX - 25}" y="${vScreenY + labelYOffset - 12}" width="50" height="18" rx="4" fill="white" opacity="0.8" />
+                    <text x="${vScreenX}" y="${vScreenY + labelYOffset}" text-anchor="middle" font-size="12" font-weight="bold" fill="#ef4444" style="text-shadow: 0 0 2px white;">
+                        (${labelVx}, ${labelVy})
+                    </text>
+                </svg>
+            `;
+
+            els.container.innerHTML = svg;
+        }
+
+        function resetValues() {
+            if (mode === 'vertex') {
+                els.inputAv.value = 1;
+                els.inputP.value = 0;
+                els.inputK.value = 0;
+            } else {
+                els.inputAs.value = 1;
+                els.inputB.value = 0;
+                els.inputC.value = 0;
+            }
+            updateState();
+        }
+
+        // Initialize icons
+        lucide.createIcons();
+        // Initial Render
+        updateState();
+        
+        window.addEventListener('resize', () => render());
+
+    </script>
+</body>
+</html>

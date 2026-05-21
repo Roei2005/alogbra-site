@@ -1,0 +1,499 @@
+<!DOCTYPE html>
+<html lang="he" dir="rtl">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>בוחן מתמטיקה - כיתה ח'</title>
+    
+    <!-- React & ReactDOM -->
+    <script crossorigin src="https://unpkg.com/react@18/umd/react.production.min.js"></script>
+    <script crossorigin src="https://unpkg.com/react-dom@18/umd/react-dom.production.min.js"></script>
+    
+    <!-- Babel -->
+    <script src="https://unpkg.com/@babel/standalone/babel.min.js"></script>
+    
+    <!-- Tailwind CSS -->
+    <script src="https://cdn.tailwindcss.com"></script>
+    
+    <!-- Katex for Math (CSS + JS) -->
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/katex@0.16.9/dist/katex.min.css">
+    <script src="https://cdn.jsdelivr.net/npm/katex@0.16.9/dist/katex.min.js"></script>
+    
+    <!-- Lucide Icons -->
+    <script src="https://unpkg.com/lucide@latest"></script>
+
+    <style>
+        @import url('https://fonts.googleapis.com/css2?family=Rubik:wght@300;400;500;700&display=swap');
+        body { font-family: 'Rubik', sans-serif; background-color: #f0f4f8; }
+        .math-display { direction: ltr; font-family: 'Times New Roman', serif; }
+        
+        /* Custom Scrollbar */
+        ::-webkit-scrollbar { width: 8px; }
+        ::-webkit-scrollbar-track { background: #f1f1f1; }
+        ::-webkit-scrollbar-thumb { background: #c5d2e0; border-radius: 4px; }
+        ::-webkit-scrollbar-thumb:hover { background: #a0aec0; }
+        
+        /* Fade In Animation */
+        .fade-in { animation: fadeIn 0.4s ease-in-out; }
+        @keyframes fadeIn { from { opacity: 0; transform: translateY(10px); } to { opacity: 1; transform: translateY(0); } }
+    </style>
+</head>
+<body>
+    <div id="root"></div>
+
+    <script type="text/babel">
+        const { useState, useEffect, useRef } = React;
+
+        // רכיב להצגת מתמטיקה
+        const Latex = ({ children, className = "" }) => {
+            const containerRef = useRef(null);
+
+            useEffect(() => {
+                if (window.katex && containerRef.current) {
+                    try {
+                        window.katex.render(children, containerRef.current, {
+                            throwOnError: false,
+                            displayMode: false,
+                            output: 'html'
+                        });
+                    } catch (e) {
+                        console.error("Katex Render Error:", e);
+                        containerRef.current.innerText = children;
+                    }
+                }
+            }, [children]);
+
+            return <span ref={containerRef} className={`math-display inline-block text-xl ${className}`} />;
+        };
+
+        const QuizApp = () => {
+            const [currentQuestionIndex, setCurrentQuestionIndex] = useState(0);
+            const [score, setScore] = useState(0);
+            const [showHint, setShowHint] = useState(false);
+            const [selectedOption, setSelectedOption] = useState(null);
+            const [isAnswered, setIsAnswered] = useState(false);
+            const [quizFinished, setQuizFinished] = useState(false);
+            
+            // Fix: Run lucide icons creation effect at the top level, on every render
+            useEffect(() => {
+                if (window.lucide) {
+                    window.lucide.createIcons();
+                }
+            });
+
+            const questions = [
+                // --- משוואות רגילות ---
+                {
+                    id: 1, topic: "משוואה בנעלם אחד",
+                    text: "פתרו את המשוואה הבאה:",
+                    math: "3x - 5 = 16",
+                    options: ["x = 7", "x = 5", "x = 8", "x = 6"],
+                    correct: 0,
+                    hint: "העבירו את ה-5 אגף (הוא יהפוך לחיובי) ואז חלקו ב-3.",
+                    explanation: "3x = 16 + 5 \\\\ 3x = 21 \\\\ x = 7"
+                },
+                {
+                    id: 2, topic: "משוואה בנעלם אחד",
+                    text: "מצאו את ערכו של x:",
+                    math: "2(x + 4) = 18",
+                    options: ["x = 5", "x = 9", "x = 4", "x = 7"],
+                    correct: 0,
+                    hint: "חלקו את המשוואה ב-2 או פתחו סוגריים.",
+                    explanation: "x + 4 = 9 \\\\ x = 5"
+                },
+                {
+                    id: 3, topic: "משוואה בנעלם אחד",
+                    text: "פתרו:",
+                    math: "5x + 3 = 2x + 15",
+                    options: ["x = 3", "x = 4", "x = 6", "x = 2"],
+                    correct: 1,
+                    hint: "העבירו את כל ה-x לצד שמאל ואת המספרים לצד ימין.",
+                    explanation: "5x - 2x = 15 - 3 \\\\ 3x = 12 \\\\ x = 4"
+                },
+                {
+                    id: 4, topic: "משוואה בנעלם אחד",
+                    text: "פתרו את המשוואה:",
+                    math: "4 - x = 2(x - 7)",
+                    options: ["x = 5", "x = 8", "x = 6", "x = 4"],
+                    correct: 2,
+                    hint: "פתחו סוגריים בזהירות (שימו לב למינוס) וכנסו איברים.",
+                    explanation: "4 - x = 2x - 14 \\\\ 4 + 14 = 2x + x \\\\ 18 = 3x \\\\ x = 6"
+                },
+
+                // --- משוואות עם מכנה מספרי ---
+                {
+                    id: 5, topic: "משוואה עם מכנה",
+                    text: "פתרו:",
+                    math: "\\frac{x}{3} + 2 = 5",
+                    options: ["x = 1", "x = 3", "x = 9", "x = 6"],
+                    correct: 2,
+                    hint: "העבירו את ה-2 אגף ואז כפלו את התוצאה ב-3.",
+                    explanation: "\\frac{x}{3} = 3 \\implies x = 3 \\cdot 3 \\implies x = 9"
+                },
+                {
+                    id: 6, topic: "משוואה עם מכנה",
+                    text: "מה הפתרון של המשוואה?",
+                    math: "\\frac{2x}{5} = 4",
+                    options: ["x = 10", "x = 20", "x = 2", "x = 5"],
+                    correct: 0,
+                    hint: "כפלו ב-5 את שני הצדדים.",
+                    explanation: "2x = 20 \\implies x = 10"
+                },
+                {
+                    id: 7, topic: "משוואה עם מכנה",
+                    text: "פתרו את המשוואה:",
+                    math: "\\frac{x-2}{4} = 3",
+                    options: ["x = 10", "x = 12", "x = 14", "x = 5"],
+                    correct: 2,
+                    hint: "כפלו ב-4 כדי 'להיפטר' מהמכנה.",
+                    explanation: "x - 2 = 12 \\implies x = 14"
+                },
+                {
+                    id: 8, topic: "משוואה עם מכנה",
+                    text: "מצאו את x:",
+                    math: "\\frac{x}{2} + \\frac{x}{3} = 10",
+                    options: ["x = 6", "x = 10", "x = 15", "x = 12"],
+                    correct: 3,
+                    hint: "המכנה המשותף הוא 6. כפלו את כל המשוואה ב-6.",
+                    explanation: "3x + 2x = 60 \\\\ 5x = 60 \\\\ x = 12"
+                },
+
+                // --- משוואות עם נעלם במכנה ---
+                {
+                    id: 9, topic: "נעלם במכנה",
+                    text: "מהו תחום ההגדרה של הביטוי?",
+                    math: "\\frac{5}{x-3}",
+                    options: ["x \\neq 0", "x \\neq 3", "x \\neq -3", "x > 3"],
+                    correct: 1,
+                    hint: "מתי המכנה שווה לאפס? זה המצב האסור.",
+                    explanation: "x - 3 = 0 \\implies x = 3 \\\\ \\text{לכן } x \\neq 3"
+                },
+                {
+                    id: 10, topic: "נעלם במכנה",
+                    text: "פתרו:",
+                    math: "\\frac{4}{x} = 2",
+                    options: ["x = 1", "x = 4", "x = 2", "x = 8"],
+                    correct: 2,
+                    hint: "כפלו ב-x.",
+                    explanation: "4 = 2x \\implies x = 2"
+                },
+                {
+                    id: 11, topic: "נעלם במכנה",
+                    text: "פתרו את המשוואה:",
+                    math: "\\frac{x+6}{x} = 3",
+                    options: ["x = 2", "x = 3", "x = 6", "x = -3"],
+                    correct: 1,
+                    hint: "כפלו ב-x והעבירו אגפים.",
+                    explanation: "x + 6 = 3x \\\\ 6 = 2x \\\\ x = 3"
+                },
+                
+                // --- מערכת משוואות ---
+                {
+                    id: 12, topic: "מערכת משוואות",
+                    text: "פתרו את המערכת:",
+                    math: "\\begin{cases} y = 2x \\\\ y = x + 4 \\end{cases}",
+                    options: ["(4, 8)", "(2, 4)", "(3, 6)", "(4, 4)"],
+                    correct: 0,
+                    hint: "הציבו את ה-y מהמשוואה הראשונה בשנייה.",
+                    explanation: "2x = x + 4 \\implies x = 4 \\\\ y = 2(4) = 8"
+                },
+                {
+                    id: 13, topic: "מערכת משוואות",
+                    text: "מצאו את הפתרון:",
+                    math: "\\begin{cases} x + y = 10 \\\\ x - y = 2 \\end{cases}",
+                    options: ["(5, 5)", "(6, 4)", "(8, 2)", "(7, 3)"],
+                    correct: 1,
+                    hint: "חברו את שתי המשוואות (שיטת השוואת מקדמים).",
+                    explanation: "2x = 12 \\implies x = 6 \\\\ 6 + y = 10 \\implies y = 4"
+                },
+                {
+                    id: 14, topic: "מערכת משוואות",
+                    text: "נתון x=3. חשבו את y:",
+                    math: "\\begin{cases} 2x + 3y = 12 \\\\ x = 3 \\end{cases}",
+                    options: ["y = 1", "y = 3", "y = 2", "y = 0"],
+                    correct: 2,
+                    hint: "פשוט הציבו 3 במקום x במשוואה הראשונה.",
+                    explanation: "2(3) + 3y = 12 \\\\ 6 + 3y = 12 \\\\ 3y = 6 \\implies y = 2"
+                },
+                {
+                    id: 15, topic: "מערכת משוואות",
+                    text: "פתרו:",
+                    math: "\\begin{cases} y = x + 1 \\\\ y = 2x - 3 \\end{cases}",
+                    options: ["(2, 3)", "(3, 4)", "(4, 5)", "(5, 6)"],
+                    correct: 2,
+                    hint: "השוו את הביטויים: x+1 שווה ל-2x-3.",
+                    explanation: "x + 1 = 2x - 3 \\\\ 4 = x \\\\ y = 4 + 1 = 5"
+                },
+
+                // --- אחוזים ---
+                {
+                    id: 16, topic: "אחוזים",
+                    text: "כמה הם 20% מתוך 150?",
+                    math: "",
+                    options: ["20", "30", "40", "50"],
+                    correct: 1,
+                    hint: "עשירית (10%) מ-150 זה 15. כמה זה פעמיים עשירית?",
+                    explanation: "\\frac{20}{100} \\cdot 150 = 0.2 \\cdot 150 = 30"
+                },
+                {
+                    id: 17, topic: "אחוזים",
+                    text: "חולצה עולה 100 ש״ח. יש הנחה של 15%. מה המחיר החדש?",
+                    math: "",
+                    options: ["75 ש״ח", "80 ש״ח", "85 ש״ח", "90 ש״ח"],
+                    correct: 2,
+                    hint: "חשבו כמה שקלים שווה ההנחה והפחיתו מהמחיר.",
+                    explanation: "100 - 15 = 85"
+                },
+                {
+                    id: 18, topic: "אחוזים",
+                    text: "המחיר עלה מ-50 ל-60. מה אחוז העלייה?",
+                    math: "",
+                    options: ["10%", "20%", "25%", "50%"],
+                    correct: 1,
+                    hint: "ההפרש הוא 10. איזה חלק מהווה 10 מתוך ה-50 המקוריים?",
+                    explanation: "\\frac{10}{50} = \\frac{1}{5} = 20\\%"
+                },
+                {
+                    id: 19, topic: "אחוזים",
+                    text: "30 הם 10% ממספר כלשהו. מהו המספר?",
+                    math: "",
+                    options: ["300", "200", "150", "3000"],
+                    correct: 0,
+                    hint: "אם 10% זה קצת, המספר השלם (100%) הוא פי 10.",
+                    explanation: "30 \\cdot 10 = 300"
+                }
+            ];
+
+            const handleOptionClick = (index) => {
+                if (isAnswered) return;
+                setSelectedOption(index);
+                setIsAnswered(true);
+                if (index === questions[currentQuestionIndex].correct) {
+                    setScore(score + 1);
+                }
+            };
+
+            const nextQuestion = () => {
+                if (currentQuestionIndex < questions.length - 1) {
+                    setCurrentQuestionIndex(prev => prev + 1);
+                    setIsAnswered(false);
+                    setSelectedOption(null);
+                    setShowHint(false);
+                } else {
+                    setQuizFinished(true);
+                }
+            };
+
+            const restartQuiz = () => {
+                setCurrentQuestionIndex(0);
+                setScore(0);
+                setQuizFinished(false);
+                setIsAnswered(false);
+                setSelectedOption(null);
+                setShowHint(false);
+            };
+
+            const currentQ = questions[currentQuestionIndex];
+
+            // --- רכיב סיום ---
+            if (quizFinished) {
+                return (
+                    <div className="min-h-screen flex flex-col bg-blue-50">
+                         {/* כותרת קבועה גם בסיום */}
+                         <div className="bg-blue-600 text-white p-4 shadow-md text-center md:text-right">
+                             <div className="font-bold text-xl">בוחן מתמטיקה - סיכום</div>
+                        </div>
+
+                        <div className="flex-1 flex items-center justify-center p-4">
+                            <div className="bg-white p-8 md:p-12 rounded-3xl shadow-xl text-center max-w-lg w-full border border-blue-100 fade-in">
+                                <div className="mb-8 flex justify-center">
+                                    <div className="bg-green-100 p-6 rounded-full">
+                                        <svg data-lucide="trophy" className="w-16 h-16 text-green-600" />
+                                    </div>
+                                </div>
+                                <h2 className="text-3xl font-bold text-gray-800 mb-4">כל הכבוד!</h2>
+                                <p className="text-xl text-gray-500 mb-8">התוצאה הסופית שלך:</p>
+                                
+                                <div className="text-6xl font-bold text-blue-600 mb-2">{score} <span className="text-2xl text-gray-400">/ {questions.length}</span></div>
+                                <div className="text-lg text-gray-400 mb-10">ציון: {Math.round((score / questions.length) * 100)}</div>
+
+                                <button 
+                                    onClick={restartQuiz}
+                                    className="bg-blue-600 hover:bg-blue-700 text-white font-bold py-3 px-8 rounded-xl transition-all shadow-lg hover:shadow-xl text-lg flex items-center gap-2 mx-auto"
+                                >
+                                    <svg data-lucide="rotate-ccw" className="w-5 h-5" />
+                                    התחל מחדש
+                                </button>
+                            </div>
+                        </div>
+                        
+                        {/* פוטר */}
+                        <div className="text-center p-6 text-slate-400 text-sm font-medium">
+                            פותח על ידי אלוגברה
+                        </div>
+                    </div>
+                );
+            }
+
+            // --- רכיב ראשי ---
+            return (
+                <div className="min-h-screen flex flex-col bg-slate-50 text-slate-800 font-sans">
+                    
+                    {/* כותרת ראשית מאוחדת */}
+                    <header className="bg-blue-600 text-white shadow-md sticky top-0 z-10">
+                        <div className="max-w-4xl mx-auto px-4 py-3 flex justify-between items-center">
+                            <h1 className="font-bold text-lg md:text-xl">בוחן מתמטיקה</h1>
+                            <div className="flex gap-3 text-sm font-medium">
+                                <div className="bg-blue-700 px-3 py-1.5 rounded-lg flex items-center gap-2">
+                                    <span className="opacity-70">שאלה</span>
+                                    <span className="font-bold">{currentQuestionIndex + 1} / {questions.length}</span>
+                                </div>
+                                <div className="bg-blue-700 px-3 py-1.5 rounded-lg flex items-center gap-2">
+                                    <span className="opacity-70">ניקוד</span>
+                                    <span className="font-bold">{score}</span>
+                                </div>
+                            </div>
+                        </div>
+                    </header>
+
+                    {/* תוכן ראשי */}
+                    <main className="flex-1 flex items-center justify-center p-4 md:p-8">
+                        <div className="max-w-3xl w-full fade-in">
+                            
+                            {/* כרטיס שאלה */}
+                            <div className="bg-white rounded-3xl shadow-xl border border-slate-200 overflow-hidden">
+                                
+                                {/* גוף השאלה */}
+                                <div className="p-6 md:p-10">
+                                    <div className="text-center mb-6">
+                                        <span className="inline-block px-3 py-1 bg-blue-50 text-blue-600 text-sm font-bold rounded-full mb-3">
+                                            {currentQ.topic}
+                                        </span>
+                                        <h2 className="text-2xl md:text-3xl font-bold text-gray-800 leading-snug mb-6">
+                                            {currentQ.text}
+                                        </h2>
+                                        
+                                        {currentQ.math && (
+                                            <div className="bg-slate-50 rounded-xl py-6 px-4 border border-slate-100 inline-block w-full">
+                                                <Latex className="text-2xl md:text-4xl text-blue-900">{currentQ.math}</Latex>
+                                            </div>
+                                        )}
+                                    </div>
+
+                                    {/* אפשרויות */}
+                                    <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mb-8">
+                                        {currentQ.options.map((opt, idx) => {
+                                            let baseStyle = "p-4 md:p-5 rounded-2xl border-2 text-lg font-medium transition-all duration-200 flex items-center gap-4 group cursor-pointer ";
+                                            let stateStyle = "";
+                                            
+                                            if (!isAnswered) {
+                                                stateStyle = "border-slate-100 bg-white hover:border-blue-400 hover:bg-blue-50 hover:shadow-md text-slate-600";
+                                            } else {
+                                                if (idx === currentQ.correct) {
+                                                    stateStyle = "border-green-500 bg-green-50 text-green-800 shadow-sm cursor-default";
+                                                } else if (idx === selectedOption) {
+                                                    stateStyle = "border-red-400 bg-red-50 text-red-800 opacity-80 cursor-default";
+                                                } else {
+                                                    stateStyle = "border-slate-100 bg-slate-50 text-slate-300 opacity-50 cursor-default";
+                                                }
+                                            }
+
+                                            return (
+                                                <div 
+                                                    key={idx} 
+                                                    onClick={() => handleOptionClick(idx)}
+                                                    className={baseStyle + stateStyle}
+                                                >
+                                                    <div className={`
+                                                        w-8 h-8 rounded-full flex items-center justify-center text-sm font-bold border-2 transition-colors shrink-0
+                                                        ${isAnswered && idx === currentQ.correct ? 'bg-green-500 border-green-500 text-white' : 
+                                                          isAnswered && idx === selectedOption ? 'bg-red-500 border-red-500 text-white' : 
+                                                          'border-slate-300 text-slate-400 group-hover:border-blue-400 group-hover:text-blue-500'}
+                                                    `}>
+                                                        {idx === 0 ? 'א' : idx === 1 ? 'ב' : idx === 2 ? 'ג' : 'ד'}
+                                                    </div>
+                                                    <div className="flex-1 text-center font-mono text-xl" dir="ltr">
+                                                        <Latex>{opt}</Latex>
+                                                    </div>
+                                                </div>
+                                            )
+                                        })}
+                                    </div>
+
+                                    {/* תחתית כרטיס */}
+                                    <div className="flex flex-col-reverse md:flex-row justify-between items-center gap-4 pt-6 border-t border-slate-100">
+                                        
+                                        <div className="w-full md:w-auto text-center md:text-right">
+                                            {!isAnswered ? (
+                                                <button 
+                                                    onClick={() => setShowHint(!showHint)}
+                                                    className="text-slate-400 hover:text-blue-600 inline-flex items-center gap-2 font-medium transition-colors px-4 py-2 rounded-lg hover:bg-slate-50"
+                                                >
+                                                    <svg data-lucide="lightbulb" className="w-5 h-5" />
+                                                    {showHint ? 'הסתר רמז' : 'צריך רמז?'}
+                                                </button>
+                                            ) : (
+                                                <div className="inline-flex items-center gap-2 font-bold px-2 py-2">
+                                                    {selectedOption === currentQ.correct ? 
+                                                        <span className="text-green-600 flex items-center gap-2"><svg data-lucide="check-circle" className="w-5 h-5"/> תשובה נכונה!</span> : 
+                                                        <span className="text-red-500 flex items-center gap-2"><svg data-lucide="x-circle" className="w-5 h-5"/> טעות</span>
+                                                    }
+                                                </div>
+                                            )}
+                                        </div>
+
+                                        <button 
+                                            onClick={nextQuestion}
+                                            disabled={!isAnswered}
+                                            className={`
+                                                flex items-center justify-center gap-2 px-8 py-3 rounded-xl font-bold text-lg transition-all shadow-md w-full md:w-auto
+                                                ${isAnswered ? 'bg-blue-600 text-white hover:bg-blue-700 hover:shadow-lg transform hover:-translate-y-1' : 'bg-slate-200 text-slate-400 cursor-not-allowed shadow-none'}
+                                            `}
+                                        >
+                                            {currentQuestionIndex < questions.length - 1 ? 'לשאלה הבאה' : 'סיום בוחן'}
+                                            <svg data-lucide="chevron-left" className="w-5 h-5" />
+                                        </button>
+                                    </div>
+                                </div>
+                                
+                                {/* אזורי מידע נוסף (רמז/הסבר) */}
+                                {(showHint || isAnswered) && (
+                                    <div className="bg-slate-50 px-6 pb-6 md:px-10 md:pb-10 space-y-4 pt-2">
+                                        {showHint && !isAnswered && (
+                                            <div className="bg-yellow-50 text-yellow-900 p-4 rounded-xl border border-yellow-200 flex gap-3 items-start animate-fade-in">
+                                                <svg data-lucide="info" className="w-5 h-5 mt-0.5 shrink-0" />
+                                                <div>{currentQ.hint}</div>
+                                            </div>
+                                        )}
+                                        
+                                        {isAnswered && (
+                                            <div className="bg-blue-50 text-blue-900 p-5 rounded-xl border border-blue-200 flex flex-col md:flex-row gap-4 items-center animate-fade-in text-center md:text-right">
+                                                <div className="flex items-center gap-2 font-bold shrink-0">
+                                                    <svg data-lucide="book-open" className="w-5 h-5" />
+                                                    דרך פתרון:
+                                                </div>
+                                                <div className="font-mono text-lg ltr">
+                                                    <Latex>{currentQ.explanation}</Latex>
+                                                </div>
+                                            </div>
+                                        )}
+                                    </div>
+                                )}
+
+                            </div>
+                        </div>
+                    </main>
+
+                    {/* פוטר */}
+                    <footer className="text-center p-6 text-slate-400 text-sm font-medium">
+                        פותח על ידי אלוגברה
+                    </footer>
+                </div>
+            );
+        };
+
+        const root = ReactDOM.createRoot(document.getElementById('root'));
+        root.render(<QuizApp />);
+    </script>
+</body>
+</html>

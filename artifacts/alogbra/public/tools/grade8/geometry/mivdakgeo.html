@@ -1,0 +1,742 @@
+<!DOCTYPE html>
+<html lang="he" dir="rtl">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>חידון גיאומטריה</title>
+    
+    <!-- React & ReactDOM -->
+    <script crossorigin src="https://unpkg.com/react@18/umd/react.development.js"></script>
+    <script crossorigin src="https://unpkg.com/react-dom@18/umd/react-dom.development.js"></script>
+    
+    <!-- Babel for JSX -->
+    <script src="https://unpkg.com/@babel/standalone/babel.min.js"></script>
+    
+    <!-- Tailwind CSS -->
+    <script src="https://cdn.tailwindcss.com"></script>
+    
+    <!-- Custom Font -->
+    <link href="https://fonts.googleapis.com/css2?family=Rubik:wght@400;500;700;900&display=swap" rel="stylesheet">
+    
+    <style>
+        body { font-family: 'Rubik', sans-serif; }
+    </style>
+</head>
+<body class="bg-slate-50">
+    <div id="root"></div>
+
+    <script type="text/babel">
+        const { useState } = React;
+
+        // --- אייקונים (החלפה ל-lucide-react) ---
+        const Check = ({ className }) => (
+            <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className={className}><polyline points="20 6 9 17 4 12"></polyline></svg>
+        );
+        const X = ({ className }) => (
+            <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className={className}><line x1="18" y1="6" x2="6" y2="18"></line><line x1="6" y1="6" x2="18" y2="18"></line></svg>
+        );
+        const ArrowRight = ({ size }) => (
+            <svg xmlns="http://www.w3.org/2000/svg" width={size} height={size} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><line x1="5" y1="12" x2="19" y2="12"></line><polyline points="12 5 19 12 12 19"></polyline></svg>
+        );
+        const RefreshCw = ({ size }) => (
+            <svg xmlns="http://www.w3.org/2000/svg" width={size} height={size} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M21 2v6h-6"></path><path d="M3 12a9 9 0 0 1 15-6.7L21 8"></path><path d="M3 22v-6h6"></path><path d="M21 12a9 9 0 0 1-15 6.7L3 16"></path></svg>
+        );
+        const Trophy = ({ className }) => (
+            <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className={className}><path d="M8 21h8a2 2 0 0 0 2-2v-1a1 1 0 0 0-1-1H7a1 1 0 0 0-1 1v1a2 2 0 0 0 2 2z"></path><path d="M16 4h4a2 2 0 0 1 2 2v2a4 4 0 0 1-4 4H6a4 4 0 0 1-4-4V6a2 2 0 0 1 2-2h4"></path><path d="M12 4v8"></path><path d="M12 16a4 4 0 0 1 4-4h-8a4 4 0 0 1 4 4z"></path></svg>
+        );
+
+        // --- מאגר שאלות מורחב (27 שאלות) עם תשובות מעורבבות ---
+        const QUESTIONS = [
+          // --- חלק 1: ישרים נחתכים ---
+          {
+            id: 1,
+            text: "חשב את גודל הזווית x.",
+            type: "intersecting_vertical",
+            diagramData: { 
+              angle1: "120°", 
+              angle2: "x",
+            },
+            options: ["60°", "180°", "120°", "90°"], // Correct: 120 (index 2)
+            correct: 2,
+            explanation: "זוויות קודקודיות (אחת מול השנייה) שוות זו לזו."
+          },
+          {
+            id: 2,
+            text: "חשב את גודל הזווית x.",
+            type: "intersecting_linear",
+            diagramData: { 
+              angle1: "130°", 
+              angle2: "x",
+            },
+            options: ["130°", "50°", "60°", "180°"], // Correct: 50 (index 1)
+            correct: 1,
+            explanation: "זוויות צמודות על ישר אחד משלימות ל-180 מעלות. 180 פחות 130 שווה 50."
+          },
+          {
+            id: 3,
+            text: "חשב את x.",
+            type: "intersecting_algebra",
+            diagramData: { 
+              angle1: "x+20", 
+              angle2: "x",
+            },
+            options: ["100", "80", "90", "45"], // Correct: 80 (index 1)
+            correct: 1,
+            explanation: "סכום הזוויות הוא 180. המשוואה: x + x + 20 = 180. נקבל 2x = 160 ולכן x = 80."
+          },
+          
+          // --- חלק 2: מקבילים ---
+          {
+            id: 4,
+            text: "הישרים מקבילים. חשב את x.",
+            type: "parallel_alternate", 
+            diagramData: { 
+              val1: "70°", 
+              val2: "x"
+            },
+            options: ["110°", "20°", "180°", "70°"], // Correct: 70 (index 3)
+            correct: 3,
+            explanation: "אלו זוויות מתחלפות (בצורת Z) בין ישרים מקבילים, ולכן הן שוות."
+          },
+          {
+            id: 5,
+            text: "הישרים מקבילים. חשב את הזווית המסומנת ב-?",
+            type: "parallel_corresponding", 
+            diagramData: { 
+              val1: "110°", 
+              val2: "?" 
+            },
+            options: ["110°", "70°", "180°", "90°"], // Correct: 110 (index 0)
+            correct: 0,
+            explanation: "אלו זוויות מתאימות (נמצאות באותו מיקום יחסי בצומת), ולכן הן שוות."
+          },
+          {
+            id: 6,
+            text: "הישרים מקבילים. חשב את x.",
+            type: "parallel_interior", 
+            diagramData: { 
+              val1: "100°", 
+              val2: "x" 
+            },
+            options: ["100°", "180°", "80°", "50°"], // Correct: 80 (index 2)
+            correct: 2,
+            explanation: "אלו זוויות חד-צדדיות (פנימיות באותו צד). סכומן הוא 180 מעלות. x = 180 - 100 = 80."
+          },
+          
+          // --- חלק 3: משולש שווה שוקיים ---
+          {
+            id: 7,
+            text: "משולש שווה שוקיים. זווית הראש היא 40°. חשב את זווית הבסיס x.",
+            type: "isosceles_base_calc",
+            diagramData: { 
+              topLabel: "40°", 
+              baseLabel: "x",
+            },
+            options: ["70°", "40°", "140°", "20°"], // Correct: 70 (index 0)
+            correct: 0,
+            explanation: "סכום הזוויות במשולש 180. נוריד את הראש (40) נשאר 140. נחלק ב-2 לכל זווית בסיס, נקבל 70."
+          },
+          {
+            id: 8,
+            text: "נתון משולש שווה שוקיים. זווית הבסיס היא 70°. חשב את הזווית החיצונית x.",
+            type: "isosceles_ext_calc",
+            diagramData: { 
+              baseVal: "70°", 
+              extVal: "x"
+            },
+            options: ["70°", "110°", "140°", "20°"], // Correct: 110 (index 1)
+            correct: 1,
+            explanation: "זווית חיצונית וזווית פנימית משלימות ל-180. אם הפנימית 70, החיצונית היא 110."
+          },
+          {
+            id: 9,
+            text: "נתון משולש שווה שוקיים. AD גובה לבסיס. אם זווית הראש כולה A=80°, למה שווה זווית x?",
+            type: "isosceles_altitude_angle",
+            diagramData: { 
+              angleA_Full: "80°",
+              angleHalf: "x"
+            },
+            options: ["80°", "40°", "20°", "60°"], // Correct: 40 (index 1)
+            correct: 1,
+            explanation: "במשולש שו״ש הגובה הוא גם חוצה זווית הראש. חצי מ-80 זה 40."
+          },
+          {
+            id: 10,
+            text: "משולש שווה שוקיים. AD גובה. אורך הבסיס כולו BC=12. למה שווה הקטע DC (מסומן ב-x)?",
+            type: "isosceles_altitude_side",
+            diagramData: { 
+              baseLen: "12", 
+              segLen: "x"
+            },
+            options: ["12", "3", "6", "4"], // Correct: 6 (index 2)
+            correct: 2,
+            explanation: "במשולש שו״ש הגובה הוא גם תיכון (חוצה צלע). חצי מ-12 זה 6."
+          },
+          {
+            id: 11,
+            text: "משולש שווה שוקיים. AD תיכון לבסיס. מה גודל הזווית ADC?",
+            type: "isosceles_median_angle",
+            diagramData: { 
+              label: "?"
+            },
+            options: ["60°", "90°", "45°", "180°"], // Correct: 90 (index 1)
+            correct: 1,
+            explanation: "במשולש שו״ש התיכון לבסיס הוא גם גובה, ולכן הוא יוצר זווית ישרה (90 מעלות)."
+          },
+
+          // --- חלק 4: חפיפת משולשים ---
+          {
+            id: 12,
+            text: "לפי איזה משפט חפיפה המשולשים חופפים?",
+            type: "congruence_sas",
+            diagramData: {},
+            options: ["ז.צ.ז", "צ.צ.צ", "צ.ז.צ", "לא חופפים"], // Correct: SAS (index 2)
+            correct: 2,
+            explanation: "נתונות שתי צלעות שוות והזווית שביניהן שווה."
+          },
+          {
+            id: 13,
+            text: "לפי איזה משפט חפיפה המשולשים חופפים?",
+            type: "congruence_sss",
+            diagramData: {},
+            options: ["צ.צ.צ", "צ.ז.צ", "ז.צ.ז", "ז.ז.צ"], // Correct: SSS (index 0)
+            correct: 0,
+            explanation: "כל שלושת הצלעות שוות בהתאמה."
+          },
+          {
+            id: 14,
+            text: "לפי איזה משפט חפיפה המשולשים חופפים?",
+            type: "congruence_asa",
+            diagramData: {},
+            options: ["צ.ז.צ", "צ.צ.צ", "ז.ז.ז", "ז.צ.ז"], // Correct: ASA (index 3)
+            correct: 3,
+            explanation: "נתונות שתי זוויות שוות והצלע שביניהן שווה."
+          },
+          {
+            id: 15,
+            text: "איזו צלע מתאימה לצלע AB?",
+            isRTLFix: true,
+            textPrefix: "נתון",
+            math: "∆ABC ≅ ∆DEF",
+            type: "text_only",
+            options: ["EF", "DE", "DF", "AC"], // Correct: DE (index 1)
+            correct: 1,
+            explanation: "לפי סדר האותיות: האותיות הראשונות AB מתאימות לראשונות DE."
+          },
+          {
+            id: 16,
+            text: "המשולשים חופפים. איזו צלע במשולש השמאלי מתאימה לצלע המסומנת באדום?",
+            type: "congruence_match_visual",
+            diagramData: { highlight: "right_side" },
+            options: ["הצלע עם 2 קווים", "הצלע עם קו 1", "לא ניתן לדעת", "הצלע בלי סימון"], // Correct: no mark (index 3)
+            correct: 3, 
+            explanation: "הצלע המסומנת באדום היא הצלע השלישית (בלי קווים), ולכן היא מתאימה לצלע השלישית במשולש השני."
+          },
+          {
+            id: 17,
+            text: "וזווית A היא 50°, למה שווה זווית R?",
+            isRTLFix: true,
+            textPrefix: "אם",
+            math: "∆ABC ≅ ∆RST",
+            type: "text_only",
+            options: ["50°", "100°", "25°", "לא ניתן לדעת"], // Correct: 50 (index 0)
+            correct: 0,
+            explanation: "זוויות מתאימות במשולשים חופפים שוות זו לזו (A ראשונה, R ראשונה)."
+          },
+          {
+            id: 18,
+            text: "משולש שווה שוקיים. זווית בסיס אחת היא x והשנייה 70°. כמה שווה x?",
+            type: "isosceles_base_simple",
+            diagramData: { val: "70°", x: "x" },
+            options: ["55°", "70°", "40°", "110°"], // Correct: 70 (index 1)
+            correct: 1,
+            explanation: "במשולש שווה שוקיים זוויות הבסיס שוות בדיוק זו לזו."
+          },
+          {
+            id: 19,
+            text: "חשב את x (זוויות קודקודיות).",
+            type: "intersecting_vertical",
+            diagramData: { angle1: "50°", angle2: "x-10" },
+            options: ["50", "40", "100", "60"], // Correct: 60 (index 3)
+            correct: 3,
+            explanation: "זוויות קודקודיות שוות: x-10 = 50, נעביר אגף ונקבל x=60."
+          },
+          {
+            id: 20,
+            text: "נתון שהמשולשים חופפים. זווית B=30°. איזו זווית במשולש השני שווה ל-30°?",
+            type: "congruence_match_angle",
+            diagramData: {},
+            options: ["D", "E", "F", "אף אחת"], // Correct: E (index 1)
+            correct: 1,
+            explanation: "לפי הסימון בשרטוט, הזווית B (מול הצלע עם 2 הקווים) מתאימה לזווית E."
+          },
+
+          // --- חלק 5: שאלות מתקדמות ---
+          {
+            id: 21,
+            text: "חשב את x אם הזוויות צמודות.",
+            type: "intersecting_algebra",
+            diagramData: { angle1: "3x", angle2: "x" },
+            options: ["30°", "60°", "45°", "90°"], // Correct: 45 (index 2)
+            correct: 2,
+            explanation: "סכום זוויות צמודות 180. המשוואה: 3x + x = 180, כלומר 4x = 180, ולכן x=45."
+          },
+          {
+            id: 22,
+            text: "הישרים מקבילים. הזוויות הן חד-צדדיות. חשב את x.",
+            type: "parallel_interior",
+            diagramData: { val1: "x", val2: "x+40" },
+            options: ["110°", "40°", "70°", "60°"], // Correct: 70 (index 2)
+            correct: 2,
+            explanation: "סכום זוויות חד-צדדיות הוא 180. המשוואה: x + x + 40 = 180. 2x=140, x=70."
+          },
+          {
+            id: 23,
+            text: "משולש שווה שוקיים. זווית הראש היא x וזווית הבסיס היא 2x. חשב את x.",
+            type: "isosceles_base_calc",
+            diagramData: { topLabel: "x", baseLabel: "2x" },
+            options: ["45°", "36°", "30°", "72°"], // Correct: 36 (index 1)
+            correct: 1,
+            explanation: "סכום זוויות: x + 2x + 2x = 180. כלומר 5x=180, ולכן x=36."
+          },
+          {
+            id: 24,
+            text: "איזו זווית שווה לזווית C?",
+            isRTLFix: true,
+            textPrefix: "נתון",
+            math: "∆ABC ≅ ∆ZYX",
+            type: "text_only",
+            options: ["Z", "A", "Y", "X"], // Correct: X (index 3)
+            correct: 3,
+            explanation: "הזווית C היא האחרונה בביטוי, ולכן מתאימה לזווית X שהיא האחרונה במשולש השני."
+          },
+          {
+            id: 25,
+            text: "במשולש שווה שוקיים הזווית החיצונית לבסיס היא 110°. מה גודל זווית הראש?",
+            type: "isosceles_ext_calc", 
+            // התיקון שלך: שאלה 25 - סימן שאלה בזווית הראש
+            diagramData: { baseVal: "110°", headVal: "?" }, 
+            options: ["110°", "40°", "70°", "55°"], // Correct: 40 (index 1)
+            correct: 1,
+            explanation: "אם החיצונית 110, הפנימית (הבסיס) היא 70. שתי זוויות הבסיס הן 70. הראש: 180-140=40."
+          },
+          {
+            id: 26,
+            text: "הישרים מקבילים (מתחלפות). חשב את x.",
+            type: "parallel_alternate",
+            diagramData: { val1: "2x", val2: "80°" },
+            options: ["80°", "40°", "160°", "20°"], // Correct: 40 (index 1)
+            correct: 1,
+            explanation: "זוויות מתחלפות שוות זו לזו. 2x = 80, ולכן x=40."
+          },
+          {
+            // השאלה החדשה לגמרי (במקום שאלה 27 הישנה)
+            id: 27,
+            text: "משפט זווית חיצונית: נתון משולש. הזווית החיצונית היא 120° והזווית הפנימית הרחוקה היא 50°. חשב את x.",
+            type: "triangle_external_calc", // סוג חדש
+            diagramData: { ext: "120°", int1: "50°", int2: "x" },
+            options: ["50°", "60°", "70°", "120°"], // Correct: 70 (index 2)
+            correct: 2,
+            explanation: "זווית חיצונית למשולש שווה לסכום שתי הזוויות הפנימיות שאינן צמודות לה. x + 50 = 120, לכן x = 70."
+          }
+        ];
+
+        // --- רכיבי עזר גרפיים ---
+
+        const AngleArc = ({ cx, cy, startAngle, endAngle, radius, label, color="red" }) => {
+          const toRad = (deg) => (deg * Math.PI) / 180;
+          const x1 = cx + radius * Math.cos(toRad(startAngle));
+          const y1 = cy + radius * Math.sin(toRad(startAngle));
+          const x2 = cx + radius * Math.cos(toRad(endAngle));
+          const y2 = cy + radius * Math.sin(toRad(endAngle));
+          const largeArcFlag = Math.abs(endAngle - startAngle) > 180 ? 1 : 0;
+          const d = `M ${x1} ${y1} A ${radius} ${radius} 0 ${largeArcFlag} 1 ${x2} ${y2}`;
+          const midAngle = (startAngle + endAngle) / 2;
+          const labelR = radius + 25;
+          const lx = cx + labelR * Math.cos(toRad(midAngle));
+          const ly = cy + labelR * Math.sin(toRad(midAngle));
+
+          return (
+            <g>
+              <path d={d} fill="none" stroke={color} strokeWidth="2" />
+              {label && (
+                <text x={lx} y={ly} textAnchor="middle" dominantBaseline="middle" className="font-bold text-lg fill-red-600" style={{ textShadow: "2px 2px 0px white, -2px -2px 0px white" }}>
+                  {label}
+                </text>
+              )}
+            </g>
+          );
+        };
+
+        const TickMark = ({ p1, p2, count=1 }) => {
+          const midX = (p1.x + p2.x) / 2;
+          const midY = (p1.y + p2.y) / 2;
+          const dx = p2.x - p1.x;
+          const dy = p2.y - p1.y;
+          const len = Math.sqrt(dx*dx + dy*dy);
+          const nx = -dy / len;
+          const ny = dx / len;
+          const size = 6;
+          const gap = 4;
+          const startOffset = -((count - 1) * gap) / 2;
+          const lines = [];
+          for(let i=0; i<count; i++) {
+            const off = startOffset + i*gap;
+            const cx = midX + (dx/len)*off;
+            const cy = midY + (dy/len)*off;
+            lines.push(
+              <line key={i} x1={cx - nx*size} y1={cy - ny*size} x2={cx + nx*size} y2={cy + ny*size} stroke="#059669" strokeWidth="2" />
+            );
+          }
+          return <g>{lines}</g>;
+        };
+
+        const GeometryDiagram = ({ type, data }) => {
+          const strokeColor = "#1e3a8a"; 
+
+          // --- 1. ישרים נחתכים ---
+          if (type.startsWith("intersecting")) {
+            const cx = 160, cy = 100;
+            return (
+              <svg viewBox="0 0 320 200" className="w-full h-64 mx-auto select-none">
+                <line x1="20" y1="100" x2="300" y2="100" stroke={strokeColor} strokeWidth="3" />
+                <line x1="80" y1="180" x2="240" y2="20" stroke={strokeColor} strokeWidth="3" />
+                {type === "intersecting_vertical" && (
+                   <>
+                     <AngleArc cx={cx} cy={cy} startAngle={-45} endAngle={0} radius={40} label={data.angle1} />
+                     <AngleArc cx={cx} cy={cy} startAngle={135} endAngle={180} radius={40} label={data.angle2} />
+                   </>
+                )}
+                {(type === "intersecting_linear" || type === "intersecting_algebra") && (
+                    <>
+                      <AngleArc cx={cx} cy={cy} startAngle={180} endAngle={315} radius={30} label={data.angle1} />
+                      <AngleArc cx={cx} cy={cy} startAngle={315} endAngle={360} radius={35} label={data.angle2} />
+                    </>
+                )}
+              </svg>
+            );
+          }
+
+          // --- 2. מקבילים ---
+          if (type.startsWith("parallel")) {
+            const y1 = 60, y2 = 140;
+            const p1 = {x: 130, y: 60};
+            const p2 = {x: 190, y: 140};
+            return (
+              <svg viewBox="0 0 320 200" className="w-full h-64 mx-auto select-none">
+                <line x1="20" y1={y1} x2="300" y2={y1} stroke={strokeColor} strokeWidth="3" />
+                <text x="305" y={y1+5} className="font-bold fill-slate-500">a</text>
+                <line x1="20" y1={y2} x2="300" y2={y2} stroke={strokeColor} strokeWidth="3" />
+                <text x="305" y={y2+5} className="font-bold fill-slate-500">b</text>
+                <line x1="100" y1="20" x2="220" y2={180} stroke="black" strokeWidth="2" />
+                {type === "parallel_alternate" && (
+                   <>
+                     <AngleArc cx={p1.x} cy={p1.y} startAngle={55} endAngle={180} radius={25} label={data.val1} />
+                     <AngleArc cx={p2.x} cy={p2.y} startAngle={235} endAngle={360} radius={25} label={data.val2} />
+                   </>
+                )}
+                {type === "parallel_corresponding" && (
+                    <>
+                      <AngleArc cx={p1.x} cy={p1.y} startAngle={0} endAngle={55} radius={35} label={data.val1} />
+                      <AngleArc cx={p2.x} cy={p2.y} startAngle={0} endAngle={55} radius={35} label={data.val2} />
+                    </>
+                )}
+                {type === "parallel_interior" && (
+                    <>
+                      <AngleArc cx={p1.x} cy={p1.y} startAngle={55} endAngle={180} radius={25} label={data.val1} />
+                      <AngleArc cx={p2.x} cy={p2.y} startAngle={180} endAngle={235} radius={25} label={data.val2} />
+                    </>
+                )}
+              </svg>
+            );
+          }
+
+          // --- 3. משולשים (כולל זווית חיצונית חדשה) ---
+          if (type.startsWith("isosceles") || type === "triangle_external_calc") {
+            const top = {x: 160, y: 30};
+            const left = {x: 80, y: 180};
+            const right = {x: 240, y: 180};
+            const extRight = {x: 300, y: 180};
+
+            // עבור משולש כללי (שאלה אחרונה) נשתמש באותן קואורדינטות בסיסיות
+            // אבל בלי סימוני שווה שוקיים אם לא צריך
+            const isIsosceles = type.startsWith("isosceles");
+
+            return (
+              <svg viewBox="0 0 320 220" className="w-full h-64 mx-auto select-none">
+                <path d={`M${top.x},${top.y} L${right.x},${right.y} L${left.x},${left.y} Z`} fill="#eff6ff" stroke={strokeColor} strokeWidth="3" />
+                
+                {isIsosceles && (
+                  <>
+                    <TickMark p1={top} p2={left} count={1} />
+                    <TickMark p1={top} p2={right} count={1} />
+                  </>
+                )}
+
+                {(type.includes("altitude") || type.includes("median")) && (
+                    <>
+                      <line x1={top.x} y1={top.y} x2={160} y2={180} stroke="black" strokeDasharray="5,5" strokeWidth="2" />
+                      {type !== "isosceles_median_angle" && (
+                        <rect x={160} y={170} width="10" height="10" fill="none" stroke="black" />
+                      )}
+                      <text x={175} y={160} className="font-bold fill-slate-600">h</text>
+                      <text x={160} y={200} textAnchor="middle" className="font-bold">D</text>
+                    </>
+                )}
+
+                <text x={top.x} y={top.y-10} textAnchor="middle" className="font-bold">A</text>
+                <text x={left.x-10} y={left.y+10} textAnchor="middle" className="font-bold">B</text>
+                <text x={right.x+10} y={right.y+10} textAnchor="middle" className="font-bold">C</text>
+
+                {type === "isosceles_base_calc" && (
+                    <>
+                      <AngleArc cx={top.x} cy={top.y} startAngle={62} endAngle={118} radius={30} label={data.topLabel} />
+                      <AngleArc cx={right.x} cy={right.y} startAngle={180} endAngle={242} radius={30} label={data.baseLabel} />
+                      {data.baseLabel.includes("x") && <AngleArc cx={left.x} cy={left.y} startAngle={298} endAngle={360} radius={30} label={data.baseLabel} />}
+                    </>
+                )}
+                {type === "isosceles_ext_calc" && (
+                    <>
+                      <line x1={right.x} y1={right.y} x2={extRight.x} y2={extRight.y} stroke="black" strokeWidth="2" />
+                      {/* תיקון לשאלה 25: אם יש headVal, נציג אותו למעלה */}
+                      {data.headVal ? (
+                         <AngleArc cx={top.x} cy={top.y} startAngle={62} endAngle={118} radius={30} label={data.headVal} />
+                      ) : (
+                         <AngleArc cx={right.x} cy={right.y} startAngle={180} endAngle={242} radius={30} label={data.baseVal} />
+                      )}
+                      {/* הזווית החיצונית */}
+                      <AngleArc cx={right.x} cy={right.y} startAngle={242} endAngle={360} radius={25} label={data.extVal || data.baseVal} />
+                    </>
+                )}
+                {type === "isosceles_altitude_angle" && (
+                     <>
+                       <AngleArc cx={top.x} cy={top.y} startAngle={62} endAngle={118} radius={45} label={data.angleA_Full} />
+                       <text x={150} y={80} className="font-bold text-red-600">{data.angleHalf}</text>
+                     </>
+                )}
+                {type === "isosceles_altitude_side" && (
+                    <>
+                      <text x={160} y={215} textAnchor="middle" className="font-bold text-blue-600">{data.baseLen}</text>
+                      <text x={200} y={195} textAnchor="middle" className="font-bold text-red-600">{data.segLen}</text>
+                    </>
+                )}
+                {type === "isosceles_median_angle" && (
+                     <text x={175} y={175} className="font-bold text-red-600 text-xl">?</text>
+                )}
+                {type === "isosceles_base_simple" && (
+                     <>
+                        <AngleArc cx={left.x} cy={left.y} startAngle={298} endAngle={360} radius={30} label={data.x} />
+                        <AngleArc cx={right.x} cy={right.y} startAngle={180} endAngle={242} radius={30} label={data.val} />
+                     </>
+                )}
+                {/* השאלה החדשה: זווית חיצונית למשולש כללי */}
+                {type === "triangle_external_calc" && (
+                    <>
+                       <line x1={right.x} y1={right.y} x2={extRight.x} y2={extRight.y} stroke="black" strokeWidth="2" />
+                       {/* חיצונית */}
+                       <AngleArc cx={right.x} cy={right.y} startAngle={242} endAngle={360} radius={25} label={data.ext} />
+                       {/* פנימית רחוקה 1 (למעלה) */}
+                       <AngleArc cx={top.x} cy={top.y} startAngle={62} endAngle={118} radius={30} label={data.int1} />
+                       {/* פנימית רחוקה 2 (שמאל) */}
+                       <AngleArc cx={left.x} cy={left.y} startAngle={298} endAngle={360} radius={30} label={data.int2} />
+                    </>
+                )}
+              </svg>
+            );
+          }
+
+          // --- 4. חפיפה ---
+          if (type.startsWith("congruence")) {
+             const t1 = { A:{x:60, y:30}, B:{x:30, y:130}, C:{x:90, y:130} };
+             const t2 = { D:{x:200, y:30}, E:{x:170, y:130}, F:{x:230, y:130} };
+             return (
+               <svg viewBox="0 0 320 180" className="w-full h-64 mx-auto select-none">
+                 <path d={`M${t1.A.x},${t1.A.y} L${t1.B.x},${t1.B.y} L${t1.C.x},${t1.C.y} Z`} fill="#f0fdf4" stroke={strokeColor} strokeWidth="2" />
+                 <path d={`M${t2.D.x},${t2.D.y} L${t2.E.x},${t2.E.y} L${t2.F.x},${t2.F.y} Z`} fill="#f0fdf4" stroke={strokeColor} strokeWidth="2" />
+                 <text x={t1.A.x} y={t1.A.y-10} textAnchor="middle" className="font-bold text-sm">A</text>
+                 <text x={t1.B.x-10} y={t1.B.y+10} textAnchor="middle" className="font-bold text-sm">B</text>
+                 <text x={t1.C.x+10} y={t1.C.y+10} textAnchor="middle" className="font-bold text-sm">C</text>
+                 <text x={t2.D.x} y={t2.D.y-10} textAnchor="middle" className="font-bold text-sm">D</text>
+                 <text x={t2.E.x-10} y={t2.E.y+10} textAnchor="middle" className="font-bold text-sm">E</text>
+                 <text x={t2.F.x+10} y={t2.F.y+10} textAnchor="middle" className="font-bold text-sm">F</text>
+                 {type === "congruence_sas" && (
+                    <>
+                       <TickMark p1={t1.A} p2={t1.B} count={1} />
+                       <TickMark p1={t2.D} p2={t2.E} count={1} />
+                       <TickMark p1={t1.B} p2={t1.C} count={2} />
+                       <TickMark p1={t2.E} p2={t2.F} count={2} />
+                       <AngleArc cx={t1.B.x} cy={t1.B.y} startAngle={-73} endAngle={0} radius={25} color="orange" />
+                       <AngleArc cx={t2.E.x} cy={t2.E.y} startAngle={-73} endAngle={0} radius={25} color="orange" />
+                    </>
+                 )}
+                 {type === "congruence_sss" && (
+                    <>
+                       <TickMark p1={t1.A} p2={t1.B} count={1} />
+                       <TickMark p1={t2.D} p2={t2.E} count={1} />
+                       <TickMark p1={t1.B} p2={t1.C} count={2} />
+                       <TickMark p1={t2.E} p2={t2.F} count={2} />
+                       <TickMark p1={t1.A} p2={t1.C} count={3} />
+                       <TickMark p1={t2.D} p2={t2.F} count={3} />
+                    </>
+                 )}
+                 {type === "congruence_asa" && (
+                    <>
+                       <AngleArc cx={t1.B.x} cy={t1.B.y} startAngle={-73} endAngle={0} radius={25} color="orange" />
+                       <AngleArc cx={t2.E.x} cy={t2.E.y} startAngle={-73} endAngle={0} radius={25} color="orange" />
+                       <AngleArc cx={t1.C.x} cy={t1.C.y} startAngle={180} endAngle={253} radius={25} color="purple" />
+                       <AngleArc cx={t2.F.x} cy={t2.F.y} startAngle={180} endAngle={253} radius={25} color="purple" />
+                       <TickMark p1={t1.B} p2={t1.C} count={1} />
+                       <TickMark p1={t2.E} p2={t2.F} count={1} />
+                    </>
+                 )}
+                 {(type === "congruence_match_visual" || type === "congruence_match_angle") && (
+                    <>
+                       <TickMark p1={t1.A} p2={t1.B} count={1} />
+                       <TickMark p1={t2.D} p2={t2.E} count={1} />
+                       <TickMark p1={t1.B} p2={t1.C} count={2} />
+                       <TickMark p1={t2.E} p2={t2.F} count={2} />
+                       {data.highlight === "right_side" && (
+                           <line x1={t2.D.x} y1={t2.D.y} x2={t2.F.x} y2={t2.F.y} stroke="red" strokeWidth="4" opacity="0.5" />
+                       )}
+                       {type === "congruence_match_angle" && (
+                           <AngleArc cx={t1.B.x} cy={t1.B.y} startAngle={-73} endAngle={0} radius={25} label="30°" />
+                       )}
+                    </>
+                 )}
+               </svg>
+             );
+          }
+
+          // --- 5. טקסט בלבד ---
+          if (type === "text_only") {
+              return (
+                  <div className="flex items-center justify-center h-64 bg-slate-50 rounded-xl">
+                      <span className="text-9xl text-slate-200 font-bold">?</span>
+                  </div>
+              );
+          }
+
+          return null;
+        };
+
+        // --- הקומפוננטה הראשית ---
+        function App() {
+          const [currentQuestion, setCurrentQuestion] = useState(0);
+          const [score, setScore] = useState(0);
+          const [showFeedback, setShowFeedback] = useState(false);
+          const [isCorrect, setIsCorrect] = useState(false);
+          const [selectedOption, setSelectedOption] = useState(null);
+
+          const handleOptionClick = (index) => {
+            if (showFeedback) return;
+            setSelectedOption(index);
+            const correct = index === QUESTIONS[currentQuestion].correct;
+            setIsCorrect(correct);
+            setShowFeedback(true);
+            if (correct) setScore(score + 1);
+          };
+
+          const nextQuestion = () => {
+            setShowFeedback(false);
+            setSelectedOption(null);
+            if (currentQuestion < QUESTIONS.length - 1) {
+              setCurrentQuestion(currentQuestion + 1);
+            } else {
+              setCurrentQuestion(QUESTIONS.length); 
+            }
+          };
+
+          const restartQuiz = () => {
+            setScore(0);
+            setCurrentQuestion(0);
+            setShowFeedback(false);
+            setSelectedOption(null);
+          };
+
+          if (currentQuestion >= QUESTIONS.length) {
+            return (
+              <div className="flex flex-col items-center justify-center min-h-screen bg-blue-50 p-4 font-sans text-right" dir="rtl">
+                <div className="bg-white p-8 rounded-3xl shadow-xl max-w-2xl w-full text-center border-2 border-blue-200">
+                  <Trophy className="w-20 h-20 text-yellow-500 mx-auto mb-4" />
+                  <h1 className="text-4xl font-bold text-blue-900 mb-4">החידון הסתיים!</h1>
+                  <p className="text-2xl text-gray-700 mb-6">
+                    הציון שלך: {score} מתוך {QUESTIONS.length}
+                  </p>
+                  <button onClick={restartQuiz} className="bg-blue-600 hover:bg-blue-700 text-white text-2xl font-bold py-4 px-8 rounded-xl shadow-md transition-all flex items-center justify-center gap-2 mx-auto">
+                    <RefreshCw size={24} /> נסה שוב
+                  </button>
+                </div>
+              </div>
+            );
+          }
+
+          const q = QUESTIONS[currentQuestion];
+
+          return (
+            <div className="min-h-screen bg-slate-50 p-4 font-sans flex flex-col items-center" dir="rtl">
+              
+              <div className="w-full max-w-3xl mb-4 flex justify-between items-center bg-white p-4 rounded-xl shadow-sm border-b-4 border-blue-200">
+                <span className="text-xl font-bold text-slate-700">שאלה {currentQuestion + 1} / {QUESTIONS.length}</span>
+                <span className="text-xl font-bold text-green-600">נקודות: {score}</span>
+              </div>
+
+              <div className="bg-white rounded-2xl shadow-lg overflow-hidden max-w-3xl w-full border border-slate-200">
+                
+                <div className="bg-white p-4 flex justify-center border-b border-slate-100 min-h-[280px] items-center">
+                  <GeometryDiagram type={q.type} data={q.diagramData} />
+                </div>
+
+                <div className="p-6">
+                  <h2 className="text-2xl font-bold text-slate-800 mb-6 text-center">
+                    {q.isRTLFix ? (
+                        <span>
+                            {q.textPrefix} <span dir="ltr" className="inline-block px-1 font-mono font-bold text-blue-700">{q.math}</span>. {q.text}
+                        </span>
+                    ) : (
+                        q.text
+                    )}
+                  </h2>
+
+                  <div className="grid grid-cols-2 gap-4 mb-6">
+                    {q.options.map((option, index) => {
+                      let btnClass = "text-xl font-bold py-4 px-2 rounded-xl border-2 transition-all shadow-sm text-center ";
+                      if (showFeedback) {
+                        if (index === q.correct) btnClass += "bg-green-50 border-green-500 text-green-700";
+                        else if (index === selectedOption) btnClass += "bg-red-50 border-red-500 text-red-700";
+                        else btnClass += "bg-gray-50 border-gray-100 text-gray-300";
+                      } else {
+                        btnClass += "bg-white border-blue-100 text-slate-700 hover:border-blue-400 hover:bg-blue-50";
+                      }
+                      return (
+                        <button key={index} onClick={() => handleOptionClick(index)} disabled={showFeedback} className={btnClass}>
+                          {option}
+                        </button>
+                      );
+                    })}
+                  </div>
+
+                  {showFeedback && (
+                    <div className={`rounded-xl p-4 animate-fade-in ${isCorrect ? 'bg-green-50 border border-green-200' : 'bg-red-50 border border-red-200'}`}>
+                      <div className="flex items-center gap-3 mb-2">
+                        {isCorrect ? <Check className="text-green-600" /> : <X className="text-red-600" />}
+                        <h3 className={`text-xl font-bold ${isCorrect ? 'text-green-800' : 'text-red-800'}`}>
+                          {isCorrect ? 'נכון!' : 'טעות'}
+                        </h3>
+                      </div>
+                      <p className="text-lg text-slate-700 mb-4">{q.explanation}</p>
+                      <button onClick={nextQuestion} className="w-full bg-slate-800 hover:bg-slate-900 text-white text-xl font-bold py-3 rounded-lg flex items-center justify-center gap-2">
+                        הבא <ArrowRight size={20} />
+                      </button>
+                    </div>
+                  )}
+                </div>
+              </div>
+            </div>
+          );
+        }
+
+        const root = ReactDOM.createRoot(document.getElementById('root'));
+        root.render(<App />);
+    </script>
+</body>
+</html>

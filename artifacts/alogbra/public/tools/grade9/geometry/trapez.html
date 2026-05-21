@@ -1,0 +1,606 @@
+<!DOCTYPE html>
+<html lang="he" dir="rtl">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <title>חוקרים את הטרפז - אלוגברה</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link href="https://fonts.googleapis.com/css2?family=Rubik:wght@400;500;700;900&display=swap" rel="stylesheet">
+    <!-- Lucide Icons -->
+    <script src="https://unpkg.com/lucide@latest"></script>
+    <style>
+        body {
+            font-family: 'Rubik', sans-serif;
+            background-color: #fffbeb; /* Amber-50 */
+            overscroll-behavior: none;
+        }
+        
+        .canvas-container {
+            background-color: white;
+            background-image: 
+                linear-gradient(#fde68a 1px, transparent 1px),
+                linear-gradient(90deg, #fde68a 1px, transparent 1px);
+            background-size: 20px 20px;
+            background-position: center center;
+            touch-action: none;
+            box-shadow: inset 0 0 20px rgba(0,0,0,0.02);
+        }
+
+        .vertex-point {
+            cursor: move;
+            transition: r 0.2s, fill 0.2s, stroke-width 0.2s;
+            filter: drop-shadow(0 2px 3px rgba(0,0,0,0.2));
+        }
+        .vertex-point:active {
+            cursor: grabbing;
+            r: 14;
+            stroke-width: 4;
+        }
+        
+        .btn-prop {
+            transition: all 0.2s cubic-bezier(0.4, 0, 0.2, 1);
+        }
+        .btn-prop:hover {
+            transform: translateY(-1px);
+        }
+        .btn-prop.active {
+            background-color: #d97706; /* Amber-600 */
+            color: white;
+            border-color: #b45309;
+            box-shadow: 0 4px 6px -1px rgba(217, 119, 6, 0.3);
+        }
+
+        .fade-in {
+            animation: fadeIn 0.4s ease-out forwards;
+        }
+        @keyframes fadeIn {
+            from { opacity: 0; transform: translateY(8px); }
+            to { opacity: 1; transform: translateY(0); }
+        }
+
+        .math-text {
+            font-family: 'Rubik', sans-serif;
+            font-weight: 700;
+            text-shadow: 2px 2px 0px white, -2px -2px 0px white, 2px -2px 0px white, -2px 2px 0px white;
+            pointer-events: none;
+            user-select: none;
+        }
+    </style>
+</head>
+<body class="h-screen flex flex-col text-slate-800 overflow-hidden">
+
+    <header class="bg-white/90 backdrop-blur-md shadow-sm border-b border-amber-100 z-20 shrink-0">
+        <div class="max-w-7xl mx-auto px-4 py-3 flex items-center justify-between">
+            <div class="flex items-center gap-2">
+                <div class="bg-amber-500 text-white p-1.5 rounded-lg">
+                    <i data-lucide="component" width="24" height="24"></i>
+                </div>
+                <div>
+                    <h1 class="text-xl font-bold text-slate-800 leading-none">חוקרים את הטרפז</h1>
+                    <p class="text-xs text-amber-600 font-medium mt-1">מעבדה אינטראקטיבית מבית אלוגברה</p>
+                </div>
+            </div>
+        </div>
+    </header>
+
+    <main class="flex-grow flex flex-col md:flex-row overflow-hidden relative">
+        
+        <!-- Canvas -->
+        <div class="relative w-full md:w-2/3 h-[50vh] md:h-auto border-b md:border-b-0 md:border-l border-amber-200 canvas-container flex justify-center items-center overflow-hidden" id="canvasWrapper">
+            <svg id="geoCanvas" width="100%" height="100%" class="w-full h-full select-none block">
+                <!-- SVG Content -->
+            </svg>
+            <div id="dragHint" class="absolute bottom-6 left-1/2 transform -translate-x-1/2 bg-white/90 backdrop-blur border border-amber-200 px-4 py-2 rounded-full text-sm font-semibold text-amber-700 shadow-lg pointer-events-none flex items-center gap-2 animate-pulse">
+                <i data-lucide="hand" width="16"></i>
+                גררו את הקודקודים לשינוי הטרפז
+            </div>
+        </div>
+
+        <!-- Sidebar -->
+        <div class="w-full md:w-1/3 bg-white flex flex-col h-[50vh] md:h-auto border-t md:border-t-0 shadow-[-5px_0_15px_-5px_rgba(0,0,0,0.05)] z-10">
+            <div class="p-6 flex flex-col h-full overflow-y-auto custom-scrollbar">
+                
+                <h2 class="text-sm font-bold text-slate-400 uppercase tracking-wider mb-4">סוגים ותכונות</h2>
+                
+                <div class="grid grid-cols-2 gap-3 mb-6">
+                    <button onclick="setMode('general')" id="btn-general" class="btn-prop p-3 rounded-xl border border-amber-100 bg-amber-50 text-slate-700 hover:bg-white hover:border-amber-300 flex flex-col items-center justify-center gap-2">
+                        <i data-lucide="baseline" width="22"></i>
+                        <span class="text-sm font-bold">טרפז כללי</span>
+                    </button>
+                    <button onclick="setMode('isosceles')" id="btn-isosceles" class="btn-prop p-3 rounded-xl border border-amber-100 bg-amber-50 text-slate-700 hover:bg-white hover:border-amber-300 flex flex-col items-center justify-center gap-2">
+                        <i data-lucide="scale" width="22"></i>
+                        <span class="text-sm font-bold">שווה שוקיים</span>
+                    </button>
+                    <button onclick="setMode('right')" id="btn-right" class="btn-prop p-3 rounded-xl border border-amber-100 bg-amber-50 text-slate-700 hover:bg-white hover:border-amber-300 flex flex-col items-center justify-center gap-2">
+                        <i data-lucide="corner-right-down" width="22"></i>
+                        <span class="text-sm font-bold">ישר זווית</span>
+                    </button>
+                    <button onclick="setMode('sum180')" id="btn-sum180" class="btn-prop p-3 rounded-xl border border-amber-100 bg-amber-50 text-slate-700 hover:bg-white hover:border-amber-300 flex flex-col items-center justify-center gap-2">
+                        <i data-lucide="merge" width="22"></i>
+                        <span class="text-sm font-bold">סכום זוויות (180°)</span>
+                    </button>
+                    <button onclick="setMode('area')" id="btn-area" class="btn-prop col-span-2 p-3 rounded-xl border border-amber-100 bg-amber-50 text-slate-700 hover:bg-white hover:border-amber-300 flex flex-row items-center justify-center gap-2">
+                        <i data-lucide="grid" width="22"></i>
+                        <span class="text-sm font-bold">שטח הטרפז</span>
+                    </button>
+                </div>
+
+                <div class="border-t border-amber-100 my-2"></div>
+
+                <button onclick="resetShape()" class="w-full py-3 text-slate-500 hover:text-amber-600 font-medium text-sm flex items-center justify-center gap-2 transition-colors mb-4">
+                    <i data-lucide="rotate-ccw" width="18"></i>
+                    איפוס לוח
+                </button>
+
+                <!-- Info Card -->
+                <div class="bg-amber-50/80 p-5 rounded-2xl border border-amber-200 flex-grow relative overflow-hidden group">
+                    <div class="relative z-10">
+                        <h3 id="infoTitle" class="font-bold text-lg text-amber-900 mb-2 flex items-center gap-2">
+                            הטרפז
+                        </h3>
+                        <div id="infoContent" class="text-amber-900 text-sm leading-relaxed">
+                            <!-- Dynamic Content -->
+                        </div>
+                    </div>
+                </div>
+
+                <div class="mt-6 text-center">
+                    <p class="text-xs font-medium text-amber-300">© כל הזכויות שמורות לאלוגברה</p>
+                </div>
+            </div>
+        </div>
+    </main>
+
+<script>
+    // --- State ---
+    const canvas = document.getElementById('geoCanvas');
+    const wrapper = document.getElementById('canvasWrapper');
+    let width, height;
+
+    let currentMode = 'general';
+    let activePoint = null;
+
+    // Trap points: Top (A,B), Bottom (D,C)
+    // Constraint: AB || DC (Horizontal lines)
+    let trap = {
+        topY: 0.25,
+        botY: 0.75,
+        ax: 0.35,
+        bx: 0.65,
+        dx: 0.2,
+        cx: 0.8
+    };
+
+    const COLORS = {
+        primary: '#d97706', // Amber 600
+        secondary: '#0ea5e9', // Sky 500 (Base markers)
+        accent: '#f43f5e', // Rose 500 (Legs)
+        highlight: '#7c3aed', // Violet 600 (Diagonals)
+        text: '#1e293b', 
+        fill: 'rgba(251, 191, 36, 0.05)'
+    };
+
+    // --- Init ---
+    function init() {
+        lucide.createIcons();
+        resizeCanvas();
+        window.addEventListener('resize', () => { resizeCanvas(); render(); });
+        
+        canvas.addEventListener('mousedown', handleStart);
+        canvas.addEventListener('touchstart', handleStart, {passive: false});
+        window.addEventListener('mousemove', handleMove);
+        window.addEventListener('touchmove', handleMove, {passive: false});
+        window.addEventListener('mouseup', handleEnd);
+        window.addEventListener('touchend', handleEnd);
+
+        setMode('general');
+    }
+
+    function resizeCanvas() {
+        const rect = wrapper.getBoundingClientRect();
+        width = rect.width;
+        height = rect.height;
+        canvas.setAttribute('width', width);
+        canvas.setAttribute('height', height);
+        canvas.setAttribute('viewBox', `0 0 ${width} ${height}`);
+    }
+
+    // --- Math ---
+    function toAbs(nx, ny) { return { x: nx * width, y: ny * height }; }
+    function toNorm(x, y) { return { x: x / width, y: y / height }; }
+    function dist(p1, p2) { return Math.hypot(p2.x - p1.x, p2.y - p1.y); }
+
+    function getCorners() {
+        // A,B Top | D,C Bottom
+        const A = toAbs(trap.ax, trap.topY);
+        const B = toAbs(trap.bx, trap.topY);
+        const C = toAbs(trap.cx, trap.botY);
+        const D = toAbs(trap.dx, trap.botY);
+        return { A, B, C, D };
+    }
+
+    // --- Interaction ---
+    function getPointerPos(evt) {
+        const r = canvas.getBoundingClientRect();
+        const clientX = evt.touches ? evt.touches[0].clientX : evt.clientX;
+        const clientY = evt.touches ? evt.touches[0].clientY : evt.clientY;
+        return toNorm(clientX - r.left, clientY - r.top);
+    }
+
+    function handleStart(evt) {
+        if (evt.target.classList.contains('vertex-point') || evt.type === 'touchstart') evt.preventDefault();
+        const pos = getPointerPos(evt);
+        const pts = getCorners();
+        let closest = null, minDist = 40;
+
+        ['A', 'B', 'C', 'D'].forEach(k => {
+            const p = pts[k];
+            const d = Math.hypot(p.x - pos.x * width, p.y - pos.y * height);
+            if(d < minDist) { minDist = d; closest = k; }
+        });
+
+        if(closest) {
+            activePoint = closest;
+            document.body.style.cursor = 'grabbing';
+            render();
+        }
+    }
+
+    function handleMove(evt) {
+        if(!activePoint) return;
+        evt.preventDefault();
+        const pos = getPointerPos(evt);
+        const pad = 0.05;
+        let nx = Math.max(pad, Math.min(1-pad, pos.x));
+        let ny = Math.max(pad, Math.min(1-pad, pos.y));
+
+        // Logic based on Mode
+        if (currentMode === 'right') {
+            if (activePoint === 'A' || activePoint === 'D') {
+                trap.ax = nx;
+                trap.dx = nx;
+                if (activePoint === 'A') trap.topY = Math.min(ny, trap.botY - 0.1);
+                if (activePoint === 'D') trap.botY = Math.max(ny, trap.topY + 0.1);
+            } 
+            else if (activePoint === 'B') {
+                trap.bx = Math.max(trap.ax + 0.1, nx); 
+                trap.topY = Math.min(ny, trap.botY - 0.1);
+            }
+            else if (activePoint === 'C') {
+                trap.cx = Math.max(trap.dx + 0.1, nx); 
+                trap.botY = Math.max(ny, trap.topY + 0.1);
+            }
+        } 
+        else if (currentMode === 'isosceles') {
+            const cx = 0.5;
+            if (activePoint === 'A' || activePoint === 'B') {
+                let distFromCenter = Math.abs(nx - cx);
+                trap.ax = cx - distFromCenter;
+                trap.bx = cx + distFromCenter;
+                trap.topY = Math.min(ny, trap.botY - 0.1);
+            }
+            if (activePoint === 'D' || activePoint === 'C') {
+                let distFromCenter = Math.abs(nx - cx);
+                trap.dx = cx - distFromCenter;
+                trap.cx = cx + distFromCenter;
+                trap.botY = Math.max(ny, trap.topY + 0.1);
+            }
+        }
+        else {
+            if (activePoint === 'A') {
+                trap.ax = nx;
+                trap.topY = Math.min(ny, trap.botY - 0.1); 
+            }
+            if (activePoint === 'B') {
+                trap.bx = nx;
+                trap.topY = Math.min(ny, trap.botY - 0.1);
+            }
+            if (activePoint === 'D') {
+                trap.dx = nx;
+                trap.botY = Math.max(ny, trap.topY + 0.1); 
+            }
+            if (activePoint === 'C') {
+                trap.cx = nx;
+                trap.botY = Math.max(ny, trap.topY + 0.1);
+            }
+        }
+        
+        render();
+    }
+
+    function handleEnd() {
+        activePoint = null;
+        document.body.style.cursor = 'default';
+        render();
+    }
+
+    function resetShape() {
+        trap = { topY: 0.25, botY: 0.75, ax: 0.35, bx: 0.65, dx: 0.2, cx: 0.8 };
+        if (currentMode === 'right') {
+            trap.ax = 0.2; trap.dx = 0.2;
+        } else if (currentMode === 'isosceles') {
+            trap.ax = 0.35; trap.bx = 0.65; trap.dx = 0.2; trap.cx = 0.8;
+        }
+        render();
+    }
+
+    // --- UI Logic ---
+    function setMode(mode) {
+        currentMode = mode;
+        document.querySelectorAll('.btn-prop').forEach(b => b.classList.remove('active'));
+        const btn = document.getElementById('btn-' + mode);
+        if(btn) btn.classList.add('active');
+        
+        // Adjust shape for mode
+        if (mode === 'right') {
+            trap.ax = trap.dx = 0.2; // Align left
+            trap.bx = 0.6; trap.cx = 0.8;
+        } else if (mode === 'isosceles') {
+            trap.ax = 0.35; trap.bx = 0.65; // Symmetric
+            trap.dx = 0.2; trap.cx = 0.8;
+        }
+        
+        updateInfoPanel();
+        render();
+    }
+
+    function updateInfoPanel() {
+        const title = document.getElementById('infoTitle');
+        const content = document.getElementById('infoContent');
+        content.parentElement.parentElement.classList.remove('fade-in');
+        void content.offsetWidth;
+        
+        let data = { title: "", text: "" };
+
+        switch(currentMode) {
+            case 'general':
+                data = { 
+                    title: "הטרפז הכללי", 
+                    text: `טרפז הוא מרובע שיש לו <b>זוג אחד בלבד</b> של צלעות מקבילות.<br>
+                           הצלעות המקבילות נקראות <b>בסיסים</b> (AB ו-DC), והאחרות נקראות <b>שוקיים</b>.`
+                };
+                break;
+            case 'isosceles':
+                data = { 
+                    title: "טרפז שווה שוקיים", 
+                    text: `מקרה מיוחד שבו השוקיים שוות באורכן (AD = BC).<br>
+                           תכונות חשובות:<br>
+                           1. זוויות הבסיס שוות זו לזו (הוורודות למטה, התכולות למעלה).<br>
+                           2. האלכסונים שווים זה לזה באורכם.`
+                };
+                break;
+            case 'right':
+                data = { 
+                    title: "טרפז ישר זווית", 
+                    text: `טרפז שבו אחת השוקיים מאונכת לבסיסים.<br>
+                           השוק המאונכת יוצרת שתי <b>זוויות ישרות</b> (90 מעלות) והיא משמשת גם כ<b>גובה</b> הטרפז.`
+                };
+                break;
+            case 'sum180':
+                data = { 
+                    title: "זוויות ליד השוק", 
+                    text: `תכונה חשובה בכל טרפז:<br>
+                           הבסיסים מקבילים, ולכן סכום הזוויות ליד אותה שוק (זוויות חד-צדדיות) הוא תמיד <b>180 מעלות</b>.<br>
+                           <span class="font-mono bg-amber-100 px-1 rounded font-bold" dir="ltr">∠A + ∠D = 180°</span>`
+                };
+                break;
+            case 'area':
+                data = { 
+                    title: "שטח הטרפז", 
+                    text: `
+                    <div class="flex items-center justify-center gap-2 mt-2 font-mono text-lg font-bold text-amber-800" dir="ltr">
+                        <span>S =</span>
+                        <div class="flex flex-col items-center">
+                            <span class="border-b-2 border-amber-800 pb-1 px-1">(AB + DC) • h</span>
+                            <span>2</span>
+                        </div>
+                    </div>
+                    <div class="text-center mt-2 text-sm">סכום הבסיסים כפול גובה, חלקי 2.</div>`
+                };
+                break;
+        }
+
+        title.innerHTML = data.title;
+        content.innerHTML = data.text;
+        content.parentElement.parentElement.classList.add('fade-in');
+    }
+
+    // --- Rendering ---
+    function createEl(type, attrs) {
+        const el = document.createElementNS("http://www.w3.org/2000/svg", type);
+        for (let k in attrs) el.setAttribute(k, attrs[k]);
+        return el;
+    }
+
+    function render() {
+        canvas.innerHTML = '';
+        const { A, B, C, D } = getCorners();
+        
+        // Fill
+        canvas.appendChild(createEl('polygon', {
+            points: `${A.x},${A.y} ${B.x},${B.y} ${C.x},${C.y} ${D.x},${D.y}`,
+            fill: COLORS.fill, stroke: 'none'
+        }));
+
+        // Base Parallel Markers - Big and Bold
+        drawParallelArrow(A, B);
+        drawParallelArrow(D, C);
+
+        if (currentMode === 'right') {
+            drawRightAngle(A, D, B); 
+            drawRightAngle(D, C, A); 
+        }
+        else if (currentMode === 'isosceles') {
+            // Draw tick marks on legs
+            drawTick(A, D);
+            drawTick(B, C);
+            
+            // Draw Diagonals (Thick Purple)
+            canvas.appendChild(createEl('line', { x1:A.x, y1:A.y, x2:C.x, y2:C.y, stroke: COLORS.highlight, 'stroke-width':5, opacity: 0.8 }));
+            canvas.appendChild(createEl('line', { x1:B.x, y1:B.y, x2:D.x, y2:D.y, stroke: COLORS.highlight, 'stroke-width':5, opacity: 0.8 }));
+            
+            // Base Angles - Lower (Pink)
+            drawSmartArc(D, A, C, 40, COLORS.accent);
+            drawSmartArc(C, B, D, 40, COLORS.accent);
+            
+            // Base Angles - Upper (Blue/Secondary)
+            drawSmartArc(A, B, D, 40, COLORS.secondary);
+            drawSmartArc(B, A, C, 40, COLORS.secondary);
+        }
+        else if (currentMode === 'sum180') {
+            // Highlight Leg AD
+            canvas.appendChild(createEl('line', { x1:A.x, y1:A.y, x2:D.x, y2:D.y, stroke: COLORS.accent, 'stroke-width': 6 }));
+            
+            // Draw angles A and D
+            // D connects A and C
+            drawSmartArc(D, A, C, 35, COLORS.accent);
+            // A connects D and B
+            drawSmartArc(A, B, D, 35, COLORS.accent);
+            
+            // Draw Text
+            drawLabelBox((A.x+D.x)/2 - 50, (A.y+D.y)/2, "180°", COLORS.accent);
+        }
+        else if (currentMode === 'area') {
+            drawAreaVisuals(A, B, C, D);
+        }
+
+        // Outline
+        canvas.appendChild(createEl('polygon', {
+            points: `${A.x},${A.y} ${B.x},${B.y} ${C.x},${C.y} ${D.x},${D.y}`,
+            fill: 'none', stroke: COLORS.primary, 'stroke-width': 4, 'stroke-linejoin': 'round'
+        }));
+
+        drawVertices({A, B, C, D});
+    }
+
+    // --- Visual Helpers ---
+    function drawParallelArrow(p1, p2) {
+        const mx = (p1.x + p2.x)/2; const my = (p1.y + p2.y)/2;
+        const size = 10;
+        const drawSingle = (offset) => {
+            canvas.appendChild(createEl('polyline', {
+                points: `${mx-size+offset},${my-size} ${mx+offset},${my} ${mx-size+offset},${my+size}`,
+                fill: 'none', stroke: COLORS.secondary, 'stroke-width': 3
+            }));
+        };
+        drawSingle(-5);
+        drawSingle(5);
+    }
+
+    function drawRightAngle(corner, p1, p2) {
+        const s = 18;
+        let xDir = (corner.x < width/2) ? 1 : -1; 
+        let yDir = (corner.y < height/2) ? 1 : -1;
+        
+        canvas.appendChild(createEl('polyline', {
+            points: `${corner.x},${corner.y + yDir*s} ${corner.x + xDir*s},${corner.y + yDir*s} ${corner.x + xDir*s},${corner.y}`,
+            fill: 'none', stroke: COLORS.text, 'stroke-width': 3
+        }));
+        canvas.appendChild(createEl('circle', { cx: corner.x + xDir*s/2, cy: corner.y + yDir*s/2, r: 2, fill: COLORS.text }));
+    }
+
+    function drawTick(p1, p2) {
+        const mx = (p1.x + p2.x)/2; const my = (p1.y + p2.y)/2;
+        canvas.appendChild(createEl('line', {
+            x1: mx - 8, y1: my, x2: mx + 8, y2: my,
+            stroke: COLORS.accent, 'stroke-width': 4
+        }));
+    }
+
+    function drawSmartArc(center, p1, p2, r, color) {
+        // Calculate angles
+        const ang1 = Math.atan2(p1.y - center.y, p1.x - center.x);
+        const ang2 = Math.atan2(p2.y - center.y, p2.x - center.x);
+        
+        // Calculate difference to find the shortest arc
+        let diff = ang2 - ang1;
+        // Normalize to -PI to +PI
+        while (diff > Math.PI) diff -= 2 * Math.PI;
+        while (diff < -Math.PI) diff += 2 * Math.PI;
+        
+        // Determine sweep flag: 
+        // If diff > 0, we go clockwise (in screen coords, Y down) = 1
+        // If diff < 0, we go counter-clockwise = 0
+        const sweep = (diff > 0) ? 1 : 0;
+        
+        const startX = center.x + r * Math.cos(ang1);
+        const startY = center.y + r * Math.sin(ang1);
+        const endX = center.x + r * Math.cos(ang2);
+        const endY = center.y + r * Math.sin(ang2);
+        
+        // Draw sector line to center + Arc
+        canvas.appendChild(createEl('path', {
+            d: `M ${center.x} ${center.y} L ${startX} ${startY} A ${r} ${r} 0 0 ${sweep} ${endX} ${endY} Z`,
+            fill: color, 'fill-opacity': 0.3, stroke: color, 'stroke-width': 2
+        }));
+    }
+
+    function drawAreaVisuals(A, B, C, D) {
+        const hx = A.x; const hy = D.y;
+        canvas.appendChild(createEl('line', {
+            x1: A.x, y1: A.y, x2: hx, y2: hy,
+            stroke: COLORS.text, 'stroke-width': 3, 'stroke-dasharray': '6,4'
+        }));
+        
+        drawLabelBox(A.x - 20, (A.y + D.y)/2, 'h', COLORS.text);
+        
+        const top = Math.round(Math.abs(B.x - A.x)/10);
+        const bot = Math.round(Math.abs(C.x - D.x)/10);
+        const hVal = Math.round(Math.abs(D.y - A.y)/10);
+        const area = Math.round((top + bot) * hVal / 2);
+
+        drawLabelBox((A.x+B.x)/2, A.y - 20, top, COLORS.primary);
+        drawLabelBox((D.x+C.x)/2, D.y + 25, bot, COLORS.primary);
+        drawLabelBox((A.x+hx)/2 + 5, (A.y+hy)/2, hVal, COLORS.text);
+
+        const infoContent = document.getElementById('infoContent');
+        if (infoContent) {
+            infoContent.innerHTML = `
+                <div class="flex items-center justify-center gap-2 mt-2 font-mono text-lg font-bold text-amber-800" dir="ltr">
+                    <span>S =</span>
+                    <div class="flex flex-col items-center">
+                        <span class="border-b-2 border-amber-800 pb-1 px-1">(AB + DC) • h</span>
+                        <span>2</span>
+                    </div>
+                </div>
+                <div class="mt-4 text-center bg-amber-50 p-3 rounded-lg border border-amber-200 shadow-sm">
+                    <div class="font-mono text-lg text-amber-900 font-bold" dir="ltr">(${top} + ${bot}) • ${hVal} / 2 = ${area}</div>
+                </div>
+            `;
+        }
+    }
+
+    function drawLabelBox(x, y, txt, color) {
+        canvas.appendChild(createEl('rect', {
+            x: x - 20, y: y - 12, width: 40, height: 24, rx: 6,
+            fill: 'white', stroke: color, 'stroke-width': 2, opacity: 0.95
+        }));
+        const t = createEl('text', {
+            x: x, y: y+5, fill: color, 'font-size': 14, 'font-weight': 'bold',
+            'text-anchor': 'middle', 'dominant-baseline': 'middle', class: 'math-text'
+        });
+        t.textContent = txt;
+        canvas.appendChild(t);
+    }
+
+    function drawVertices(pts) {
+        for(let k in pts) {
+            const p = pts[k];
+            const isActive = activePoint === k;
+            if (isActive) canvas.appendChild(createEl('circle', { cx: p.x, cy: p.y, r: 22, fill: COLORS.primary, opacity: 0.2 }));
+            
+            canvas.appendChild(createEl('circle', { 
+                cx: p.x, cy: p.y, r: 9, fill: isActive ? COLORS.primary : 'white', 
+                stroke: COLORS.primary, 'stroke-width': 3, 
+                class: 'vertex-point'
+            }));
+            const t = createEl('text', { x: p.x + (k==='D'||k==='A'?-25:25), y: p.y + (k==='A'||k==='B'?-20:30), fill: COLORS.text, 'font-size': 20, 'font-weight':'bold', 'text-anchor':'middle', class:'math-text'});
+            t.textContent = k;
+            canvas.appendChild(t);
+        }
+    }
+
+    init();
+</script>
+</body>
+</html>

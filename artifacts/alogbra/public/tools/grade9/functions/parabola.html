@@ -1,0 +1,967 @@
+<!DOCTYPE html>
+<html lang="he" dir="rtl">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <title>פרבולות - הסיכום המלא</title>
+    
+    <!-- טעינת Tailwind CSS לעיצוב -->
+    <script src="https://cdn.tailwindcss.com"></script>
+    
+    <!-- הגדרת פונט נעים לקריאה בעברית (Rubik) -->
+    <link href="https://fonts.googleapis.com/css2?family=Rubik:wght@300;400;500;700;900&display=swap" rel="stylesheet">
+    <style>
+        body { font-family: 'Rubik', sans-serif; overflow-x: hidden; }
+        /* תיקון כיווניות עבור נוסחאות מתמטיות */
+        .dir-ltr { direction: ltr; }
+    </style>
+
+    <!-- מפת ייבוא (Import Map) כדי שהקוד יעבוד עם פקודות import רגילות -->
+    <script type="importmap">
+    {
+        "imports": {
+            "react": "https://esm.sh/react@18.2.0",
+            "react-dom/client": "https://esm.sh/react-dom@18.2.0/client",
+            "lucide-react": "https://esm.sh/lucide-react@0.344.0?deps=react@18.2.0",
+            "recharts": "https://esm.sh/recharts@2.12.2?deps=react@18.2.0,react-dom@18.2.0"
+        }
+    }
+    </script>
+
+    <!-- טעינת Babel כדי לקמפל את ה-JSX בדפדפן -->
+    <script src="https://unpkg.com/@babel/standalone/babel.min.js"></script>
+</head>
+<body class="bg-slate-50 text-slate-900">
+    <div id="root"></div>
+
+    <script type="text/babel" data-type="module">
+        import React, { useState } from 'react';
+        import { createRoot } from 'react-dom/client';
+        import { BookOpen, Calculator, CheckCircle, ChevronLeft, ChevronRight, BarChart2, TrendingUp, X, Home, Info, Lightbulb, Activity } from 'lucide-react';
+        import { LineChart, Line, XAxis, YAxis, CartesianGrid, ReferenceLine, ResponsiveContainer, ReferenceDot, Label } from 'recharts';
+
+        // --- רכיבים גרפיים ועזרי מתמטיקה ---
+
+        const MathFraction = ({ num, den, sign = "" }) => (
+          <div className="inline-flex items-center mx-1 align-middle font-mono text-xl whitespace-nowrap">
+            {sign && <span className="mr-2">{sign}</span>}
+            <div className="flex flex-col items-center justify-center">
+              <div className="border-b-2 border-slate-800 pb-0.5 mb-0.5 px-1 w-full text-center tracking-wider">{num}</div>
+              <div className="text-center w-full tracking-wider">{den}</div>
+            </div>
+          </div>
+        );
+
+        const MathRoot = ({ content }) => (
+          <span className="inline-flex items-baseline mx-0.5 whitespace-nowrap">
+            <span className="text-2xl relative top-0.5">√</span>
+            <span className="border-t-2 border-slate-800 pt-0.5 px-0.5 relative -top-0.5">{content}</span>
+          </span>
+        );
+
+        const LTRFormula = ({ children, className = "" }) => (
+          <div className={`dir-ltr text-left font-mono overflow-x-auto max-w-full ${className}`} dir="ltr">
+            {children}
+          </div>
+        );
+
+        // רכיב לשרטוט פרבולה משופר
+        const SimpleParabolaGraph = ({ 
+          a, b, c, 
+          highlight = null, 
+          showYIntercept = false,
+          showRoots = false,
+          showVertex = false,
+          showSymmetry = false,
+          showPoints = false 
+        }) => {
+          const data = [];
+          const vertexX = -b / (2 * a);
+          const vertexY = a * vertexX * vertexX + b * vertexX + c;
+          
+          // קביעת גבולות דינמיים
+          const startX = Math.floor(Math.min(vertexX, 0)) - 3;
+          const endX = Math.ceil(Math.max(vertexX, -b/a)) + 3;
+
+          for (let x = startX; x <= endX; x += 0.2) {
+            const xFixed = Math.round(x * 10) / 10;
+            data.push({ x: xFixed, y: a * xFixed * xFixed + b * xFixed + c });
+          }
+
+          const roots = [];
+          const delta = b * b - 4 * a * c;
+          if (delta >= 0) {
+            roots.push({ x: (-b + Math.sqrt(delta)) / (2 * a), y: 0 });
+            roots.push({ x: (-b - Math.sqrt(delta)) / (2 * a), y: 0 });
+          }
+
+          const yIntercept = { x: 0, y: c };
+
+          // Helper to determine if we should show a specific feature
+          const shouldShow = (specificFlag) => showPoints || specificFlag;
+
+          return (
+            <div className="w-full h-64 md:h-80 bg-white rounded-lg border border-slate-200 mt-6 mb-2 overflow-hidden touch-pan-y" dir="ltr">
+              <ResponsiveContainer width="100%" height="100%">
+                <LineChart data={data} margin={{ top: 20, right: 30, bottom: 20, left: 30 }}>
+                  <CartesianGrid strokeDasharray="3 3" opacity={0.3} />
+                  <XAxis 
+                    dataKey="x" 
+                    type="number" 
+                    domain={[startX, endX]} 
+                    allowDecimals={false} 
+                    stroke="#64748b" 
+                    tick={{fontSize: 10}}
+                  />
+                  <YAxis 
+                    dataKey="y" 
+                    type="number" 
+                    domain={['auto', 'auto']} 
+                    allowDecimals={false} 
+                    stroke="#64748b"
+                    tick={{fontSize: 10}}
+                    width={30}
+                  />
+                  <ReferenceLine y={0} stroke="#000" strokeWidth={1.5} />
+                  <ReferenceLine x={0} stroke="#000" strokeWidth={1.5} />
+                  
+                  <Line 
+                    type="natural" 
+                    dataKey="y" 
+                    stroke="#3b82f6" 
+                    strokeWidth={3} 
+                    dot={false} 
+                    isAnimationActive={false}
+                  />
+
+                  {highlight === 'increasing' && (
+                    <Line type="natural" dataKey="y" data={data.filter(d => a > 0 ? d.x >= vertexX : d.x <= vertexX)} stroke="#22c55e" strokeWidth={5} dot={false} />
+                  )}
+                  {highlight === 'decreasing' && (
+                    <Line type="natural" dataKey="y" data={data.filter(d => a > 0 ? d.x <= vertexX : d.x >= vertexX)} stroke="#ef4444" strokeWidth={5} dot={false} />
+                  )}
+                  {highlight === 'positive' && (
+                    <Line type="natural" dataKey="y" data={data.filter(d => d.y >= 0)} stroke="#06b6d4" strokeWidth={5} dot={false} />
+                  )}
+                  {highlight === 'negative' && (
+                    <Line type="natural" dataKey="y" data={data.filter(d => d.y <= 0)} stroke="#f97316" strokeWidth={5} dot={false} />
+                  )}
+
+                  {/* Points & Labels */}
+                  
+                  {/* ציר סימטריה */}
+                  {shouldShow(showSymmetry) && (
+                    <ReferenceLine x={vertexX} stroke="#f59e0b" strokeDasharray="5 5" label={{ value: `x=${vertexX}`, position: 'top', fill: '#f59e0b', fontSize: 12, fontWeight: 'bold' }} />
+                  )}
+                  
+                  {/* קודקוד */}
+                  {shouldShow(showVertex) && (
+                    <ReferenceDot x={vertexX} y={vertexY} r={5} fill="#f59e0b" stroke="white" strokeWidth={2} isFront={true}>
+                         <Label value={`(${vertexX},${vertexY})`} position="top" offset={10} fill="#f59e0b" fontSize={12} fontWeight="bold" />
+                    </ReferenceDot>
+                  )}
+                  
+                  {/* חיתוך Y */}
+                  {shouldShow(showYIntercept) && (
+                    <ReferenceDot x={yIntercept.x} y={yIntercept.y} r={5} fill="#10b981" stroke="white" strokeWidth={2} isFront={true}>
+                        <Label value={`(0,${c})`} position="right" offset={10} fill="#10b981" fontSize={12} fontWeight="bold" />
+                    </ReferenceDot>
+                  )}
+                  
+                  {/* חיתוך X (שורשים) */}
+                  {shouldShow(showRoots) && roots.map((root, i) => (
+                    <ReferenceDot key={i} x={root.x} y={root.y} r={5} fill="#6366f1" stroke="white" strokeWidth={2} isFront={true}>
+                        <Label value={`(${root.x},0)`} position="bottom" offset={10} fill="#6366f1" fontSize={12} fontWeight="bold" />
+                    </ReferenceDot>
+                  ))}
+                  
+                </LineChart>
+              </ResponsiveContainer>
+            </div>
+          );
+        };
+
+
+        const ParabolaMaster = () => {
+          const [currentScreen, setCurrentScreen] = useState('home'); 
+          const [currentTopicIndex, setCurrentTopicIndex] = useState(0);
+          
+          // State for Practice Mode
+          const [currentQuestion, setCurrentQuestion] = useState(0);
+          const [score, setScore] = useState(0);
+          const [showExplanation, setShowExplanation] = useState(false);
+          const [selectedOption, setSelectedOption] = useState(null);
+          const [isCorrect, setIsCorrect] = useState(null);
+
+          // Data definitions moved up to avoid ReferenceError
+          const exampleFunc = { a: 1, b: -4, c: 3, str: "y = x² - 4x + 3" };
+          const fullExampleFunc = { a: 1, b: -6, c: 5, str: "y = x² - 6x + 5" };
+
+          const questions = [
+            {
+              question: "במשוואה y = 2x² - 5x + 3, מהו ערך המקדם c?",
+              options: ["2", "-5", "3", "0"],
+              correct: 2,
+              explanation: "המקדם c הוא המספר החופשי (ללא x) במשוואה. במקרה זה הוא 3."
+            },
+            {
+              question: "נתונה פרבולה מחייכת שקודקודה ב x=2. מתי היא עולה?",
+              options: ["x > 2", "x < 2", "בין 0 ל-2", "תמיד עולה"],
+              correct: 0,
+              explanation: "פרבולה מחייכת יורדת עד הקודקוד ועולה אחריו. תמיד מסתכלים משמאל לימין. לכן היא עולה כאשר x גדול מ-2."
+            },
+            {
+              question: "מה קורה כאשר הביטוי בתוך השורש (הדלתא) יוצא שלילי?",
+              options: ["יש שני פתרונות", "יש פתרון אחד", "אין פתרון (אין חיתוך עם ציר x)", "הפרבולה הפוכה"],
+              correct: 2,
+              explanation: "אי אפשר לעשות שורש למספר שלילי (במספרים ממשיים), ולכן אין נקודות חיתוך עם ציר ה-x."
+            },
+            {
+              question: "איך נמצא את תחום השליליות של פרבולה?",
+              options: ["נבדוק מתי ה-y קטן מ-0 (מתחת לציר x)", "נבדוק מתי ה-y גדול מ-0", "לפי הקודקוד בלבד", "זה תמיד צד שמאל של הציר"],
+              correct: 0,
+              explanation: "תחום שליליות הוא החלק בגרף שנמצא מתחת לציר ה-x, כלומר שה-y שלו שלילי."
+            },
+            {
+              question: "מהי הנוסחה למציאת x קודקוד?",
+              options: ["-b/2a", "b/2a", "-b/a", "c/a"],
+              correct: 0,
+              explanation: "הנוסחה היא מינוס b חלקי 2a. הקפד על המינוס!"
+            }
+          ];
+
+          const topics = [
+            {
+              id: 'intro',
+              title: 'היכרות עם הפרבולה',
+              icon: <Info className="w-6 h-6" />,
+              content: (
+                <div className="space-y-6">
+                  <div className="bg-blue-50 p-4 rounded-xl border-r-4 border-blue-500">
+                    <h3 className="font-bold text-xl mb-2 text-blue-800">המשוואה הריבועית</h3>
+                    <p className="text-lg leading-relaxed">
+                      פרבולה היא הגרף של פונקציה ריבועית. הצורה הכללית נראית כך:
+                    </p>
+                    <LTRFormula className="text-center text-3xl font-bold my-6 text-indigo-600 bg-white p-4 rounded-lg shadow-sm">
+                      y = ax² + bx + c
+                    </LTRFormula>
+                    <p className="text-lg">
+                      כדי לפתור תרגילים, חובה לזהות את <span className="font-bold text-pink-600">a</span>, <span className="font-bold text-purple-600">b</span> ו-<span className="font-bold text-teal-600">c</span>:
+                    </p>
+                  </div>
+
+                  <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+                    <div className="bg-white p-4 rounded-lg shadow border border-gray-100">
+                      <span className="text-2xl font-bold text-pink-600 block mb-2">a</span>
+                      <p>ה"בוס". קובע את הצורה.<br/>a חיובי = "מחייכת" 🙂<br/>a שלילי = "בוכה" ☹️</p>
+                    </div>
+                    <div className="bg-white p-4 rounded-lg shadow border border-gray-100">
+                      <span className="text-2xl font-bold text-purple-600 block mb-2">b</span>
+                      <p>המקדם של ה-x (בלי החזקה). עוזר למצוא את הקודקוד.</p>
+                    </div>
+                    <div className="bg-white p-4 rounded-lg shadow border border-gray-100">
+                      <span className="text-2xl font-bold text-teal-600 block mb-2">c</span>
+                      <p>המספר החופשי בסוף. זהו תמיד נקודת החיתוך עם ציר ה-y.</p>
+                    </div>
+                  </div>
+                  
+                  <div className="bg-slate-100 p-4 rounded-xl mt-6">
+                    <h4 className="font-bold text-lg mb-2">נשתמש בדוגמה הזו לאורך כל הדרך:</h4>
+                    <LTRFormula className="text-center text-2xl font-bold text-slate-800 bg-white p-3 rounded border">
+                      {exampleFunc.str}
+                    </LTRFormula>
+                    <div className="flex justify-center gap-4 mt-2 text-lg">
+                        <span><span className="font-bold text-pink-600">a = {exampleFunc.a}</span></span>
+                        <span><span className="font-bold text-purple-600">b = {exampleFunc.b}</span></span>
+                        <span><span className="font-bold text-teal-600">c = {exampleFunc.c}</span></span>
+                    </div>
+                    <SimpleParabolaGraph {...exampleFunc} />
+                  </div>
+                </div>
+              )
+            },
+            {
+              id: 'intercepts',
+              title: 'חיתוך עם הצירים ונוסחת השורשים',
+              icon: <BarChart2 className="w-6 h-6" />,
+              content: (
+                <div className="space-y-8">
+                  {/* חיתוך Y */}
+                  <div className="bg-green-50 p-4 md:p-5 rounded-xl border-r-4 border-green-500 shadow-sm">
+                    <h3 className="font-bold text-xl md:text-2xl mb-3 text-green-800 flex items-center">
+                        <span className="ml-2 text-2xl md:text-3xl">❶</span> חיתוך עם ציר ה-y
+                    </h3>
+                    <p className="text-lg mb-2">הנקודה שבה הגרף חוצה את הציר האנכי.</p>
+                    <p className="text-lg">תמיד מציבים <strong>x = 0</strong>. התוצאה ל-y היא תמיד <strong>c</strong>.</p>
+                    <LTRFormula className="bg-white p-3 rounded mt-4 text-center text-2xl font-bold border border-green-200 w-fit mx-auto px-8">
+                      (0, c)
+                    </LTRFormula>
+                    
+                    <div className="mt-6 bg-white p-4 rounded-lg border border-green-100">
+                        <h4 className="font-bold text-green-700 mb-2">בדוגמה שלנו ({exampleFunc.str}):</h4>
+                        <p>ה-c הוא 3. לכן נקודת החיתוך היא:</p>
+                        <LTRFormula className="text-center text-xl font-bold mt-2">(0, 3)</LTRFormula>
+                        <div className="w-full md:w-3/4 mx-auto">
+                          <SimpleParabolaGraph {...exampleFunc} showYIntercept={true} />
+                        </div>
+                    </div>
+                  </div>
+
+                  {/* חיתוך X */}
+                  <div className="bg-indigo-50 p-4 md:p-5 rounded-xl border-r-4 border-indigo-500 shadow-sm">
+                    <h3 className="font-bold text-xl md:text-2xl mb-3 text-indigo-800 flex items-center">
+                        <span className="ml-2 text-2xl md:text-3xl">❷</span> חיתוך עם ציר ה-x (שורשים)
+                    </h3>
+                    <p className="text-lg mb-2">הנקודות שבהן הגרף חוצה את הציר האופקי.</p>
+                    
+                    <div className="bg-white p-4 rounded-lg border-2 border-indigo-200 mb-6">
+                        <p className="text-lg font-bold text-indigo-900 mb-2">שלב ראשון - משווים ל-0!</p>
+                        <p className="mb-2">כדי למצוא את החיתוך, חייבים להציב <strong>y = 0</strong>.</p>
+                        <p>כך אנחנו מקבלים משוואה ריבועית:</p>
+                        <LTRFormula className="text-xl md:text-2xl text-center font-bold my-3 bg-indigo-50 p-2 rounded whitespace-nowrap">
+                          ax² + bx + c = 0
+                        </LTRFormula>
+                    </div>
+
+                    <p className="text-lg mb-4">כעת נשתמש בנוסחת השורשים:</p>
+                    
+                    <div className="bg-white p-4 md:p-6 rounded-lg shadow-md text-center mb-8 overflow-x-auto border border-indigo-100">
+                       <LTRFormula className="text-2xl md:text-3xl flex items-center justify-center whitespace-nowrap">
+                         <span className="mr-3 font-bold">x₁‚₂ =</span>
+                         <MathFraction 
+                            num={<><span>-b ± </span><MathRoot content="b² - 4ac" /></>}
+                            den="2a"
+                         />
+                       </LTRFormula>
+                    </div>
+
+                    <div className="bg-white p-4 rounded-lg border border-indigo-100">
+                        <h4 className="font-bold text-indigo-700 mb-4 text-lg">בדוגמה שלנו ({exampleFunc.str}):</h4>
+                        <p className="mb-2">משווים ל-0: <span dir="ltr" className="font-mono font-bold">x² - 4x + 3 = 0</span></p>
+                        <p className="mb-2">a=1, b=-4, c=3</p>
+                        <p>נציב בנוסחה:</p>
+                        <LTRFormula className="text-lg md:text-xl flex items-center justify-center my-4 overflow-x-auto">
+                            <span>x₁‚₂ =</span>
+                            <MathFraction 
+                                num={<><span>-(-4) ± </span><MathRoot content="(-4)² - 4·1·3" /></>}
+                                den="2·1"
+                            />
+                        </LTRFormula>
+                        
+                        <ol className="list-decimal list-inside space-y-3 text-lg">
+                            <li>
+                                <strong>נחשב את תוכן השורש ("דלתא"):</strong>
+                                <LTRFormula className="inline-block bg-gray-100 px-2 rounded mx-2 whitespace-nowrap">16 - 12 = 4</LTRFormula>
+                            </li>
+                            <li>
+                                <strong>נוציא שורש:</strong> שורש של 4 הוא <strong>2</strong>.
+                            </li>
+                            <li>
+                                <strong>נפצל לשני פתרונות:</strong>
+                                <div className="flex flex-col md:flex-row justify-center gap-4 md:gap-8 mt-4">
+                                    <div className="bg-indigo-100 p-3 rounded text-center">
+                                        <span className="font-bold block mb-2">פתרון 1 (+)</span>
+                                        <LTRFormula>x₁ = <MathFraction num="4 + 2" den="2" /> = 3</LTRFormula>
+                                    </div>
+                                    <div className="bg-indigo-100 p-3 rounded text-center">
+                                        <span className="font-bold block mb-2">פתרון 2 (-)</span>
+                                        <LTRFormula>x₂ = <MathFraction num="4 - 2" den="2" /> = 1</LTRFormula>
+                                    </div>
+                                </div>
+                            </li>
+                        </ol>
+                        <p className="mt-4 font-bold text-center text-indigo-800">הנקודות הן: (1,0) ו-(3,0)</p>
+                        <div className="w-full md:w-3/4 mx-auto">
+                            <SimpleParabolaGraph {...exampleFunc} showRoots={true} />
+                        </div>
+                    </div>
+                  </div>
+                </div>
+              )
+            },
+            {
+              id: 'vertex',
+              title: 'קודקוד וציר סימטריה',
+              icon: <Calculator className="w-6 h-6" />,
+              content: (
+                <div className="space-y-8">
+                  <p className="text-lg font-medium">
+                    נקודת הקודקוד היא נקודת המפנה של הפרבולה. הכי נמוכה (במחייכת 🙂) או הכי גבוהה (בבוכה ☹️).
+                  </p>
+
+                  <div className="bg-orange-50 p-5 rounded-xl border-r-4 border-orange-500 shadow-sm">
+                    <h3 className="font-bold text-2xl mb-4 text-orange-800">נוסחת הקודקוד (מציאת ה-x)</h3>
+                    
+                    <div className="flex justify-center my-6 bg-white p-6 rounded-lg shadow-md border border-orange-100">
+                        <LTRFormula className="text-2xl md:text-3xl flex items-center">
+                            <span className="mr-3 font-bold">x<sub style={{fontSize: '0.6em'}}>קודקוד</sub> =</span>
+                            <MathFraction num="-b" den="2a" />
+                        </LTRFormula>
+                    </div>
+                    <p className="text-lg">
+                      אחרי שמוצאים את ה-x, מציבים אותו במשוואה המקורית כדי למצוא את ה-y.
+                    </p>
+                  </div>
+
+                  <div className="bg-white p-5 rounded-lg shadow-sm border border-orange-200">
+                    <h4 className="font-bold text-xl mb-3 text-orange-700">ציר הסימטריה</h4>
+                    <p className="text-lg mb-3">
+                        קו ישר (אנכי) שעובר בדיוק באמצע הפרבולה, דרך הקודקוד. המשוואה שלו היא פשוט:
+                    </p>
+                    <LTRFormula className="text-center text-xl md:text-2xl font-bold bg-orange-100 p-3 rounded w-fit mx-auto px-6 whitespace-nowrap">
+                        x = ה-x של הקודקוד
+                    </LTRFormula>
+                  </div>
+
+                  <div className="bg-white p-5 rounded-xl border-2 border-orange-300">
+                      <h4 className="font-bold text-orange-700 mb-4 text-xl">בדוגמה שלנו ({exampleFunc.str}):</h4>
+                      <p className="mb-2">a=1, b=-4</p>
+                      
+                      <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
+                        <div className="overflow-x-auto">
+                            <p><strong>1. נמצא את x קודקוד:</strong></p>
+                            <LTRFormula className="text-xl my-3 bg-gray-50 p-2 rounded whitespace-nowrap">
+                                x = <MathFraction num="-(-4)" den="2·1" /> = <MathFraction num="4" den="2" /> = 2
+                            </LTRFormula>
+                            <p><strong>2. נמצא את y קודקוד (נציב x=2):</strong></p>
+                            <LTRFormula className="text-xl my-3 bg-gray-50 p-2 rounded whitespace-nowrap">
+                                y = 2² - 4(2) + 3 = -1
+                            </LTRFormula>
+                        </div>
+                        <div className="flex flex-col justify-center">
+                            <div className="bg-orange-100 p-4 rounded-lg text-center mb-4">
+                                <p className="text-lg font-bold text-orange-800 mb-2">הקודקוד הוא:</p>
+                                <LTRFormula className="text-3xl font-bold">(2, -1)</LTRFormula>
+                            </div>
+                            <div className="bg-orange-100 p-4 rounded-lg text-center">
+                                <p className="text-lg font-bold text-orange-800 mb-2">ציר הסימטריה:</p>
+                                <LTRFormula className="text-3xl font-bold">x = 2</LTRFormula>
+                            </div>
+                        </div>
+                      </div>
+                      <div className="w-full md:w-3/4 mx-auto">
+                        {/* כאן אנחנו מציגים לראשונה את ציר הסימטריה */}
+                        <SimpleParabolaGraph {...exampleFunc} showVertex={true} showSymmetry={true} />
+                      </div>
+                  </div>
+                </div>
+              )
+            },
+            {
+              id: 'intervals',
+              title: 'עלייה וירידה',
+              icon: <TrendingUp className="w-6 h-6" />,
+              content: (
+                <div className="space-y-8">
+                  <div className="bg-purple-50 p-5 rounded-xl border-r-4 border-purple-500 shadow-sm">
+                    <h3 className="font-bold text-2xl mb-4 text-purple-800">איך קוראים את הגרף?</h3>
+                    <p className="text-lg mb-4 font-medium">
+                      כלל ברזל: תמיד מסתכלים על הגרף <strong>משמאל לימין</strong> (כמו שקוראים אנגלית).
+                    </p>
+                    <p className="text-lg">
+                      הנקודה שבה הפרבולה מפסיקה לרדת ומתחילה לעלות (או להפך) היא תמיד <strong>הקודקוד</strong>.
+                    </p>
+                  </div>
+
+                  <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                    <div className="bg-white p-5 rounded-xl shadow-sm border-2 border-green-200 relative overflow-hidden">
+                      <div className="absolute top-0 left-0 bg-green-500 text-white py-1 px-4 rounded-br-lg font-bold">תחום עלייה 📈</div>
+                      <h4 className="font-bold text-xl mt-8 mb-2">מתי הגרף "מטפס" למעלה?</h4>
+                      <p className="mb-4">נסתכל על הדוגמה שלנו (קודקוד ב- x=2):</p>
+                      <SimpleParabolaGraph {...exampleFunc} highlight="increasing" showVertex={true} />
+                      <div className="mt-4 text-center font-bold text-lg">
+                        העלייה מתחילה אחרי הקודקוד.
+                        <br/>
+                        <LTRFormula className="inline-block bg-green-100 px-3 py-1 rounded mt-2 text-2xl">x {'>'} 2</LTRFormula>
+                      </div>
+                    </div>
+
+                    <div className="bg-white p-5 rounded-xl shadow-sm border-2 border-red-200 relative overflow-hidden">
+                      <div className="absolute top-0 left-0 bg-red-500 text-white py-1 px-4 rounded-br-lg font-bold">תחום ירידה 📉</div>
+                      <h4 className="font-bold text-xl mt-8 mb-2">מתי הגרף "גולש" למטה?</h4>
+                      <p className="mb-4">נסתכל על הדוגמה שלנו (קודקוד ב- x=2):</p>
+                      <SimpleParabolaGraph {...exampleFunc} highlight="decreasing" showVertex={true} />
+                      <div className="mt-4 text-center font-bold text-lg">
+                        הירידה קורית לפני הקודקוד.
+                        <br/>
+                        <LTRFormula className="inline-block bg-red-100 px-3 py-1 rounded mt-2 text-2xl">x {'<'} 2</LTRFormula>
+                      </div>
+                    </div>
+                  </div>
+                  
+                  <div className="bg-gray-100 p-4 rounded-lg text-center text-gray-700">
+                    <Info className="inline-block w-5 h-5 ml-2 relative -top-0.5" />
+                    בפרבולה "בוכה" (a שלילי) זה בדיוק הפוך: קודם עלייה, ואז ירידה.
+                  </div>
+                </div>
+              )
+            },
+            {
+              id: 'positivity',
+              title: 'תחומי חיוביות ושליליות',
+              icon: <Activity className="w-6 h-6" />,
+              content: (
+                <div className="space-y-8">
+                  <div className="bg-cyan-50 p-5 rounded-xl border-r-4 border-cyan-500 shadow-sm">
+                    <h3 className="font-bold text-2xl mb-3 text-cyan-800">מעל המים או מתחת למים?</h3>
+                    <p className="text-lg leading-relaxed mb-4">
+                      דמיינו שציר ה-x הוא פני הים.
+                    </p>
+                    <ul className="list-disc list-inside space-y-4 text-lg font-medium">
+                      <li className="flex items-center">
+                        <TrendingUp className="text-cyan-600 w-6 h-6 ml-2" />
+                        <span><strong>תחום חיובי (+):</strong> כל החלק של הפרבולה שנמצא <strong>מעל</strong> ציר ה-x.</span>
+                      </li>
+                      <li className="flex items-center">
+                        <TrendingUp className="text-orange-600 w-6 h-6 ml-2 transform rotate-180" />
+                        <span><strong>תחום שלילי (-):</strong> כל החלק של הפרבולה שנמצא <strong>מתחת</strong> לציר ה-x.</span>
+                      </li>
+                    </ul>
+                    <p className="text-lg mt-6 bg-white p-3 rounded-lg border border-cyan-200">
+                      הנקודות שמפרידות בין ה"מעל" ל"מתחת" הן <strong>נקודות החיתוך עם ציר ה-x</strong> שמצאנו קודם!
+                    </p>
+                  </div>
+
+                  <div className="bg-white p-5 rounded-xl border-2 border-cyan-300">
+                      <h4 className="font-bold text-cyan-700 mb-4 text-xl">בדוגמה שלנו ({exampleFunc.str}):</h4>
+                      <p className="mb-4 text-lg">מצאנו שנקודות החיתוך הן ב- <strong>x=1</strong> וב- <strong>x=3</strong>.</p>
+                      
+                      <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                        <div className="text-center">
+                            <h5 className="font-bold text-orange-600 mb-2 text-lg">תחום שלילי (מתחת לציר)</h5>
+                            <SimpleParabolaGraph {...exampleFunc} highlight="negative" showRoots={true} />
+                            <p className="mt-3 font-medium">החלק ש"טובל" במים הוא בין 1 ל-3.</p>
+                            <LTRFormula className="inline-block bg-orange-100 px-4 py-2 rounded mt-2 text-xl font-bold">
+                                1 {'<'} x {'<'} 3
+                            </LTRFormula>
+                        </div>
+                        
+                        <div className="text-center">
+                            <h5 className="font-bold text-cyan-600 mb-2 text-lg">תחום חיובי (מעל לציר)</h5>
+                            <SimpleParabolaGraph {...exampleFunc} highlight="positive" showRoots={true} />
+                            <p className="mt-3 font-medium">הזרועות שעולות מעל המים, משני הצדדים.</p>
+                            <LTRFormula className="inline-block bg-cyan-100 px-4 py-2 rounded mt-2 text-xl font-bold">
+                                x {'<'} 1 או x {'>'} 3
+                            </LTRFormula>
+                        </div>
+                      </div>
+                  </div>
+                </div>
+              )
+            }
+          ];
+
+          const handleNextTopic = () => {
+            if (currentTopicIndex < topics.length - 1) {
+              setCurrentTopicIndex(prev => prev + 1);
+              window.scrollTo(0,0);
+            } else {
+              setCurrentScreen('practice');
+              window.scrollTo(0,0);
+            }
+          };
+
+          const handlePrevTopic = () => {
+            if (currentTopicIndex > 0) {
+              setCurrentTopicIndex(prev => prev - 1);
+              window.scrollTo(0,0);
+            } else {
+              setCurrentScreen('home');
+            }
+          };
+
+          const handleAnswer = (index) => {
+            if (showExplanation) return;
+            
+            setSelectedOption(index);
+            const correct = index === questions[currentQuestion].correct;
+            setIsCorrect(correct);
+            setShowExplanation(true);
+            
+            if (correct) {
+              setScore(prev => prev + 10);
+            }
+          };
+
+          const nextQuestion = () => {
+            setSelectedOption(null);
+            setIsCorrect(null);
+            setShowExplanation(false);
+            if (currentQuestion < questions.length - 1) {
+              setCurrentQuestion(prev => prev + 1);
+            } else {
+              alert(`כל הכבוד! סיימת את התרגול עם ${score + (isCorrect ? 10 : 0)} נקודות`);
+              setCurrentScreen('home');
+              setCurrentQuestion(0);
+              setScore(0);
+            }
+          };
+
+          // --- Render Functions ---
+
+          const renderHome = () => (
+            <div className="flex flex-col items-center justify-center min-h-[80vh] text-center p-6 bg-gradient-to-br from-blue-50 to-white rounded-3xl">
+              <div className="bg-white p-6 rounded-full shadow-lg mb-8 animate-bounce">
+                <TrendingUp className="w-16 h-16 text-blue-600" />
+              </div>
+              <h1 className="text-4xl md:text-5xl font-black text-slate-800 mb-6 tracking-tight">
+                פרבולות - הסיכום המלא
+              </h1>
+              <p className="text-xl md:text-2xl text-slate-600 mb-10 max-w-2xl">
+                הכלי שייקח אתכם צעד צעד: חקירה, שרטוט, עלייה/ירידה וחיוביות/שליליות. עכשיו עם שרטוטים ברורים!
+              </p>
+              
+              <div className="flex flex-col gap-4 w-full max-w-md">
+                <button 
+                  onClick={() => {setCurrentScreen('fullExample'); window.scrollTo(0,0);}}
+                  className="flex items-center justify-center gap-2 bg-purple-600 hover:bg-purple-700 text-white font-bold py-4 px-8 rounded-xl text-xl shadow-lg transform transition hover:-translate-y-1"
+                >
+                  <Lightbulb className="w-6 h-6" />
+                  דוגמה פתורה מלאה
+                </button>
+
+                <div className="flex gap-4">
+                    <button 
+                    onClick={() => {setCurrentScreen('learn'); setCurrentTopicIndex(0);}}
+                    className="flex-1 flex items-center justify-center gap-2 bg-blue-600 hover:bg-blue-700 text-white font-bold py-4 px-4 rounded-xl text-lg shadow-lg transform transition hover:-translate-y-1"
+                    >
+                    <BookOpen className="w-5 h-5" />
+                    לימוד לפי נושאים
+                    </button>
+                    <button 
+                    onClick={() => setCurrentScreen('practice')}
+                    className="flex-1 flex items-center justify-center gap-2 bg-emerald-500 hover:bg-emerald-600 text-white font-bold py-4 px-4 rounded-xl text-lg shadow-lg transform transition hover:-translate-y-1"
+                    >
+                    <CheckCircle className="w-5 h-5" />
+                    תרגול ידע
+                    </button>
+                </div>
+              </div>
+            </div>
+          );
+
+          const renderLearn = () => (
+            <div className="max-w-4xl mx-auto p-4 md:p-6 pb-24">
+              <div className="flex items-center justify-between mb-8 bg-white p-4 rounded-xl shadow-sm border border-slate-100">
+                <div className="flex items-center gap-3">
+                  <div className="p-2 bg-blue-100 rounded-lg text-blue-600">
+                    {topics[currentTopicIndex].icon}
+                  </div>
+                  <h2 className="text-2xl font-bold text-slate-800">
+                    {topics[currentTopicIndex].title}
+                  </h2>
+                </div>
+                <div className="text-sm font-medium text-slate-400">
+                  שיעור {currentTopicIndex + 1} מתוך {topics.length}
+                </div>
+              </div>
+
+              <div className="bg-white p-6 md:p-8 rounded-2xl shadow-lg border border-slate-100 text-slate-700 leading-relaxed min-h-[400px]">
+                {topics[currentTopicIndex].content}
+              </div>
+
+              <div className="fixed bottom-0 left-0 right-0 bg-white border-t p-4 shadow-[0_-4px_6px_-1px_rgba(0,0,0,0.1)]">
+                <div className="max-w-4xl mx-auto flex justify-between gap-4">
+                  <button 
+                    onClick={handlePrevTopic}
+                    className={`flex items-center gap-2 px-6 py-3 rounded-xl font-bold transition ${currentTopicIndex === 0 ? 'bg-gray-100 text-gray-400' : 'bg-gray-100 text-gray-700 hover:bg-gray-200'}`}
+                  >
+                    <ChevronRight className="w-5 h-5" />
+                    {currentTopicIndex === 0 ? 'ראשי' : 'הקודם'}
+                  </button>
+                  
+                  <button 
+                    onClick={handleNextTopic}
+                    className="flex items-center gap-2 bg-blue-600 hover:bg-blue-700 text-white px-8 py-3 rounded-xl font-bold shadow-md"
+                  >
+                    {currentTopicIndex === topics.length - 1 ? 'לתרגול המסכם' : 'הבא'}
+                    <ChevronLeft className="w-5 h-5" />
+                  </button>
+                </div>
+              </div>
+            </div>
+          );
+
+          const renderPractice = () => {
+            const q = questions[currentQuestion];
+            
+            return (
+              <div className="max-w-3xl mx-auto p-4 md:p-6">
+                <div className="flex justify-between items-center mb-6">
+                  <button onClick={() => setCurrentScreen('home')} className="text-gray-500 hover:text-gray-800 flex items-center gap-1">
+                    <Home className="w-5 h-5" /> תפריט ראשי
+                  </button>
+                  <div className="text-xl font-bold text-blue-600">
+                     ניקוד: {score}
+                  </div>
+                </div>
+
+                <div className="bg-white rounded-2xl shadow-xl overflow-hidden border border-slate-200">
+                  <div className="bg-slate-50 p-6 border-b border-slate-100">
+                    <span className="text-sm font-bold text-slate-400 uppercase tracking-wider">שאלה {currentQuestion + 1} מתוך {questions.length}</span>
+                    <h3 className="text-2xl font-bold text-slate-800 mt-2">{q.question}</h3>
+                  </div>
+
+                  <div className="p-6 grid gap-4">
+                    {q.options.map((opt, idx) => {
+                      let btnClass = "w-full text-right p-4 rounded-xl text-lg border-2 transition-all ";
+                      
+                      if (selectedOption === null) {
+                        btnClass += "border-slate-100 hover:border-blue-200 hover:bg-blue-50 bg-white";
+                      } else {
+                        if (idx === q.correct) {
+                          btnClass += "border-green-500 bg-green-50 text-green-800 font-bold";
+                        } else if (idx === selectedOption) {
+                          btnClass += "border-red-400 bg-red-50 text-red-800";
+                        } else {
+                          btnClass += "border-slate-100 opacity-50";
+                        }
+                      }
+
+                      return (
+                        <button 
+                          key={idx}
+                          onClick={() => handleAnswer(idx)}
+                          disabled={selectedOption !== null}
+                          className={btnClass}
+                        >
+                          <div className="flex items-center justify-between">
+                            <span>{opt}</span>
+                            {selectedOption !== null && idx === q.correct && <CheckCircle className="text-green-600 w-6 h-6"/>}
+                            {selectedOption !== null && idx === selectedOption && idx !== q.correct && <X className="text-red-500 w-6 h-6"/>}
+                          </div>
+                        </button>
+                      );
+                    })}
+                  </div>
+
+                  {showExplanation && (
+                    <div className={`p-6 border-t ${isCorrect ? 'bg-green-50' : 'bg-red-50'} animate-in fade-in slide-in-from-bottom-4 duration-300`}>
+                      <h4 className={`font-bold mb-2 ${isCorrect ? 'text-green-800' : 'text-red-800'}`}>
+                        {isCorrect ? 'נכון מאוד!' : 'לא בדיוק...'}
+                      </h4>
+                      <p className="text-slate-700 text-lg mb-4">{q.explanation}</p>
+                      <button 
+                        onClick={nextQuestion}
+                        className="bg-slate-800 text-white py-3 px-8 rounded-lg font-bold hover:bg-slate-900 w-full md:w-auto"
+                      >
+                        {currentQuestion < questions.length - 1 ? 'לשאלה הבאה' : 'סיום התרגול'}
+                      </button>
+                    </div>
+                  )}
+                </div>
+              </div>
+            );
+          };
+
+          const renderFullExample = () => (
+            <div className="max-w-4xl mx-auto p-4 md:p-6 pb-12">
+              <div className="flex items-center gap-2 mb-6 cursor-pointer text-gray-600 hover:text-blue-600 transition" onClick={() => setCurrentScreen('home')}>
+                <Home className="w-5 h-5" />
+                <span className="font-bold">חזרה לתפריט הראשי</span>
+              </div>
+
+              <div className="bg-white rounded-2xl shadow-xl overflow-hidden border border-slate-200">
+                <div className="bg-purple-600 p-6 text-white text-center">
+                    <h2 className="text-3xl font-bold mb-2">חקירת פרבולה מלאה</h2>
+                    <p className="text-purple-100 text-lg">הדגמה מההתחלה ועד הסוף על הפונקציה:</p>
+                    <LTRFormula className="text-3xl font-bold mt-4 bg-purple-700 inline-block px-6 py-2 rounded-lg">
+                        {fullExampleFunc.str}
+                    </LTRFormula>
+                </div>
+
+                <div className="p-6 md:p-10 space-y-12">
+                    
+                    {/* Step 0: The Equation & Graph */}
+                    <section className="text-center border-b pb-8">
+                        <div className="mt-2 flex justify-center gap-6 text-xl mb-6">
+                            <div className="bg-pink-50 px-4 py-2 rounded border border-pink-200"><span className="font-bold text-pink-600">a = {fullExampleFunc.a}</span></div>
+                            <div className="bg-purple-50 px-4 py-2 rounded border border-purple-200"><span className="font-bold text-purple-600">b = {fullExampleFunc.b}</span></div>
+                            <div className="bg-teal-50 px-4 py-2 rounded border border-teal-200"><span className="font-bold text-teal-600">c = {fullExampleFunc.c}</span></div>
+                        </div>
+                        <p className="text-green-600 font-bold text-lg mb-4">😊 a חיובי, לכן הפרבולה "מחייכת" (יש לה מינימום)</p>
+                        <div className="w-full md:w-2/3 mx-auto">
+                            <SimpleParabolaGraph {...fullExampleFunc} />
+                        </div>
+                    </section>
+
+                    {/* Step 1: Y Intercept */}
+                    <section className="grid md:grid-cols-3 gap-8 items-center">
+                        <div className="md:col-span-2">
+                            <h3 className="text-2xl font-bold text-slate-800 mb-4 flex items-center gap-3">
+                                <span className="bg-slate-800 text-white rounded-full w-10 h-10 flex items-center justify-center text-xl font-bold">1</span>
+                                חיתוך עם ציר y
+                            </h3>
+                            <div className="bg-green-50 p-6 rounded-lg border-r-4 border-green-500">
+                                <p className="text-lg">תמיד מציבים <strong>x=0</strong>. התוצאה היא ה-<strong>c</strong>.</p>
+                                <LTRFormula className="font-bold text-2xl mt-4 text-green-800">(0, 5)</LTRFormula>
+                            </div>
+                        </div>
+                        <div>
+                            <SimpleParabolaGraph {...fullExampleFunc} showYIntercept={true} />
+                            <p className="text-center text-sm text-gray-500 mt-2">הנקודה הירוקה על ציר ה-y</p>
+                        </div>
+                    </section>
+
+                    {/* Step 2: X Intercepts */}
+                    <section>
+                        <h3 className="text-2xl font-bold text-slate-800 mb-6 flex items-center gap-3">
+                            <span className="bg-slate-800 text-white rounded-full w-10 h-10 flex items-center justify-center text-xl font-bold">2</span>
+                            חיתוך עם ציר x (שורשים)
+                        </h3>
+                        <div className="bg-indigo-50 p-6 rounded-lg border border-indigo-100 space-y-6">
+                            <p className="text-lg"><strong>שלב ראשון: משווים ל-0!</strong> (נציב y=0)</p>
+                            <LTRFormula className="text-xl bg-white p-2 rounded w-fit mx-auto border border-gray-200">x² - 6x + 5 = 0</LTRFormula>
+                            <p className="text-lg mt-2">כעת נציב a=1, b=-6, c=5 בנוסחת השורשים:</p>
+                            <LTRFormula className="flex justify-center text-2xl my-4 p-4 bg-white rounded-lg shadow-sm">
+                                <span>x₁‚₂ =</span>
+                                <MathFraction 
+                                    num={<><span>-(-6) ± </span><MathRoot content="(-6)² - 4·1·5" /></>}
+                                    den="2·1"
+                                />
+                            </LTRFormula>
+                            
+                            <div className="grid md:grid-cols-2 gap-8">
+                                <div className="space-y-4 text-lg">
+                                    <div className="mb-2"><strong>חישוב הדלתא:</strong> <LTRFormula className="inline-block">36 - 20 = 16</LTRFormula></div>
+                                    <div className="mb-2"><strong>הוצאת שורש:</strong> <LTRFormula className="inline-block">√16 = 4</LTRFormula></div>
+                                    <div className="mb-2"><strong>המשוואה הפשוטה:</strong> <LTRFormula className="inline-block text-xl">x = <MathFraction num="6 ± 4" den="2" /></LTRFormula></div>
+                                    <div className="flex gap-4 mt-4">
+                                        <div className="bg-white p-3 rounded border text-center flex-1">
+                                            <span className="text-indigo-600 font-bold block mb-1">פתרון 1 (+)</span>
+                                            <LTRFormula>x₁ = <MathFraction num="6 + 4" den="2" /> = 5</LTRFormula>
+                                        </div>
+                                        <div className="bg-white p-3 rounded border text-center flex-1">
+                                            <span className="text-indigo-600 font-bold block mb-1">פתרון 2 (-)</span>
+                                            <LTRFormula>x₂ = <MathFraction num="6 - 4" den="2" /> = 1</LTRFormula>
+                                        </div>
+                                    </div>
+                                </div>
+                                <div>
+                                     <SimpleParabolaGraph {...fullExampleFunc} showRoots={true} />
+                                     <p className="text-center text-sm text-gray-500 mt-2">הנקודות הסגולות על ציר ה-x</p>
+                                </div>
+                            </div>
+                        </div>
+                    </section>
+
+                    {/* Step 3: Vertex */}
+                    <section className="grid md:grid-cols-3 gap-8 items-center">
+                         <div className="md:col-span-2">
+                            <h3 className="text-2xl font-bold text-slate-800 mb-4 flex items-center gap-3">
+                                <span className="bg-slate-800 text-white rounded-full w-10 h-10 flex items-center justify-center text-xl font-bold">3</span>
+                                קודקוד וציר סימטריה
+                            </h3>
+                            <div className="bg-orange-50 p-6 rounded-lg border border-orange-200 space-y-4">
+                                <div>
+                                    <p className="font-bold text-orange-800 mb-2">א. מציאת x קודקוד:</p>
+                                    <LTRFormula className="text-xl bg-white p-2 rounded inline-block">
+                                        x = <MathFraction num="-(-6)" den="2·1" /> = 3
+                                    </LTRFormula>
+                                </div>
+                                <div>
+                                    <p className="font-bold text-orange-800 mb-2">ב. מציאת y קודקוד (נציב x=3):</p>
+                                    <LTRFormula className="text-xl bg-white p-2 rounded inline-block">
+                                        y = 3² - 6(3) + 5 = -4
+                                    </LTRFormula>
+                                </div>
+                                <div className="flex gap-4 mt-2">
+                                     <div className="bg-orange-100 p-3 rounded-lg text-center flex-1">
+                                        <span className="block font-bold text-orange-800 mb-1">הקודקוד (מינימום)</span>
+                                        <LTRFormula className="text-2xl font-bold">(3, -4)</LTRFormula>
+                                    </div>
+                                    <div className="bg-orange-100 p-3 rounded-lg text-center flex-1">
+                                        <span className="block font-bold text-orange-800 mb-1">ציר הסימטריה</span>
+                                        <LTRFormula className="text-2xl font-bold">x = 3</LTRFormula>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                        <div>
+                            <SimpleParabolaGraph {...fullExampleFunc} showVertex={true} showSymmetry={true} />
+                            <p className="text-center text-sm text-gray-500 mt-2">הנקודה הכתומה וקו הסימטריה</p>
+                        </div>
+                    </section>
+
+                    {/* Step 4: Intervals */}
+                    <section>
+                        <h3 className="text-2xl font-bold text-slate-800 mb-6 flex items-center gap-3">
+                            <span className="bg-slate-800 text-white rounded-full w-10 h-10 flex items-center justify-center text-xl font-bold">4</span>
+                            תחומי עלייה וירידה
+                        </h3>
+                        <p className="text-lg mb-4">הקודקוד הוא ב- <strong>x=3</strong>. מסתכלים משמאל לימין.</p>
+                        <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                            <div className="bg-red-50 p-4 rounded-xl border-2 border-red-200 text-center">
+                                <h5 className="font-bold text-red-600 text-xl mb-3">📉 תחום ירידה</h5>
+                                <SimpleParabolaGraph {...fullExampleFunc} highlight="decreasing" showVertex={true} />
+                                <p className="mt-3 text-lg">לפני הקודקוד</p>
+                                <LTRFormula className="inline-block bg-white px-4 py-2 rounded mt-2 text-2xl font-bold border border-red-100">
+                                    x {'<'} 3
+                                </LTRFormula>
+                            </div>
+                            <div className="bg-green-50 p-4 rounded-xl border-2 border-green-200 text-center">
+                                <h5 className="font-bold text-green-600 text-xl mb-3">📈 תחום עלייה</h5>
+                                <SimpleParabolaGraph {...fullExampleFunc} highlight="increasing" showVertex={true} />
+                                 <p className="mt-3 text-lg">אחרי הקודקוד</p>
+                                <LTRFormula className="inline-block bg-white px-4 py-2 rounded mt-2 text-2xl font-bold border border-green-100">
+                                    x {'>'} 3
+                                </LTRFormula>
+                            </div>
+                        </div>
+                    </section>
+
+                    {/* Step 5: Positivity */}
+                    <section>
+                        <h3 className="text-2xl font-bold text-slate-800 mb-6 flex items-center gap-3">
+                            <span className="bg-slate-800 text-white rounded-full w-10 h-10 flex items-center justify-center text-xl font-bold">5</span>
+                            חיוביות ושליליות
+                        </h3>
+                        <p className="text-lg mb-4">נקודות החיתוך הן ב- <strong>x=1</strong> וב- <strong>x=5</strong>. זהו קו המים.</p>
+                        <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                             <div className="bg-orange-50 p-4 rounded-xl border-2 border-orange-300 text-center">
+                                <h5 className="font-bold text-orange-700 text-xl mb-3">תחום שלילי (-)</h5>
+                                <p className="mb-2">מתחת לציר ה-x</p>
+                                <SimpleParabolaGraph {...fullExampleFunc} highlight="negative" showRoots={true} />
+                                <LTRFormula className="inline-block bg-white px-4 py-2 rounded mt-4 text-xl font-bold border border-orange-200">
+                                    1 {'<'} x {'<'} 5
+                                </LTRFormula>
+                            </div>
+                            <div className="bg-cyan-50 p-4 rounded-xl border-2 border-cyan-300 text-center">
+                                <h5 className="font-bold text-cyan-700 text-xl mb-3">תחום חיובי (+)</h5>
+                                <p className="mb-2">מעל ציר ה-x</p>
+                                <SimpleParabolaGraph {...fullExampleFunc} highlight="positive" showRoots={true} />
+                                <LTRFormula className="inline-block bg-white px-4 py-2 rounded mt-4 text-xl font-bold border border-cyan-200">
+                                    x {'<'} 1 או x {'>'} 5
+                                </LTRFormula>
+                            </div>
+                        </div>
+                    </section>
+
+                </div>
+                <div className="bg-gray-50 p-8 text-center border-t">
+                    <button 
+                        onClick={() => {setCurrentScreen('home'); window.scrollTo(0,0);}}
+                        className="bg-slate-800 text-white font-bold py-4 px-10 rounded-xl hover:bg-slate-900 transition text-lg shadow-md"
+                    >
+                        חזרה למסך הראשי
+                    </button>
+                </div>
+              </div>
+            </div>
+          );
+
+          return (
+            <div className="min-h-screen bg-slate-50 font-sans text-slate-900" dir="rtl">
+              {currentScreen === 'home' && renderHome()}
+              {currentScreen === 'learn' && renderLearn()}
+              {currentScreen === 'practice' && renderPractice()}
+              {currentScreen === 'fullExample' && renderFullExample()}
+            </div>
+          );
+        };
+
+        const root = createRoot(document.getElementById('root'));
+        root.render(<ParabolaMaster />);
+    </script>
+</body>
+</html>

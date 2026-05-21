@@ -1,0 +1,330 @@
+<!DOCTYPE html>
+<html lang="he" dir="rtl">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>בוחן אלגברה - שברים אלגבריים</title>
+    <!-- Tailwind CSS -->
+    <script src="https://cdn.tailwindcss.com"></script>
+    <!-- Lucide Icons -->
+    <script src="https://unpkg.com/lucide@latest"></script>
+    <style>
+        /* תיקון פונטים למתמטיקה */
+        .math-serif { font-family: 'Times New Roman', serif; }
+        
+        /* אנימציות */
+        .fade-in {
+            animation: fadeIn 0.3s ease-in-out;
+        }
+        @keyframes fadeIn {
+            from { opacity: 0; transform: translateY(-10px); }
+            to { opacity: 1; transform: translateY(0); }
+        }
+    </style>
+</head>
+<body class="min-h-screen bg-slate-50 text-slate-900 font-sans">
+
+    <!-- כותרת ראשית -->
+    <header class="bg-indigo-700 text-white py-6 shadow-lg">
+        <div class="container mx-auto px-4 text-center">
+            <h1 class="text-3xl font-bold mb-2 flex items-center justify-center gap-3">
+                <i data-lucide="function-square" width="32" height="32"></i>
+                בוחן באלגברה: טכניקה אלגברית
+            </h1>
+            <p class="text-indigo-100 text-lg">כפל וחיבור שברים אלגבריים</p>
+        </div>
+    </header>
+
+    <main class="container mx-auto px-4 py-8 max-w-4xl">
+        
+        <!-- סרגל התקדמות -->
+        <div class="flex justify-between items-center mb-6 text-sm font-medium text-slate-500">
+            <span id="question-counter">שאלה 1 מתוך 2</span>
+            <span id="topic-display">נושא</span>
+        </div>
+        <div class="w-full bg-slate-200 rounded-full h-2.5 mb-8">
+            <div id="progress-bar" class="bg-indigo-600 h-2.5 rounded-full transition-all duration-300" style="width: 50%"></div>
+        </div>
+
+        <!-- כרטיס שאלה -->
+        <div class="bg-white rounded-2xl shadow-xl border border-slate-100 overflow-hidden">
+            <div class="bg-slate-50 px-6 py-4 border-b border-slate-100 flex items-center gap-2">
+                <div id="topic-icon"></div>
+                <h2 id="question-title" class="text-xl font-bold text-slate-800">כותרת השאלה</h2>
+            </div>
+            
+            <div id="question-content" class="p-8 min-h-[200px] text-xl leading-relaxed">
+                <!-- תוכן השאלה יוכנס כאן דינמית -->
+            </div>
+
+            <!-- אזור פתרון -->
+            <div class="px-8 pb-8">
+                <button 
+                    onclick="toggleSolution()"
+                    id="toggle-btn"
+                    class="w-full flex items-center justify-center gap-2 bg-indigo-50 hover:bg-indigo-100 text-indigo-700 py-3 rounded-lg font-bold transition-colors mb-4 border border-indigo-200"
+                >
+                    <span id="toggle-text">הצג פתרון מלא</span>
+                    <i id="toggle-icon" data-lucide="chevron-down" width="20"></i>
+                </button>
+
+                <div id="solution-container" class="hidden bg-slate-50 p-6 rounded-xl border border-slate-200 fade-in">
+                    <h3 class="text-xl font-bold mb-4 flex items-center gap-2 text-green-700 border-b border-green-200 pb-2">
+                        <i data-lucide="check-circle" width="24"></i>
+                        פתרון מלא:
+                    </h3>
+                    <div id="solution-content" class="space-y-4 text-lg">
+                        <!-- תוכן הפתרון יוכנס כאן דינמית -->
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- כפתורי ניווט -->
+        <div class="flex justify-between mt-8" id="nav-buttons">
+            <button 
+                onclick="prevQuestion()"
+                id="prev-btn"
+                class="flex items-center gap-2 px-6 py-3 rounded-lg font-bold transition-all bg-white text-slate-700 shadow hover:bg-slate-50 disabled:opacity-0 disabled:cursor-default"
+            >
+                <i data-lucide="arrow-right" width="20"></i>
+                לשאלה הקודמת
+            </button>
+
+            <button 
+                onclick="nextQuestion()"
+                id="next-btn"
+                class="flex items-center gap-2 bg-indigo-600 hover:bg-indigo-700 text-white px-8 py-3 rounded-lg font-bold shadow-lg shadow-indigo-200 transition-all transform hover:-translate-y-1"
+            >
+                לשאלה הבאה
+                <i data-lucide="arrow-left" width="20"></i>
+            </button>
+            
+            <div id="finish-msg" class="hidden text-green-600 font-bold text-xl flex items-center gap-2 bg-green-50 px-6 py-2 rounded-lg border border-green-200">
+                <i data-lucide="award"></i>
+                כל הכבוד! סיימת את הבוחן.
+            </div>
+        </div>
+
+    </main>
+
+    <script>
+        // --- פונקציות עזר לייצור HTML ---
+
+        function createFraction(num, den) {
+            return `
+            <div class="inline-flex flex-col items-center align-middle mx-2 text-xl math-serif" style="vertical-align: middle">
+                <span class="border-b-2 border-gray-800 px-1 pb-0.5 mb-0.5 w-full text-center">${num}</span>
+                <span class="px-1 w-full text-center">${den}</span>
+            </div>`;
+        }
+
+        function createPower(base, exp) {
+            return `<span>${base}<sup class="text-sm">${exp}</sup></span>`;
+        }
+
+        // --- נתוני השאלות (בוחן אלגברה) ---
+        const questions = [
+            {
+                id: 1,
+                topic: 'כפל שברים אלגבריים',
+                icon: 'x',
+                iconClass: 'text-indigo-600',
+                title: 'שאלה 1: כפל וצמצום',
+                content: `
+                    <div class="text-xl leading-relaxed">
+                        <p class="mb-4 font-bold">פתור את התרגיל הבא, פשט ככל האפשר ורשום את תחום ההגדרה:</p>
+                        <div class="flex items-center justify-center bg-gray-50 p-8 rounded-lg border border-gray-200 my-4 flex-wrap" dir="ltr">
+                            ${createFraction(`<span>${createPower('x', '2')} - 16</span>`, `<span>2x - 8</span>`)}
+                            <span class="text-2xl font-bold mx-3">•</span>
+                            ${createFraction(`<span>4x</span>`, `<span>${createPower('x', '2')} + 4x</span>`)}
+                            <span class="text-2xl font-bold mx-3">=</span>
+                            <span class="text-2xl font-bold mx-2">?</span>
+                        </div>
+                    </div>`,
+                solution: `
+                    <div class="space-y-4 text-lg">
+                        <div>
+                            <span class="font-bold text-indigo-700 block mb-2">שלב 1: פירוק לגורמים</span>
+                            נפרק כל מונה ומכנה לגורמים:
+                            <ul class="list-disc list-inside mt-2 space-y-1">
+                                <li>מונה שמאלי (הפרש ריבועים): <span dir="ltr">x² - 16 = (x-4)(x+4)</span></li>
+                                <li>מכנה שמאלי (גורם משותף): <span dir="ltr">2x - 8 = 2(x-4)</span></li>
+                                <li>מכנה ימני (גורם משותף): <span dir="ltr">x² + 4x = x(x+4)</span></li>
+                            </ul>
+                        </div>
+                        <div class="bg-gray-100 p-4 rounded text-center my-2" dir="ltr">
+                            (x - 4)(x + 4) &nbsp;&nbsp;&nbsp; 4x <br>
+                            -------------- • ----------- <br>
+                            2(x - 4) &nbsp;&nbsp;&nbsp;&nbsp;&nbsp; x(x + 4)
+                        </div>
+                        <div>
+                            <span class="font-bold text-indigo-700 block mb-2">שלב 2: צמצום ותחום הגדרה</span>
+                            <span class="font-bold">תחום הגדרה:</span> המכנים מתאפסים כאשר <span dir="ltr">x ≠ 4, x ≠ 0, x ≠ -4</span>.<br/>
+                            <br/>
+                            כעת נצמצם את הגורמים הזהים במונה ובמכנה:
+                            <ul class="list-disc list-inside mt-1">
+                                <li><span dir="ltr">(x-4)</span> מצטמצם.</li>
+                                <li><span dir="ltr">(x+4)</span> מצטמצם.</li>
+                                <li><span dir="ltr">x</span> מצטמצם.</li>
+                            </ul>
+                        </div>
+                        <div class="bg-gray-100 p-4 rounded text-center my-2 text-xl" dir="ltr">
+                            4 / 2 = 2
+                        </div>
+                        <div class="bg-green-50 border-r-4 border-green-500 p-4 rounded mt-4">
+                            <span class="font-bold">תשובה סופית:</span>
+                            <span class="text-2xl font-bold mx-2">2</span>
+                        </div>
+                    </div>`
+            },
+            {
+                id: 2,
+                topic: 'חיבור שברים אלגבריים',
+                icon: 'plus-circle',
+                iconClass: 'text-indigo-600',
+                title: 'שאלה 2: מכנה משותף',
+                content: `
+                    <div class="text-xl leading-relaxed">
+                        <p class="mb-4 font-bold">חשב את סכום השברים הבא (פשט את התוצאה):</p>
+                        <div class="flex items-center justify-center bg-gray-50 p-8 rounded-lg border border-gray-200 my-4 flex-wrap" dir="ltr">
+                            ${createFraction(`<span>4</span>`, `<span>${createPower('x', '2')} - 25</span>`)}
+                            <span class="text-2xl font-bold mx-3">+</span>
+                            ${createFraction(`<span>2</span>`, `<span>3x + 15</span>`)}
+                            <span class="text-2xl font-bold mx-3">=</span>
+                            <span class="text-2xl font-bold mx-2">?</span>
+                        </div>
+                    </div>`,
+                solution: `
+                    <div class="space-y-4 text-lg">
+                        <div>
+                            <span class="font-bold text-indigo-700 block mb-2">שלב 1: פירוק המכנים לגורמים</span>
+                            <ul class="list-disc list-inside mt-2 space-y-1">
+                                <li>מכנה ראשון: <span dir="ltr">x² - 25 = (x-5)(x+5)</span></li>
+                                <li>מכנה שני: <span dir="ltr">3x + 15 = 3(x+5)</span></li>
+                            </ul>
+                        </div>
+                        <div>
+                            <span class="font-bold text-indigo-700 block mb-2">שלב 2: מציאת מכנה משותף</span>
+                            המכנה המשותף המינימלי הוא: <span dir="ltr" class="font-bold">3(x-5)(x+5)</span>.<br/>
+                            <br/>
+                            נרחיב את השברים:
+                            <ul class="list-disc list-inside mt-1">
+                                <li>את השבר הראשון נכפיל ב-3.</li>
+                                <li>את השבר השני נכפיל ב-<span dir="ltr">(x-5)</span>.</li>
+                            </ul>
+                        </div>
+                        <div class="bg-gray-100 p-4 rounded text-center my-2" dir="ltr">
+                            4 • 3 + 2 • (x - 5) <br>
+                            ------------------- <br>
+                            3(x - 5)(x + 5)
+                        </div>
+                        <div>
+                            <span class="font-bold text-indigo-700 block mb-2">שלב 3: פתיחת סוגריים וכינוס במונה</span>
+                            <span dir="ltr">12 + 2x - 10 = 2x + 2</span><br/>
+                            נוציא גורם משותף במונה (לא חובה, אבל מומלץ): <span dir="ltr">2(x + 1)</span>.
+                        </div>
+                        <div class="bg-green-50 border-r-4 border-green-500 p-4 rounded mt-4">
+                            <span class="font-bold">תשובה סופית:</span>
+                            <div class="flex justify-center mt-2" dir="ltr">
+                                ${createFraction(`<span>2(x + 1)</span>`, `<span>3(x - 5)(x + 5)</span>`)}
+                            </div>
+                        </div>
+                    </div>`
+            }
+        ];
+
+        // --- ניהול מצב האפליקציה ---
+        let currentQuestion = 0;
+        let isSolutionVisible = false;
+
+        function renderQuestion() {
+            const q = questions[currentQuestion];
+            
+            // עדכון טקסטים
+            document.getElementById('question-counter').innerText = `שאלה ${currentQuestion + 1} מתוך ${questions.length}`;
+            document.getElementById('topic-display').innerText = q.topic;
+            document.getElementById('question-title').innerText = q.title;
+            document.getElementById('question-content').innerHTML = q.content;
+            document.getElementById('solution-content').innerHTML = q.solution;
+
+            // עדכון אייקון נושא
+            const iconContainer = document.getElementById('topic-icon');
+            iconContainer.innerHTML = `<i data-lucide="${q.icon}" class="${q.iconClass}"></i>`;
+
+            // עדכון פרוגרס בר
+            const progress = ((currentQuestion + 1) / questions.length) * 100;
+            document.getElementById('progress-bar').style.width = `${progress}%`;
+
+            // איפוס מצב פתרון
+            isSolutionVisible = false;
+            updateSolutionUI();
+
+            // עדכון כפתורי ניווט
+            const prevBtn = document.getElementById('prev-btn');
+            const nextBtn = document.getElementById('next-btn');
+            const finishMsg = document.getElementById('finish-msg');
+
+            prevBtn.disabled = currentQuestion === 0;
+            
+            if (currentQuestion === questions.length - 1) {
+                nextBtn.classList.add('hidden');
+                finishMsg.classList.remove('hidden');
+            } else {
+                nextBtn.classList.remove('hidden');
+                finishMsg.classList.add('hidden');
+            }
+
+            // רענון אייקונים
+            lucide.createIcons();
+            
+            // גלילה למעלה
+            window.scrollTo(0,0);
+        }
+
+        function toggleSolution() {
+            isSolutionVisible = !isSolutionVisible;
+            updateSolutionUI();
+        }
+
+        function updateSolutionUI() {
+            const container = document.getElementById('solution-container');
+            const btnText = document.getElementById('toggle-text');
+            const btnIcon = document.getElementById('toggle-icon');
+
+            if (isSolutionVisible) {
+                container.classList.remove('hidden');
+                btnText.innerText = 'הסתר פתרון מלא';
+                // אייקון למעלה
+                btnIcon.setAttribute('data-lucide', 'chevron-up');
+            } else {
+                container.classList.add('hidden');
+                btnText.innerText = 'הצג פתרון מלא';
+                // אייקון למטה
+                btnIcon.setAttribute('data-lucide', 'chevron-down');
+            }
+            lucide.createIcons();
+        }
+
+        function nextQuestion() {
+            if (currentQuestion < questions.length - 1) {
+                currentQuestion++;
+                renderQuestion();
+            }
+        }
+
+        function prevQuestion() {
+            if (currentQuestion > 0) {
+                currentQuestion--;
+                renderQuestion();
+            }
+        }
+
+        // אתחול ראשוני
+        document.addEventListener('DOMContentLoaded', () => {
+            renderQuestion();
+        });
+
+    </script>
+</body>
+</html>

@@ -1,0 +1,529 @@
+<!DOCTYPE html>
+<html lang="he" dir="rtl">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>מבחן מסכם במתמטיקה - כיתה ט׳</title>
+    <!-- Tailwind CSS -->
+    <script src="https://cdn.tailwindcss.com"></script>
+    <!-- Lucide Icons -->
+    <script src="https://unpkg.com/lucide@latest"></script>
+    <style>
+        /* תיקון פונטים למתמטיקה */
+        .math-serif { font-family: 'Times New Roman', serif; }
+        
+        /* אנימציות */
+        .fade-in {
+            animation: fadeIn 0.3s ease-in-out;
+        }
+        @keyframes fadeIn {
+            from { opacity: 0; transform: translateY(-10px); }
+            to { opacity: 1; transform: translateY(0); }
+        }
+    </style>
+</head>
+<body class="min-h-screen bg-slate-50 text-slate-900 font-sans">
+
+    <!-- כותרת ראשית -->
+    <header class="bg-blue-700 text-white py-6 shadow-lg">
+        <div class="container mx-auto px-4 text-center">
+            <h1 class="text-3xl font-bold mb-2 flex items-center justify-center gap-3">
+                <i data-lucide="calculator" width="32" height="32"></i>
+                מבחן מסכם במתמטיקה - כיתה ט׳
+            </h1>
+            <p class="text-blue-100 text-lg">אלגברה, גאומטריה ופונקציות</p>
+        </div>
+    </header>
+
+    <main class="container mx-auto px-4 py-8 max-w-4xl">
+        
+        <!-- סרגל התקדמות -->
+        <div class="flex justify-between items-center mb-6 text-sm font-medium text-slate-500">
+            <span id="question-counter">שאלה 1 מתוך 5</span>
+            <span id="topic-display">נושא</span>
+        </div>
+        <div class="w-full bg-slate-200 rounded-full h-2.5 mb-8">
+            <div id="progress-bar" class="bg-blue-600 h-2.5 rounded-full transition-all duration-300" style="width: 20%"></div>
+        </div>
+
+        <!-- כרטיס שאלה -->
+        <div class="bg-white rounded-2xl shadow-xl border border-slate-100 overflow-hidden">
+            <div class="bg-slate-50 px-6 py-4 border-b border-slate-100 flex items-center gap-2">
+                <div id="topic-icon"></div>
+                <h2 id="question-title" class="text-xl font-bold text-slate-800">כותרת השאלה</h2>
+            </div>
+            
+            <div id="question-content" class="p-8 min-h-[200px] text-xl leading-relaxed">
+                <!-- תוכן השאלה יוכנס כאן דינמית -->
+            </div>
+
+            <!-- אזור פתרון -->
+            <div class="px-8 pb-8">
+                <button 
+                    onclick="toggleSolution()"
+                    id="toggle-btn"
+                    class="w-full flex items-center justify-center gap-2 bg-indigo-50 hover:bg-indigo-100 text-indigo-700 py-3 rounded-lg font-bold transition-colors mb-4 border border-indigo-200"
+                >
+                    <span id="toggle-text">הצג פתרון מלא</span>
+                    <i id="toggle-icon" data-lucide="chevron-down" width="20"></i>
+                </button>
+
+                <div id="solution-container" class="hidden bg-slate-50 p-6 rounded-xl border border-slate-200 fade-in">
+                    <h3 class="text-xl font-bold mb-4 flex items-center gap-2 text-green-700 border-b border-green-200 pb-2">
+                        <i data-lucide="check-circle" width="24"></i>
+                        פתרון מלא:
+                    </h3>
+                    <div id="solution-content" class="space-y-4 text-lg">
+                        <!-- תוכן הפתרון יוכנס כאן דינמית -->
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- כפתורי ניווט -->
+        <div class="flex justify-between mt-8" id="nav-buttons">
+            <button 
+                onclick="prevQuestion()"
+                id="prev-btn"
+                class="flex items-center gap-2 px-6 py-3 rounded-lg font-bold transition-all bg-white text-slate-700 shadow hover:bg-slate-50 disabled:opacity-0 disabled:cursor-default"
+            >
+                <i data-lucide="arrow-right" width="20"></i>
+                לשאלה הקודמת
+            </button>
+
+            <button 
+                onclick="nextQuestion()"
+                id="next-btn"
+                class="flex items-center gap-2 bg-blue-600 hover:bg-blue-700 text-white px-8 py-3 rounded-lg font-bold shadow-lg shadow-blue-200 transition-all transform hover:-translate-y-1"
+            >
+                לשאלה הבאה
+                <i data-lucide="arrow-left" width="20"></i>
+            </button>
+            
+            <div id="finish-msg" class="hidden text-green-600 font-bold text-xl flex items-center gap-2 bg-green-50 px-6 py-2 rounded-lg border border-green-200">
+                <i data-lucide="award"></i>
+                סיימת את המבחן בהצלחה!
+            </div>
+        </div>
+
+    </main>
+
+    <script>
+        // --- פונקציות עזר לייצור HTML ---
+
+        function createFraction(num, den) {
+            return `
+            <div class="inline-flex flex-col items-center align-middle mx-2 text-xl math-serif" style="vertical-align: middle">
+                <span class="border-b-2 border-gray-800 px-1 pb-0.5 mb-0.5 w-full text-center">${num}</span>
+                <span class="px-1 w-full text-center">${den}</span>
+            </div>`;
+        }
+
+        function createPower(base, exp) {
+            return `<span>${base}<sup class="text-sm">${exp}</sup></span>`;
+        }
+
+        function createTrapezoidSVG() {
+            return `
+            <svg viewBox="0 0 400 220" class="w-full max-w-md mx-auto my-6 bg-white border border-gray-100 rounded-lg shadow-sm">
+              <defs>
+                <marker id="arrow" markerWidth="10" markerHeight="10" refX="9" refY="3" orient="auto" markerUnits="strokeWidth">
+                  <path d="M0,0 L0,6 L9,3 z" fill="#000" />
+                </marker>
+              </defs>
+              <path d="M100,50 L300,50 L360,180 L40,180 Z" fill="none" stroke="black" stroke-width="2.5" />
+              <line x1="100" y1="50" x2="100" y2="180" stroke="gray" stroke-width="1.5" stroke-dasharray="5,5" />
+              <rect x="100" y="165" width="15" height="15" fill="none" stroke="black" />
+              <text x="90" y="40" font-size="18" font-weight="bold">A</text>
+              <text x="310" y="40" font-size="18" font-weight="bold">B</text>
+              <text x="375" y="190" font-size="18" font-weight="bold">C</text>
+              <text x="25" y="190" font-size="18" font-weight="bold">D</text>
+              <text x="200" y="40" font-size="16" text-anchor="middle">10 ס"מ</text>
+              <text x="200" y="205" font-size="16" text-anchor="middle">26 ס"מ</text>
+              <text x="65" y="175" font-size="16">60°</text>
+              <line x1="65" y1="110" x2="75" y2="115" stroke="black" stroke-width="2" />
+              <line x1="325" y1="110" x2="335" y2="115" stroke="black" stroke-width="2" />
+            </svg>`;
+        }
+
+        function createParabolaSVG(a = 1, b = 0, c = 0, vertexX = 0, vertexY = 0, roots = []) {
+            const width = 300;
+            const height = 300;
+            const scale = 20; 
+            const originX = width / 2;
+            const originY = height / 2 + 50; 
+
+            let pathD = "M";
+            for (let px = 0; px <= width; px += 5) {
+                const xVal = (px - originX) / scale;
+                const yVal = a * xVal * xVal + b * xVal + c;
+                const py = originY - yVal * scale;
+                pathD += `${px},${py} `;
+            }
+
+            let rootsSVG = '';
+            roots.forEach(r => {
+                rootsSVG += `<circle cx="${originX + r * scale}" cy="${originY}" r="3" fill="black" />`;
+            });
+
+            return `
+            <svg viewBox="0 0 ${width} ${height}" class="w-full max-w-xs mx-auto bg-white border border-gray-200 rounded my-4">
+              <line x1="0" y1="${originY}" x2="${width}" y2="${originY}" stroke="#cbd5e1" stroke-width="2" />
+              <line x1="${originX}" y1="0" x2="${originX}" y2="${height}" stroke="#cbd5e1" stroke-width="2" />
+              <text x="${width - 20}" y="${originY - 10}" font-size="12" fill="gray">x</text>
+              <text x="${originX + 10}" y="20" font-size="12" fill="gray">y</text>
+              <path d="${pathD}" fill="none" stroke="#2563eb" stroke-width="3" />
+              <circle cx="${originX + vertexX * scale}" cy="${originY - vertexY * scale}" r="4" fill="red" />
+              <text x="${originX + vertexX * scale}" y="${originY - vertexY * scale - 15}" text-anchor="middle" font-size="12" font-weight="bold" fill="red">
+                (${vertexX}, ${vertexY})
+              </text>
+              ${rootsSVG}
+            </svg>`;
+        }
+
+        // --- נתוני השאלות ---
+        const questions = [
+            {
+                id: 1,
+                topic: 'אלגברה - שברים אלגבריים',
+                icon: 'calculator',
+                iconClass: 'text-green-600',
+                title: 'שאלה 1: חיסור שברים',
+                content: `
+                    <div class="text-xl leading-relaxed">
+                        <p class="mb-4 font-bold">פתור את התרגיל הבא (פשט ככל האפשר) ומצא את תחום ההגדרה:</p>
+                        <div class="flex items-center justify-center bg-gray-50 p-6 rounded-lg border border-gray-200 my-4" dir="ltr">
+                            ${createFraction('3x', `<span>${createPower('x', '2')} - 9</span>`)}
+                            <span class="text-2xl font-bold mx-2">-</span>
+                            ${createFraction('1', 'x - 3')}
+                            <span class="text-2xl font-bold mx-2">=</span>
+                            <span class="text-2xl font-bold mx-2">?</span>
+                        </div>
+                    </div>`,
+                solution: `
+                    <div class="space-y-4 text-lg">
+                        <div>
+                            <span class="font-bold text-blue-700 block mb-2">שלב 1: פירוק לגורמים ותחום הגדרה</span>
+                            המכנה הראשון הוא הפרש ריבועים: <span dir="ltr">(x-3)(x+3)</span>.<br/>
+                            המכנה השני כבר מפורק: <span dir="ltr">(x-3)</span>.<br/>
+                            <span class="font-bold">תחום הגדרה:</span> <span dir="ltr">x ≠ 3, x ≠ -3</span>.
+                        </div>
+                        <div>
+                            <span class="font-bold text-blue-700 block mb-2">שלב 2: מכנה משותף</span>
+                            המכנה המשותף הוא <span dir="ltr">(x-3)(x+3)</span>.<br/>
+                            נכפיל את השבר השני ב-<span dir="ltr">(x+3)</span>.
+                        </div>
+                        <div class="bg-gray-100 p-4 rounded text-center" dir="ltr">
+                            <span class="text-xl">3x - 1(x + 3)</span>
+                            <div class="border-t border-black w-1/3 mx-auto my-1"></div>
+                            <span class="text-xl">(x - 3)(x + 3)</span>
+                        </div>
+                        <div>
+                            <span class="font-bold text-blue-700 block mb-2">שלב 3: פתיחת סוגריים וכינוס איברים במונה</span>
+                            <span dir="ltr">3x - x - 3 = 2x - 3</span>
+                        </div>
+                        <div class="bg-green-50 border-r-4 border-green-500 p-4 rounded mt-4">
+                            <span class="font-bold">תשובה סופית:</span>
+                            <div class="flex justify-center mt-2" dir="ltr">
+                                <div class="text-center">
+                                    <span class="block border-b border-black pb-1">2x - 3</span>
+                                    <span class="block">(x - 3)(x + 3)</span>
+                                </div>
+                            </div>
+                        </div>
+                    </div>`
+            },
+            {
+                id: 2,
+                topic: 'אלגברה - שברים אלגבריים',
+                icon: 'calculator',
+                iconClass: 'text-green-600',
+                title: 'שאלה 2: חילוק, טרינום וצמצום',
+                content: `
+                    <div class="text-xl leading-relaxed">
+                        <p class="mb-4 font-bold">פתור את התרגיל הבא. פשט ככל האפשר ורשום תחום הגדרה:</p>
+                        <div class="flex items-center justify-center bg-gray-50 p-6 rounded-lg border border-gray-200 my-4 flex-wrap" dir="ltr">
+                            ${createFraction(`<span>${createPower('x', '2')} + 5x + 6</span>`, `<span>2x - 8</span>`)}
+                            <span class="text-2xl font-bold mx-2">:</span>
+                            ${createFraction(`<span>${createPower('x', '2')} - 9</span>`, `<span>4x - 16</span>`)}
+                        </div>
+                    </div>`,
+                solution: `
+                    <div class="space-y-4 text-lg">
+                        <div>
+                            <span class="font-bold text-blue-700 block mb-2">שלב 1: הפיכת חילוק לכפל בהופכי</span>
+                            כופלים בשבר השני ההפוך. המונה הופך למכנה ולהפך.
+                        </div>
+                        <div>
+                            <span class="font-bold text-blue-700 block mb-2">שלב 2: פירוק לגורמים</span>
+                            <ul class="list-disc list-inside space-y-1">
+                                <li>מונה שמאלי (טרינום): <span dir="ltr">x² + 5x + 6 = (x+2)(x+3)</span></li>
+                                <li>מכנה שמאלי (גורם משותף): <span dir="ltr">2x - 8 = 2(x-4)</span></li>
+                                <li>מונה ימני חדש (גורם משותף): <span dir="ltr">4x - 16 = 4(x-4)</span></li>
+                                <li>מכנה ימני חדש (הפרש ריבועים): <span dir="ltr">x² - 9 = (x-3)(x+3)</span></li>
+                            </ul>
+                        </div>
+                        <div class="bg-gray-100 p-4 rounded text-center text-lg" dir="ltr">
+                            (x+2)(x+3) • 4(x-4) <br/>
+                            ------------------- <br/>
+                            2(x-4) • (x-3)(x+3)
+                        </div>
+                        <div>
+                            <span class="font-bold text-blue-700 block mb-2">שלב 3: צמצום</span>
+                            מצמצמים את <span dir="ltr">(x+3)</span>, את <span dir="ltr">(x-4)</span>, ואת ה-4 עם ה-2 (נשאר 2 במונה).
+                        </div>
+                        <div>
+                            <span class="font-bold">תחום הגדרה:</span> <span dir="ltr">x ≠ 4, x ≠ 3, x ≠ -3</span>
+                        </div>
+                        <div class="bg-green-50 border-r-4 border-green-500 p-4 rounded mt-4">
+                            <span class="font-bold">תשובה סופית:</span>
+                            <div class="flex justify-center mt-2" dir="ltr">
+                                <div class="text-center">
+                                    <span class="block border-b border-black pb-1">2(x + 2)</span>
+                                    <span class="block">x - 3</span>
+                                </div>
+                            </div>
+                        </div>
+                    </div>`
+            },
+            {
+                id: 3,
+                topic: 'גאומטריה',
+                icon: 'ruler',
+                iconClass: 'text-blue-600',
+                title: 'שאלה 3: טרפז שווה שוקיים',
+                content: `
+                    <div class="text-xl leading-relaxed">
+                        <div class="mb-4">
+                            נתון טרפז שווה שוקיים ABCD (<span dir="ltr">AB || CD</span>).<br/>
+                            הבסיס העליון AB הוא 10 ס"מ.<br/>
+                            הבסיס התחתון DC הוא 26 ס"מ.<br/>
+                            זווית הבסיס (<span dir="ltr">∠D</span>) היא 60 מעלות.
+                        </div>
+                        ${createTrapezoidSVG()}
+                        <div class="font-bold mt-6 space-y-2">
+                            <p>א. חשב את אורך השוק AD.</p>
+                            <p>ב. חשב את גובה הטרפז.</p>
+                            <p>ג. חשב את היקף ושטח הטרפז.</p>
+                        </div>
+                    </div>`,
+                solution: `
+                    <div class="space-y-4 text-lg">
+                        <div>
+                            <span class="font-bold text-blue-700 block mb-2">סעיף א': מציאת השוק</span>
+                            נוריד שני גבהים מקודקודים A ו-B לבסיס DC. נוצר מלבן במרכז שרוחבו 10.<br/>
+                            אורך הקטעים בצדדים: <span dir="ltr">(26 - 10) / 2 = 8</span> ס"מ כל אחד.<br/>
+                            במשולש ישר זווית שבו הזווית 60, הניצב שליד הזווית הוא 8.<br/>
+                            לפי קוסינוס או משולש הזהב (30-60-90), היתר (השוק) כפול מהניצב הקטן.<br/>
+                            <span class="font-bold">תשובה: השוק AD = 16 ס"מ.</span>
+                        </div>
+                        <div>
+                            <span class="font-bold text-blue-700 block mb-2">סעיף ב': מציאת הגובה</span>
+                            לפי פיתגורס במשולש הצדדי: <span dir="ltr">h² + 8² = 16²</span><br/>
+                            <span dir="ltr">h² = 256 - 64 = 192</span><br/>
+                            <span dir="ltr">h = √192 ≈ 13.856</span> (או <span dir="ltr">8√3</span>).
+                        </div>
+                        <div class="bg-green-50 border-r-4 border-green-500 p-4 rounded mt-4">
+                            <span class="font-bold text-blue-700 block mb-2">סעיף ג': היקף ושטח</span>
+                            <p><span class="font-bold">היקף:</span> סכום כל הצלעות: <span dir="ltr">10 + 26 + 16 + 16 = 68</span> ס"מ.</p>
+                            <p class="mt-2"><span class="font-bold">שטח:</span> סכום בסיסים כפול גובה חלקי 2:</p>
+                            <p dir="ltr" class="text-center font-mono my-2">(10 + 26) • 13.856 / 2 ≈ 249.4</p>
+                            <p>(או בדיוק: <span dir="ltr">144√3</span> סמ"ר)</p>
+                        </div>
+                    </div>`
+            },
+            {
+                id: 4,
+                topic: 'פונקציות - פרבולה',
+                icon: 'activity',
+                iconClass: 'text-purple-600',
+                title: 'שאלה 4: הזזות וקודקוד',
+                content: `
+                    <div class="text-xl leading-relaxed">
+                        <p class="mb-4">נתונה הפונקציה הריבועית הבאה:</p>
+                        <div class="text-3xl text-center font-serif my-6" dir="ltr">
+                            y = -2(x - 4)${createPower('', '2')} + 8
+                        </div>
+                        <div class="font-bold space-y-4">
+                            <p>א. מהם שיעורי קודקוד הפרבולה?</p>
+                            <p>ב. האם לפרבולה יש נקודת מינימום או מקסימום? נמק לפי המקדם a.</p>
+                            <p>ג. כיצד התקבלה פרבולה זו מהפרבולה <span dir="ltr">y = -2x²</span>? (תאר את ההזזה)</p>
+                        </div>
+                    </div>`,
+                solution: `
+                    <div class="space-y-4 text-lg">
+                        <div>
+                            <span class="font-bold text-blue-700 block mb-2">סעיף א': קודקוד</span>
+                            לפי הצורה הקודקודית <span dir="ltr">y = a(x-p)² + k</span>, הקודקוד הוא <span dir="ltr">(p, k)</span>.<br/>
+                            כאן <span dir="ltr">p=4</span> ו-<span dir="ltr">k=8</span>.<br/>
+                            <span class="font-bold">תשובה: (8, 4).</span>
+                        </div>
+                        <div>
+                            <span class="font-bold text-blue-700 block mb-2">סעיף ב': סוג הקיצון</span>
+                            המקדם <span dir="ltr">a = -2</span>. מכיוון ש-<span dir="ltr">a &lt; 0</span> (שלילי), הפרבולה "בוכה" (הפוכה).<br/>
+                            <span class="font-bold">תשובה: נקודת מקסימום.</span>
+                        </div>
+                        <div class="bg-green-50 border-r-4 border-green-500 p-4 rounded mt-4">
+                            <span class="font-bold text-blue-700 block mb-2">סעיף ג': הזזות</span>
+                            הפרבולה הוזזה:
+                            <ul class="list-disc list-inside mt-1">
+                                <li><strong>4 יחידות ימינה</strong> (בגלל ה <span dir="ltr">x-4</span> בסוגריים).</li>
+                                <li><strong>8 יחידות למעלה</strong> (בגלל ה <span dir="ltr">+8</span> מחוץ לסוגריים).</li>
+                            </ul>
+                        </div>
+                    </div>`
+            },
+            {
+                id: 5,
+                topic: 'פונקציות - חקירה מלאה',
+                icon: 'activity',
+                iconClass: 'text-purple-600',
+                title: 'שאלה 5: חקירת פרבולה',
+                content: `
+                    <div class="text-xl leading-relaxed">
+                        <p class="mb-2">נתונה הפונקציה:</p>
+                        <div class="text-3xl text-center font-serif my-4" dir="ltr">
+                            y = x${createPower('', '2')} - 6x + 5
+                        </div>
+                        <p class="mb-4 font-bold">מצא את:</p>
+                        <ol class="list-decimal list-inside space-y-2">
+                            <li>שיעורי קודקוד הפרבולה.</li>
+                            <li>נקודות חיתוך עם הצירים.</li>
+                            <li>ציר הסימטריה.</li>
+                            <li>תחומי עלייה וירידה.</li>
+                            <li>תחומי חיוביות ושליליות.</li>
+                            <li>שרטט סקיצה של הגרף.</li>
+                        </ol>
+                    </div>`,
+                solution: `
+                    <div class="space-y-4 text-lg">
+                        <div>
+                            <span class="font-bold text-blue-700">1. קודקוד הפרבולה:</span><br/>
+                            <span dir="ltr">x = -b/2a = -(-6)/2 = 3</span><br/>
+                            נציב בפונקציה: <span dir="ltr">y = 3² - 6(3) + 5 = 9 - 18 + 5 = -4</span><br/>
+                            קודקוד: <span dir="ltr" class="font-bold">(3, -4)</span> (מינימום).
+                        </div>
+                        <div>
+                            <span class="font-bold text-blue-700">2. חיתוך עם הצירים:</span><br/>
+                            חיתוך עם Y (מציבים 0): <span dir="ltr">(0, 5)</span>.<br/>
+                            חיתוך עם X (משוואה ריבועית): <span dir="ltr">x² - 6x + 5 = 0</span><br/>
+                            טרינום: <span dir="ltr">(x-5)(x-1) = 0</span><br/>
+                            נקודות: <span dir="ltr" class="font-bold">(1, 0), (5, 0)</span>.
+                        </div>
+                        <div>
+                            <span class="font-bold text-blue-700">3. ציר סימטריה:</span> <span dir="ltr">x = 3</span>.
+                        </div>
+                        <div class="grid grid-cols-2 gap-4">
+                            <div>
+                                <span class="font-bold text-blue-700">4. עלייה וירידה:</span><br/>
+                                עולה: <span dir="ltr">x &gt; 3</span><br/>
+                                יורדת: <span dir="ltr">x &lt; 3</span>
+                            </div>
+                            <div>
+                                <span class="font-bold text-blue-700">5. חיוביות ושליליות:</span><br/>
+                                חיובית: <span dir="ltr">x &gt; 5</span> או <span dir="ltr">x &lt; 1</span><br/>
+                                שלילית: <span dir="ltr">1 &lt; x &lt; 5</span>
+                            </div>
+                        </div>
+                        <div class="bg-white p-2 border rounded mt-4">
+                            <span class="font-bold text-blue-700">6. שרטוט הסקיצה:</span>
+                            ${createParabolaSVG(1, -6, 5, 3, -4, [1, 5])}
+                        </div>
+                    </div>`
+            }
+        ];
+
+        // --- ניהול מצב האפליקציה ---
+        let currentQuestion = 0;
+        let isSolutionVisible = false;
+
+        function renderQuestion() {
+            const q = questions[currentQuestion];
+            
+            // עדכון טקסטים
+            document.getElementById('question-counter').innerText = `שאלה ${currentQuestion + 1} מתוך ${questions.length}`;
+            document.getElementById('topic-display').innerText = q.topic;
+            document.getElementById('question-title').innerText = q.title;
+            document.getElementById('question-content').innerHTML = q.content;
+            document.getElementById('solution-content').innerHTML = q.solution;
+
+            // עדכון אייקון נושא
+            const iconContainer = document.getElementById('topic-icon');
+            iconContainer.innerHTML = `<i data-lucide="${q.icon}" class="${q.iconClass}"></i>`;
+
+            // עדכון פרוגרס בר
+            const progress = ((currentQuestion + 1) / questions.length) * 100;
+            document.getElementById('progress-bar').style.width = `${progress}%`;
+
+            // איפוס מצב פתרון
+            isSolutionVisible = false;
+            updateSolutionUI();
+
+            // עדכון כפתורי ניווט
+            const prevBtn = document.getElementById('prev-btn');
+            const nextBtn = document.getElementById('next-btn');
+            const finishMsg = document.getElementById('finish-msg');
+
+            prevBtn.disabled = currentQuestion === 0;
+            
+            if (currentQuestion === questions.length - 1) {
+                nextBtn.classList.add('hidden');
+                finishMsg.classList.remove('hidden');
+            } else {
+                nextBtn.classList.remove('hidden');
+                finishMsg.classList.add('hidden');
+            }
+
+            // רענון אייקונים
+            lucide.createIcons();
+            
+            // גלילה למעלה
+            window.scrollTo(0,0);
+        }
+
+        function toggleSolution() {
+            isSolutionVisible = !isSolutionVisible;
+            updateSolutionUI();
+        }
+
+        function updateSolutionUI() {
+            const container = document.getElementById('solution-container');
+            const btnText = document.getElementById('toggle-text');
+            const btnIcon = document.getElementById('toggle-icon');
+
+            if (isSolutionVisible) {
+                container.classList.remove('hidden');
+                btnText.innerText = 'הסתר פתרון מלא';
+                // אייקון למעלה
+                btnIcon.setAttribute('data-lucide', 'chevron-up');
+            } else {
+                container.classList.add('hidden');
+                btnText.innerText = 'הצג פתרון מלא';
+                // אייקון למטה
+                btnIcon.setAttribute('data-lucide', 'chevron-down');
+            }
+            lucide.createIcons();
+        }
+
+        function nextQuestion() {
+            if (currentQuestion < questions.length - 1) {
+                currentQuestion++;
+                renderQuestion();
+            }
+        }
+
+        function prevQuestion() {
+            if (currentQuestion > 0) {
+                currentQuestion--;
+                renderQuestion();
+            }
+        }
+
+        // אתחול ראשוני
+        document.addEventListener('DOMContentLoaded', () => {
+            renderQuestion();
+        });
+
+    </script>
+</body>
+</html>

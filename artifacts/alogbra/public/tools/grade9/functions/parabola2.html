@@ -1,0 +1,558 @@
+<!DOCTYPE html>
+<html lang="he" dir="rtl">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>ניתוח פרבולה ריבועית - אלוגברה</title>
+    
+    <!-- טעינת ספריות חיצוניות -->
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script crossorigin src="https://unpkg.com/react@18/umd/react.production.min.js"></script>
+    <script crossorigin src="https://unpkg.com/react-dom@18/umd/react-dom.production.min.js"></script>
+    <script src="https://unpkg.com/@babel/standalone/babel.min.js"></script>
+
+    <style>
+        @import url('https://fonts.googleapis.com/css2?family=Rubik:wght@300;400;500;700&display=swap');
+        body { font-family: 'Rubik', sans-serif; }
+        
+        .ltr-override { direction: ltr; unicode-bidi: embed; }
+        
+        /* אנימציות */
+        @keyframes slideIn { from { opacity: 0; transform: translateY(-10px); } to { opacity: 1; transform: translateY(0); } }
+        .animate-slide-in { animation: slideIn 0.3s ease-out forwards; }
+    </style>
+</head>
+<body class="bg-slate-50 text-slate-800">
+
+    <div id="root"></div>
+
+    <script type="text/babel" data-presets="env,react">
+        const { useState, useRef, useEffect } = React;
+
+        // --- אייקונים (SVG) ---
+        const IconBase = ({ d, className = "", color = "currentColor", fill = "none" }) => (
+            <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill={fill} stroke={color} strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className={className}>
+                {d}
+            </svg>
+        );
+
+        const GridIcon = (p) => <IconBase {...p} d={<><rect x="3" y="3" width="18" height="18" rx="2" ry="2"/><line x1="3" y1="9" x2="21" y2="9"/><line x1="3" y1="15" x2="21" y2="15"/><line x1="9" y1="3" x2="9" y2="21"/><line x1="15" y1="3" x2="15" y2="21"/></>} />;
+        const ChevronDown = (p) => <IconBase {...p} d={<polyline points="6 9 12 15 18 9"/>} />;
+        const ChevronUp = (p) => <IconBase {...p} d={<polyline points="18 15 12 9 6 15"/>} />;
+        const TrendingUp = (p) => <IconBase {...p} d={<><polyline points="23 6 13.5 15.5 8.5 10.5 1 18"/><polyline points="17 6 23 6 23 12"/></>} />;
+        const TrendingDown = (p) => <IconBase {...p} d={<><polyline points="23 18 13.5 8.5 8.5 13.5 1 6"/><polyline points="17 18 23 18 23 12"/></>} />;
+        const Maximize2 = (p) => <IconBase {...p} d={<><polyline points="15 3 21 3 21 9"/><polyline points="9 21 3 21 3 15"/><line x1="21" y1="3" x2="14" y2="10"/><line x1="3" y1="21" x2="10" y2="14"/></>} />;
+        const Minimize2 = (p) => <IconBase {...p} d={<><polyline points="4 14 10 14 10 20"/><polyline points="20 10 14 10 14 4"/><line x1="14" y1="10" x2="21" y2="3"/><line x1="3" y1="21" x2="10" y2="14"/></>} />;
+        const ArrowRight = (p) => <IconBase {...p} d={<><line x1="5" y1="12" x2="19" y2="12"/><polyline points="12 5 19 12 12 19"/></>} />;
+        const Move = (p) => <IconBase {...p} d={<><polyline points="5 9 2 12 5 15"/><polyline points="9 5 12 2 15 5"/><polyline points="19 9 22 12 19 15"/><polyline points="9 19 12 22 15 19"/><line x1="2" y1="12" x2="22" y2="12"/><line x1="12" y1="2" x2="12" y2="22"/></>} />;
+
+        // --- לוגיקה מתמטית ---
+        const calculateY = (x, a, b, c) => a * x * x + b * x + c;
+
+        const solveQuadratic = (a, b, c) => {
+            const delta = b * b - 4 * a * c;
+            if (delta < 0) return [];
+            if (delta === 0) return [-b / (2 * a)];
+            const x1 = (-b + Math.sqrt(delta)) / (2 * a);
+            const x2 = (-b - Math.sqrt(delta)) / (2 * a);
+            // החזרת שורשים ממוינים ומעוגלים למניעת בעיות צפות קטנות
+            return [x1, x2].sort((u, v) => u - v).map(n => parseFloat(n.toFixed(4)));
+        };
+
+        // --- רכיבים ---
+
+        const MathText = ({ children, className="" }) => (
+            <span className={`font-mono font-bold text-lg inline-block ltr-override ${className}`}>
+                {children}
+            </span>
+        );
+
+        const Fraction = ({ num, den, borderColor="border-slate-800", className="" }) => (
+            <div className={`inline-flex flex-col items-center align-middle mx-2 ltr-override ${className}`} style={{verticalAlign: 'middle'}}>
+                <div className={`border-b-2 ${borderColor} w-full text-center px-1 pb-0.5 mb-0.5`}>{num}</div>
+                <div className="text-center w-full px-1">{den}</div>
+            </div>
+        );
+
+        const SectionCard = ({ title, icon: Icon, isOpen, onToggle, children, colorClass = "bg-white" }) => (
+            <div className={`border border-slate-200 rounded-xl overflow-hidden transition-all duration-300 shadow-sm ${isOpen ? 'ring-2 ring-indigo-100' : ''}`}>
+                <button 
+                    onClick={onToggle}
+                    className={`w-full flex items-center justify-between p-4 ${colorClass} hover:bg-opacity-80 transition`}
+                >
+                    <div className="flex items-center gap-3">
+                        <div className="p-2 bg-white/50 rounded-lg"><Icon size={20} className="text-slate-700"/></div>
+                        <span className="font-bold text-slate-800">{title}</span>
+                    </div>
+                    {isOpen ? <ChevronUp size={20} className="text-slate-400"/> : <ChevronDown size={20} className="text-slate-400"/>}
+                </button>
+                
+                {isOpen && (
+                    <div className="p-4 bg-white border-t border-slate-100 animate-slide-in">
+                        {children}
+                    </div>
+                )}
+            </div>
+        );
+
+        // --- האפליקציה הראשית ---
+        const ParabolaExplorer = () => {
+            const [activeEx, setActiveEx] = useState(0);
+            const [openSection, setOpenSection] = useState('roots'); // roots, vertex, intervals
+            
+            // State for interactive graph (Pan)
+            const [pan, setPan] = useState({ x: 0, y: 0 });
+            const [isDragging, setIsDragging] = useState(false);
+            const dragStartRef = useRef({ x: 0, y: 0 });
+
+            const examples = [
+                {
+                    id: 1,
+                    name: "פרבולה מחייכת (2 חיתוכים)",
+                    a: 1, b: -4, c: -5,
+                    desc: "y = x² - 4x - 5",
+                    color: "text-indigo-600"
+                },
+                {
+                    id: 2,
+                    name: "פרבולה בוכה (מקסימום)",
+                    a: -1, b: 2, c: 3,
+                    desc: "y = -x² + 2x + 3",
+                    color: "text-rose-600"
+                },
+                {
+                    id: 3,
+                    name: "פרבולה משיקה (פתרון יחיד)",
+                    a: 1, b: -6, c: 9,
+                    desc: "y = x² - 6x + 9",
+                    color: "text-emerald-600"
+                }
+            ];
+
+            const ex = examples[activeEx];
+            
+            // איפוס המיקום כשמחליפים דוגמה
+            useEffect(() => {
+                setPan({ x: 0, y: 0 });
+            }, [activeEx]);
+
+            const roots = solveQuadratic(ex.a, ex.b, ex.c);
+            const vertexX = -ex.b / (2 * ex.a);
+            const vertexY = calculateY(vertexX, ex.a, ex.b, ex.c);
+            const isMin = ex.a > 0;
+            const discriminant = ex.b*ex.b - 4*ex.a*ex.c;
+
+            // --- לוגיקה גרפית ---
+            const width = 400;
+            const height = 300;
+            const scaleX = 30; // pixels per unit
+            const scaleY = 15; // pixels per unit
+            
+            // מרכז התחלתי + הזזה אינטראקטיבית
+            const offsetX = width / 2 + pan.x;
+            const offsetY = (height / 2 + 50) + pan.y;
+
+            const toPx = (x, y) => ({
+                x: offsetX + x * scaleX,
+                y: offsetY - y * scaleY
+            });
+
+            // יצירת נקודות לגרף
+            // אנחנו מייצרים מספיק נקודות כדי לכסות גם אם מזיזים את הגרף
+            // טווח דינמי לפי ההזזה היה עדיף, אבל טווח רחב קבוע יעבוד לרוב המקרים הפשוטים
+            const rangeX = 20; 
+            const points = [];
+            for (let x = -rangeX; x <= rangeX; x += 0.1) {
+                points.push(toPx(x, calculateY(x, ex.a, ex.b, ex.c)));
+            }
+            const pathData = `M ${points[0].x} ${points[0].y} ` + points.map(p => `L ${p.x} ${p.y}`).join(" ");
+
+            // קווי רשת
+            const gridLinesX = [];
+            for(let i=-20; i<=20; i++) gridLinesX.push(i);
+            const gridLinesY = [];
+            for(let i=-30; i<=30; i+=2) gridLinesY.push(i);
+
+            // --- Handlers לגרירה ---
+            const handleMouseDown = (e) => {
+                setIsDragging(true);
+                dragStartRef.current = { x: e.clientX - pan.x, y: e.clientY - pan.y };
+            };
+
+            const handleMouseMove = (e) => {
+                if (!isDragging) return;
+                setPan({
+                    x: e.clientX - dragStartRef.current.x,
+                    y: e.clientY - dragStartRef.current.y
+                });
+            };
+
+            const handleMouseUp = () => setIsDragging(false);
+            
+            // תמיכה במובייל (Touch)
+            const handleTouchStart = (e) => {
+                setIsDragging(true);
+                const touch = e.touches[0];
+                dragStartRef.current = { x: touch.clientX - pan.x, y: touch.clientY - pan.y };
+            };
+
+            const handleTouchMove = (e) => {
+                if (!isDragging) return;
+                const touch = e.touches[0];
+                setPan({
+                    x: touch.clientX - dragStartRef.current.x,
+                    y: touch.clientY - dragStartRef.current.y
+                });
+                // מניעת גלילת מסך בזמן גרירת הגרף
+                if(e.cancelable) e.preventDefault();
+            };
+
+            return (
+                <div className="min-h-screen bg-slate-50 text-slate-800 font-sans p-2 md:p-8" dir="rtl">
+                    
+                    {/* כותרת */}
+                    <div className="max-w-5xl mx-auto mb-6 text-center">
+                        <h1 className="text-2xl md:text-3xl font-extrabold text-slate-800 mb-2">ניתוח פרבולה ריבועית</h1>
+                        <p className="text-slate-500 text-sm md:text-base">בחרו פונקציה וגלו את התכונות שלה שלב אחר שלב</p>
+                    </div>
+
+                    {/* בחירת דוגמאות */}
+                    <div className="max-w-5xl mx-auto mb-6 flex justify-center gap-3 flex-wrap">
+                        {examples.map((item, idx) => (
+                            <button
+                                key={item.id}
+                                onClick={() => setActiveEx(idx)}
+                                className={`px-4 py-2 md:px-6 md:py-3 rounded-full font-bold transition-all shadow-sm text-xs md:text-sm ${
+                                    activeEx === idx 
+                                        ? 'bg-slate-800 text-white shadow-lg scale-105' 
+                                        : 'bg-white text-slate-500 hover:bg-slate-100'
+                                }`}
+                            >
+                                {item.name}
+                            </button>
+                        ))}
+                    </div>
+
+                    {/* גריד ראשי */}
+                    <div className="max-w-6xl mx-auto grid grid-cols-1 lg:grid-cols-2 gap-6 md:gap-8">
+                        
+                        {/* צד ימין: ניתוח אנליטי */}
+                        <div className="space-y-4 order-2 lg:order-1">
+                            
+                            {/* הצגת המשוואה */}
+                            <div className="bg-white p-6 rounded-2xl shadow-sm border border-slate-200 text-center relative overflow-hidden">
+                                <div className="absolute top-0 right-0 w-2 h-full bg-slate-800"></div>
+                                <div className="text-xs md:text-sm font-bold text-slate-400 uppercase tracking-widest mb-2">הפונקציה הנחקרת</div>
+                                <div className={`text-2xl md:text-4xl font-mono font-bold ${ex.color} mb-4 break-words ltr-override`}>
+                                    {ex.desc}
+                                </div>
+                                <div className="flex justify-center gap-4 md:gap-6 text-slate-500 font-mono text-xs md:text-sm border-t border-slate-100 pt-4 ltr-override">
+                                    <span>a = <b className="text-slate-800">{ex.a}</b></span>
+                                    <span>b = <b className="text-slate-800">{ex.b}</b></span>
+                                    <span>c = <b className="text-slate-800">{ex.c}</b></span>
+                                </div>
+                            </div>
+
+                            {/* כרטיסייה 1: חיתוך עם הצירים */}
+                            <SectionCard 
+                                title="חיתוך עם הצירים" 
+                                icon={GridIcon}
+                                isOpen={openSection === 'roots'}
+                                onToggle={() => setOpenSection(openSection === 'roots' ? '' : 'roots')}
+                                colorClass="bg-blue-50"
+                            >
+                                <div className="space-y-6">
+                                    
+                                    {/* חיתוך Y */}
+                                    <div>
+                                        <h4 className="font-bold text-blue-800 mb-2 flex items-center gap-2">1. חיתוך עם ציר Y</h4>
+                                        <p className="text-sm text-slate-600 mb-2">כדי למצוא חיתוך עם ציר Y, אנחנו תמיד מציבים <MathText>x = 0</MathText>.</p>
+                                        <div className="bg-slate-50 p-3 rounded-lg border border-slate-100 font-mono text-center text-slate-700 text-sm md:text-base ltr-override">
+                                            y = {ex.a}(0)² + ({ex.b})(0) + {ex.c} = <b>{ex.c}</b>
+                                        </div>
+                                        <div className="mt-2 text-sm font-bold text-blue-600">
+                                            הנקודה היא: <span className="ltr-override">(0, {ex.c})</span>
+                                        </div>
+                                    </div>
+
+                                    <hr className="border-slate-100"/>
+
+                                    {/* חיתוך X */}
+                                    <div>
+                                        <h4 className="font-bold text-blue-800 mb-2 flex items-center gap-2">2. חיתוך עם ציר X</h4>
+                                        <p className="text-sm text-slate-600 mb-2">נציב <MathText>y = 0</MathText> ונפתור בעזרת נוסחת השורשים:</p>
+                                        
+                                        <div className="bg-slate-800 text-white p-4 rounded-xl font-mono flex items-center justify-center text-sm md:text-lg mb-4 shadow-inner overflow-x-auto ltr-override">
+                                            <span>x₁,₂ = </span>
+                                            <Fraction num="-b ± √(b² - 4ac)" den="2a" borderColor="border-white" />
+                                        </div>
+
+                                        <div className="bg-blue-50/50 p-4 rounded-xl space-y-4">
+                                            <p className="text-sm font-bold text-slate-500">שלב א: הצבה בנוסחה</p>
+                                            <div className="font-mono flex items-center justify-center text-slate-800 text-sm md:text-base overflow-x-auto ltr-override">
+                                                <span>x₁,₂ = </span>
+                                                <Fraction 
+                                                    num={<span>{-ex.b} ± √(({ex.b})² - 4·{ex.a}·{ex.c})</span>} 
+                                                    den={<span>2 · ({ex.a})</span>} 
+                                                    borderColor="border-slate-400"
+                                                />
+                                            </div>
+                                            
+                                            <p className="text-sm font-bold text-slate-500 mt-2">שלב ב: חישוב הביטוי שבתוך השורש (דלתא)</p>
+                                            <div className="font-mono text-center text-slate-800 text-sm md:text-base ltr-override">
+                                                {ex.b*ex.b} - ({4*ex.a*ex.c}) = <b>{discriminant}</b>
+                                            </div>
+
+                                            <p className="text-sm font-bold text-slate-500 mt-2">שלב ג: פתרון סופי</p>
+                                            {roots.length === 2 ? (
+                                                <div className="flex justify-around font-mono font-bold text-blue-700 text-sm md:text-base ltr-override">
+                                                    <span>x₁ = {roots[0]}</span>
+                                                    <span>x₂ = {roots[1]}</span>
+                                                </div>
+                                            ) : roots.length === 1 ? (
+                                                <div className="text-center font-mono font-bold text-blue-700 text-sm md:text-base ltr-override">
+                                                    x = {roots[0]}
+                                                </div>
+                                            ) : (
+                                                <div className="text-center font-bold text-rose-500 text-sm md:text-base">
+                                                    הביטוי בשורש שלילי, לכן אין חיתוך עם ציר X.
+                                                </div>
+                                            )}
+                                        </div>
+                                    </div>
+                                </div>
+                            </SectionCard>
+
+                            {/* כרטיסייה 2: קודקוד */}
+                            <SectionCard 
+                                title="נקודת קודקוד (Min/Max)" 
+                                icon={isMin ? Minimize2 : Maximize2}
+                                isOpen={openSection === 'vertex'}
+                                onToggle={() => setOpenSection(openSection === 'vertex' ? '' : 'vertex')}
+                                colorClass="bg-purple-50"
+                            >
+                                <div className="space-y-4">
+                                    <p className="text-sm text-slate-600">
+                                        נחשב את ה-x של הקודקוד לפי הנוסחה: 
+                                    </p>
+                                    
+                                    <div className="flex flex-col md:flex-row items-center justify-center gap-4 bg-purple-50 p-4 rounded-xl">
+                                        <div className="text-center">
+                                            <div className="text-xs text-slate-500 font-bold mb-1">חישוב x קודקוד</div>
+                                            <div className="font-mono text-purple-700 font-bold flex items-center justify-center text-sm md:text-base ltr-override">
+                                                <span>x = </span>
+                                                <Fraction num="-b" den="2a" borderColor="border-purple-300" />
+                                                <span> = </span>
+                                                <Fraction num={-ex.b} den={2*ex.a} borderColor="border-purple-300" />
+                                                <span> = {vertexX}</span>
+                                            </div>
+                                        </div>
+                                        <ArrowRight className="text-slate-300 hidden md:block transform rotate-180"/>
+                                        <div className="text-center">
+                                            <div className="text-xs text-slate-500 font-bold mb-1">הצבה למציאת y</div>
+                                            <div className="font-mono text-purple-700 font-bold text-sm md:text-base ltr-override">
+                                                y({vertexX}) = {vertexY}
+                                            </div>
+                                        </div>
+                                    </div>
+
+                                    <div className="flex items-center gap-3 bg-slate-50 p-3 rounded-lg border border-slate-100">
+                                        {isMin ? <Minimize2 className="text-purple-600"/> : <Maximize2 className="text-purple-600"/>}
+                                        <div className="text-sm">
+                                            מכיוון ש <MathText>a = {ex.a}</MathText> ({ex.a > 0 ? 'חיובי' : 'שלילי'}), זוהי נקודת <b>{isMin ? 'מינימום' : 'מקסימום'}</b>.
+                                            הפרבולה {isMin ? '"מחייכת" 😊' : '"בוכה" 😢'}.
+                                        </div>
+                                    </div>
+                                </div>
+                            </SectionCard>
+
+                            {/* כרטיסייה 3: תחומים */}
+                            <SectionCard 
+                                title="תחומי חיוביות ושליליות" 
+                                icon={TrendingUp}
+                                isOpen={openSection === 'intervals'}
+                                onToggle={() => setOpenSection(openSection === 'intervals' ? '' : 'intervals')}
+                                colorClass="bg-emerald-50"
+                            >
+                                <div className="space-y-4">
+                                    <p className="text-sm text-slate-600">
+                                        <span className="font-bold text-emerald-600">חיוביות:</span> התחום שבו הפרבולה נמצאת <span className="underline">מעל</span> ציר ה-X.
+                                        <br/>
+                                        <span className="font-bold text-rose-600">שליליות:</span> התחום שבו הפרבולה נמצאת <span className="underline">מתחת</span> לציר ה-X.
+                                    </p>
+                                    
+                                    <p className="text-xs text-slate-500">תמיד רושמים את התחום בעזרת ערכי ה-x.</p>
+
+                                    <div className="grid grid-cols-2 gap-4">
+                                        <div className="bg-emerald-50 border border-emerald-100 p-3 rounded-lg text-center">
+                                            <div className="font-bold text-emerald-700 text-sm mb-1">תחום חיוביות (+)</div>
+                                            <div className="font-mono text-emerald-800 font-bold text-sm md:text-base ltr-override">
+                                                {roots.length === 2 && ex.a > 0 ? `x < ${roots[0]}  or  x > ${roots[1]}` : 
+                                                roots.length === 2 && ex.a < 0 ? `${roots[0]} < x < ${roots[1]}` :
+                                                roots.length === 1 && ex.a > 0 ? `x ≠ ${roots[0]}` :
+                                                ex.a > 0 ? "כל x" : "אף x"}
+                                            </div>
+                                        </div>
+                                        <div className="bg-rose-50 border border-rose-100 p-3 rounded-lg text-center">
+                                            <div className="font-bold text-rose-700 text-sm mb-1">תחום שליליות (-)</div>
+                                            <div className="font-mono text-rose-800 font-bold text-sm md:text-base ltr-override">
+                                                {roots.length === 2 && ex.a > 0 ? `${roots[0]} < x < ${roots[1]}` : 
+                                                roots.length === 2 && ex.a < 0 ? `x < ${roots[0]}  or  x > ${roots[1]}` :
+                                                roots.length === 1 && ex.a < 0 ? `x ≠ ${roots[0]}` :
+                                                ex.a < 0 ? "כל x" : "אף x"}
+                                            </div>
+                                        </div>
+                                    </div>
+                                </div>
+                            </SectionCard>
+
+                        </div>
+
+                        {/* צד שמאל: גרף ויזואלי ואינטראקטיבי */}
+                        <div className="order-1 lg:order-2">
+                            <div className="relative bg-white rounded-3xl shadow-xl border border-slate-200 overflow-hidden h-[350px] md:h-[500px]">
+                                {/* קנבס SVG אינטראקטיבי */}
+                                <svg 
+                                    className={`w-full h-full cursor-move ${isDragging ? 'cursor-grabbing' : 'cursor-grab'}`}
+                                    viewBox={`0 0 ${width} ${height}`}
+                                    onMouseDown={handleMouseDown}
+                                    onMouseMove={handleMouseMove}
+                                    onMouseUp={handleMouseUp}
+                                    onMouseLeave={handleMouseUp}
+                                    onTouchStart={handleTouchStart}
+                                    onTouchMove={handleTouchMove}
+                                    onTouchEnd={handleMouseUp}
+                                >
+                                    {/* Grid Lines */}
+                                    {gridLinesX.map(gx => {
+                                        const p = toPx(gx, 0);
+                                        // ציור רק אם בתוך התחום הנראה בערך
+                                        if(p.x < -50 || p.x > width + 50) return null;
+                                        return <line key={`gx${gx}`} x1={p.x} y1={-1000} x2={p.x} y2={1000} stroke="#f1f5f9" strokeWidth="1"/>
+                                    })}
+                                    {gridLinesY.map(gy => {
+                                        const p = toPx(0, gy);
+                                        if(p.y < -50 || p.y > height + 50) return null;
+                                        return <line key={`gy${gy}`} x1={-1000} y1={p.y} x2={1000} y2={p.y} stroke="#f1f5f9" strokeWidth="1"/>
+                                    })}
+
+                                    {/* Axes */}
+                                    <line x1={-1000} y1={toPx(0,0).y} x2={1000} y2={toPx(0,0).y} stroke="#64748b" strokeWidth="2" />
+                                    <text x={width - 20} y={toPx(0,0).y + 20} className="font-bold fill-slate-500 text-sm">x</text>
+                                    
+                                    <line x1={toPx(0,0).x} y1={-1000} x2={toPx(0,0).x} y2={1000} stroke="#64748b" strokeWidth="2" />
+                                    <text x={toPx(0,0).x + 10} y={20} className="font-bold fill-slate-500 text-sm">y</text>
+
+                                    {/* Highlight Intervals (Background Colors) */}
+                                    {openSection === 'intervals' && roots.length === 2 && (
+                                        <>
+                                            {/* Positive Area Highlight */}
+                                            <rect 
+                                                x={-1000} 
+                                                y={-1000} 
+                                                width={3000} 
+                                                height={toPx(0,0).y + 1000} 
+                                                fill="rgba(16, 185, 129, 0.05)" // Greenish top
+                                            />
+                                            {/* Negative Area Highlight */}
+                                            <rect 
+                                                x={-1000} 
+                                                y={toPx(0,0).y} 
+                                                width={3000} 
+                                                height={1000} 
+                                                fill="rgba(225, 29, 72, 0.05)" // Reddish bottom
+                                            />
+                                        </>
+                                    )}
+
+                                    {/* The Parabola Curve */}
+                                    <path d={pathData} fill="none" stroke="#334155" strokeWidth="3" />
+                                    
+                                    {/* Colored Segments for Intervals if active */}
+                                    {openSection === 'intervals' && (
+                                        <path d={pathData} fill="none" stroke={ex.a > 0 ? "#10b981" : "#e11d48"} strokeWidth="3" strokeDasharray="5,5" opacity="0.6" />
+                                    )}
+
+                                    {/* Points of Interest */}
+                                    
+                                    {/* Vertex */}
+                                    <circle cx={toPx(vertexX, vertexY).x} cy={toPx(vertexX, vertexY).y} r="6" className="fill-purple-500 stroke-white stroke-2"/>
+                                    <text 
+                                        x={toPx(vertexX, vertexY).x} 
+                                        y={toPx(vertexX, vertexY).y + (isMin ? 25 : -15)} 
+                                        textAnchor="middle" 
+                                        className={`text-xs font-bold fill-purple-700 ${openSection !== 'vertex' && openSection !== '' ? 'opacity-30' : 'opacity-100'}`}
+                                    >
+                                        קודקוד
+                                    </text>
+
+                                    {/* Roots */}
+                                    {roots.map((r, i) => (
+                                        <g key={i}>
+                                            <circle cx={toPx(r, 0).x} cy={toPx(r, 0).y} r="6" className="fill-blue-500 stroke-white stroke-2"/>
+                                            <text 
+                                                x={toPx(r, 0).x} 
+                                                y={toPx(r, 0).y - 15} 
+                                                textAnchor="middle" 
+                                                className={`text-xs font-bold fill-blue-700 ${openSection !== 'roots' && openSection !== '' ? 'opacity-30' : 'opacity-100'}`}
+                                            >
+                                                {r}
+                                            </text>
+                                        </g>
+                                    ))}
+
+                                    {/* Y Intercept */}
+                                    <circle cx={toPx(0, ex.c).x} cy={toPx(0, ex.c).y} r="6" className="fill-slate-500 stroke-white stroke-2"/>
+                                    <text 
+                                        x={toPx(0, ex.c).x + 15} 
+                                        y={toPx(0, ex.c).y} 
+                                        dominantBaseline="middle"
+                                        className={`text-xs font-bold fill-slate-600 ${openSection !== 'roots' && openSection !== '' ? 'opacity-30' : 'opacity-100'}`}
+                                    >
+                                        {ex.c}
+                                    </text>
+
+                                </svg>
+
+                                {/* Graph Controls Overlay */}
+                                <div className="absolute bottom-4 left-4 flex flex-col gap-2 pointer-events-none">
+                                    <div className="bg-white/90 p-2 rounded-xl border border-slate-200 text-xs shadow-sm backdrop-blur-sm flex items-center gap-2">
+                                        <Move size={16} className="text-slate-500"/>
+                                        <span>ניתן לגרור את הגרף</span>
+                                    </div>
+                                    <div className="bg-white/90 p-3 rounded-xl border border-slate-200 text-xs shadow-sm space-y-1 backdrop-blur-sm">
+                                        <div className="flex items-center gap-2">
+                                            <div className="w-3 h-3 rounded-full bg-purple-500"></div> <span>קודקוד <span className="ltr-override">({vertexX}, {vertexY})</span></span>
+                                        </div>
+                                        <div className="flex items-center gap-2">
+                                            <div className="w-3 h-3 rounded-full bg-blue-500"></div> <span>חיתוך X</span>
+                                        </div>
+                                        <div className="flex items-center gap-2">
+                                            <div className="w-3 h-3 rounded-full bg-slate-500"></div> <span>חיתוך Y <span className="ltr-override">(0, {ex.c})</span></span>
+                                        </div>
+                                    </div>
+                                </div>
+                                
+                                {/* כפתור איפוס מיקום */}
+                                {(pan.x !== 0 || pan.y !== 0) && (
+                                    <button 
+                                        onClick={() => setPan({x: 0, y: 0})}
+                                        className="absolute top-4 left-4 bg-white shadow-md border border-slate-200 p-2 rounded-full hover:bg-slate-50 transition"
+                                        title="מרכז גרף"
+                                    >
+                                        <Maximize2 size={16} className="text-slate-600"/>
+                                    </button>
+                                )}
+                            </div>
+                        </div>
+
+                    </div>
+                </div>
+            );
+        };
+
+        const root = ReactDOM.createRoot(document.getElementById('root'));
+        root.render(<ParabolaExplorer />);
+    </script>
+</body>
+</html>

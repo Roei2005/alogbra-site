@@ -1,0 +1,335 @@
+<!DOCTYPE html>
+<html lang="he" dir="rtl">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>הנוסחה של הקו הישר - מדריך אינטראקטיבי</title>
+    
+    <!-- Tailwind CSS -->
+    <script src="https://cdn.tailwindcss.com"></script>
+    
+    <!-- React & ReactDOM -->
+    <script crossorigin src="https://unpkg.com/react@18/umd/react.production.min.js"></script>
+    <script crossorigin src="https://unpkg.com/react-dom@18/umd/react-dom.production.min.js"></script>
+    
+    <!-- Babel (for JSX) -->
+    <script src="https://unpkg.com/@babel/standalone/babel.min.js"></script>
+    
+    <!-- Lucide Icons -->
+    <script src="https://unpkg.com/lucide@latest"></script>
+
+    <!-- Font -->
+    <link href="https://fonts.googleapis.com/css2?family=Assistant:wght@400;700&family=Noto+Sans+Hebrew:wght@400;700&display=swap" rel="stylesheet">
+
+    <style>
+        body {
+            font-family: 'Assistant', 'Noto Sans Hebrew', sans-serif;
+        }
+    </style>
+</head>
+<body class="bg-slate-50 text-slate-800">
+
+    <div id="root"></div>
+
+    <script type="text/babel">
+        // רכיב עזר לאייקונים (במקום lucide-react)
+        const Icon = ({ name, size = 24, className = "" }) => {
+            React.useEffect(() => {
+                lucide.createIcons();
+            }, [name]);
+
+            return <i data-lucide={name} width={size} height={size} className={className}></i>;
+        };
+
+        const LinearFunctionInfographic = () => {
+            // Helper for mini graphs
+            const MiniGraph = ({ m, b, highlight, label, subLabel }) => {
+                const size = 90;
+                const scale = 5; 
+                
+                // y = mx + b
+                const x1 = -6;
+                const y1 = m * x1 + b;
+                const x2 = 6;
+                const y2 = m * x2 + b;
+
+                const toSvgX = (x) => (x * scale) + (size / 2);
+                const toSvgY = (y) => (size / 2) - (y * scale);
+
+                return (
+                    <div className="flex flex-col items-center gap-2">
+                        <div className="relative bg-white border border-slate-200 rounded-lg shadow-sm overflow-hidden" style={{ width: size, height: size }}>
+                            <div className="absolute top-1/2 left-0 w-full h-[1px] bg-slate-200"></div>
+                            <div className="absolute left-1/2 top-0 h-full w-[1px] bg-slate-200"></div>
+                            
+                            <svg width={size} height={size} className="absolute top-0 left-0">
+                                <line 
+                                    x1={toSvgX(x1)} 
+                                    y1={toSvgY(y1)} 
+                                    x2={toSvgX(x2)} 
+                                    y2={toSvgY(y2)} 
+                                    stroke={highlight === 'm' ? '#3b82f6' : highlight === 'b' ? '#ec4899' : '#64748b'} 
+                                    strokeWidth="2.5" 
+                                />
+                                {highlight === 'b' && (
+                                    <circle cx={toSvgX(0)} cy={toSvgY(b)} r="3" fill="#ec4899" />
+                                )}
+                            </svg>
+                        </div>
+                        <div className="text-center">
+                            <span className="text-xs font-bold text-slate-700 block">{label}</span>
+                            {subLabel && <span className="text-[10px] text-slate-500 font-mono dir-ltr block" dir="ltr">{subLabel}</span>}
+                        </div>
+                    </div>
+                );
+            };
+
+            // NEW: Precise Graph for the Examples Section
+            const EquationGraph = ({ m, b }) => {
+                const size = 160;
+                const range = 5; // -5 to 5
+                const scale = size / (range * 2);
+                
+                const toX = (x) => (x + range) * scale;
+                const toY = (y) => (range - y) * scale;
+
+                return (
+                    <div className="w-full flex justify-center mb-4">
+                        <svg width={size} height={size} className="bg-white border border-slate-200 rounded-lg shadow-inner">
+                            {Array.from({ length: range * 2 + 1 }).map((_, i) => {
+                                const val = i - range;
+                                const isAxis = val === 0;
+                                return (
+                                    <g key={i}>
+                                        <line 
+                                            x1={toX(val)} y1={0} x2={toX(val)} y2={size} 
+                                            stroke={isAxis ? "#94a3b8" : "#f1f5f9"} 
+                                            strokeWidth={isAxis ? 2 : 1} 
+                                        />
+                                        <line 
+                                            x1={0} y1={toY(val)} x2={size} y2={toY(val)} 
+                                            stroke={isAxis ? "#94a3b8" : "#f1f5f9"} 
+                                            strokeWidth={isAxis ? 2 : 1} 
+                                        />
+                                    </g>
+                                );
+                            })}
+                            
+                            <line 
+                                x1={toX(-range)} y1={toY(m * -range + b)} 
+                                x2={toX(range)} y2={toY(m * range + b)} 
+                                stroke="#3b82f6" 
+                                strokeWidth="3" 
+                                strokeLinecap="round"
+                            />
+
+                            <circle cx={toX(0)} cy={toY(b)} r="4" fill="#ec4899" stroke="white" strokeWidth="1" />
+                        </svg>
+                    </div>
+                );
+            };
+
+            const EquationCard = ({ eq, m, b, analysis }) => (
+                <div className="bg-slate-50 p-4 rounded-xl border border-slate-200 hover:border-blue-300 transition-all">
+                    <EquationGraph m={m} b={b} />
+                    
+                    <div className="text-xl font-mono font-bold text-slate-800 mb-3 text-center dir-ltr border-b border-slate-200 pb-2" dir="ltr">
+                        {eq}
+                    </div>
+                    <div className="space-y-2 text-sm">
+                        <div className="flex items-start gap-2">
+                            <span className="font-bold text-blue-600 w-16 shrink-0">השיפוע:</span>
+                            <div>
+                                <span className="font-mono bg-blue-100 px-1 rounded text-blue-800 mx-1">{m}</span>
+                                <span className="text-slate-600">{analysis.slope}</span>
+                            </div>
+                        </div>
+                        <div className="flex items-start gap-2">
+                            <span className="font-bold text-pink-500 w-16 shrink-0">החיתוך:</span>
+                            <div>
+                                <span className="font-mono bg-pink-100 px-1 rounded text-pink-800 mx-1">{b}</span>
+                                <span className="text-slate-600">{analysis.intercept}</span>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            );
+
+            return (
+                <div className="min-h-screen bg-slate-50 p-4 md:p-8 font-sans text-slate-800" dir="rtl">
+                    <div className="max-w-4xl mx-auto bg-white shadow-xl rounded-3xl overflow-hidden border border-slate-200">
+                        
+                        {/* Header Section */}
+                        <div className="bg-slate-900 text-white p-4 md:p-8 text-center relative overflow-hidden">
+                            <div className="absolute top-0 left-0 w-full h-full opacity-10 pointer-events-none">
+                                <svg width="100%" height="100%">
+                                    <pattern id="grid" width="40" height="40" patternUnits="userSpaceOnUse">
+                                        <path d="M 40 0 L 0 0 0 40" fill="none" stroke="white" strokeWidth="1"/>
+                                    </pattern>
+                                    <rect width="100%" height="100%" fill="url(#grid)" />
+                                </svg>
+                            </div>
+                            
+                            <h1 className="text-2xl md:text-4xl font-black mb-2 relative z-10">הנוסחה של הקו הישר</h1>
+                            <p className="text-slate-300 text-base md:text-lg relative z-10">מדריך ויזואלי: שיפוע וחיתוך</p>
+                            
+                            {/* The Equation Breakdown */}
+                            <div className="mt-6 flex flex-nowrap items-center justify-center bg-white/10 backdrop-blur-md rounded-2xl p-2 md:p-6 border border-white/20 shadow-2xl mx-auto w-fit font-mono" dir="ltr">
+                                
+                                <span className="text-4xl sm:text-5xl md:text-8xl font-bold text-white mr-1 md:mr-2">y</span>
+                                <span className="text-4xl sm:text-5xl md:text-8xl font-bold text-white mx-1 md:mx-2">=</span>
+                                
+                                {/* M part */}
+                                <div className="flex flex-col items-center group cursor-help translate-y-1 md:translate-y-3 ml-0.5 md:ml-1 mr-0.5 md:mr-1">
+                                    <span className="text-4xl sm:text-5xl md:text-8xl font-bold text-blue-400 group-hover:text-blue-300 transition-colors leading-none">m</span>
+                                    <span className="text-[9px] md:text-sm text-blue-300 font-bold mt-1 border-t border-blue-400/30 pt-1 whitespace-nowrap font-sans">שיפוע</span>
+                                </div>
+                                
+                                <span className="text-4xl sm:text-5xl md:text-8xl font-bold text-white leading-none">x</span>
+                                <span className="text-4xl sm:text-5xl md:text-8xl font-bold text-white mx-1 md:mx-3">+</span>
+                                
+                                {/* B part */}
+                                <div className="flex flex-col items-center mx-0.5 md:mx-1 group cursor-help">
+                                    <span className="text-4xl sm:text-5xl md:text-8xl font-bold text-pink-500 group-hover:text-pink-400 transition-colors leading-none">b</span>
+                                    <span className="text-[9px] md:text-sm text-pink-400 font-bold mt-1 md:mt-2 border-t border-pink-500/30 pt-1 whitespace-nowrap font-sans">חיתוך עם ציר y</span>
+                                </div>
+                            </div>
+                        </div>
+
+                        {/* Content Grid */}
+                        <div className="grid md:grid-cols-2 gap-0 divide-y md:divide-y-0 md:divide-x md:divide-x-reverse divide-slate-200">
+                            
+                            {/* Slope (m) Column */}
+                            <div className="p-6 bg-blue-50/30">
+                                <div className="flex items-center gap-3 mb-4">
+                                    <div className="bg-blue-100 p-2 rounded-xl text-blue-600">
+                                        <Icon name="trending-up" size={24} />
+                                    </div>
+                                    <h2 className="text-xl font-bold text-slate-800">השיפוע <span className="text-blue-600 font-mono text-lg">(m)</span></h2>
+                                </div>
+                                
+                                <p className="text-sm text-slate-600 mb-6">
+                                    קובע את הכיוון והתלילות. ערך חיובי עולה, שלילי יורד.
+                                </p>
+
+                                <div className="grid grid-cols-2 gap-3">
+                                    <div className="bg-white p-3 rounded-xl shadow-sm border border-slate-100 flex flex-col items-center">
+                                        <MiniGraph m={2} b={0} highlight="m" label="חיובי ועולה" subLabel="m = 2" />
+                                        <div className="mt-2 text-green-600 text-xs font-bold flex items-center gap-1">
+                                            <Icon name="arrow-up-right" size={14} /> עולה
+                                        </div>
+                                    </div>
+
+                                    <div className="bg-white p-3 rounded-xl shadow-sm border border-slate-100 flex flex-col items-center">
+                                        <MiniGraph m={-2} b={0} highlight="m" label="שלילי ויורד" subLabel="m = -2" />
+                                        <div className="mt-2 text-red-500 text-xs font-bold flex items-center gap-1">
+                                            <Icon name="arrow-down-right" size={14} /> יורד
+                                        </div>
+                                    </div>
+
+                                    <div className="col-span-2 bg-white p-3 rounded-xl shadow-sm border border-slate-100">
+                                        <div className="flex justify-around items-end">
+                                            <MiniGraph m={0.5} b={0} highlight="m" label="מתון" subLabel="m = 0.5" />
+                                            <div className="border-r border-slate-100 h-20 mx-2"></div>
+                                            <MiniGraph m={4} b={0} highlight="m" label="תלול מאוד" subLabel="m = 4" />
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+
+                            {/* Intercept (b) Column */}
+                            <div className="p-6 bg-pink-50/30">
+                                <div className="flex items-center gap-3 mb-4">
+                                    <div className="bg-pink-100 p-2 rounded-xl text-pink-600">
+                                        <Icon name="move-vertical" size={24} />
+                                    </div>
+                                    <h2 className="text-xl font-bold text-slate-800">החיתוך <span className="text-pink-500 font-mono text-lg">(b)</span></h2>
+                                </div>
+
+                                <p className="text-sm text-slate-600 mb-6">
+                                    נקודת המפגש עם ציר ה-Y (הציר האנכי).
+                                </p>
+
+                                <div className="space-y-3">
+                                    <div className="bg-white p-3 rounded-xl shadow-sm border border-slate-100 flex items-center justify-between">
+                                        <div>
+                                            <span className="font-bold text-slate-700 text-sm block">חיובי (למעלה)</span>
+                                            <span className="text-xs text-slate-400 font-mono block" dir="ltr">b = 3</span>
+                                        </div>
+                                        <MiniGraph m={0.5} b={3} highlight="b" label="" />
+                                    </div>
+
+                                    <div className="bg-white p-3 rounded-xl shadow-sm border border-slate-100 flex items-center justify-between">
+                                        <div>
+                                            <span className="font-bold text-slate-700 text-sm block">אפס (בראשית)</span>
+                                            <span className="text-xs text-slate-400 font-mono block" dir="ltr">b = 0</span>
+                                        </div>
+                                        <MiniGraph m={0.5} b={0} highlight="b" label="" />
+                                    </div>
+
+                                    <div className="bg-white p-3 rounded-xl shadow-sm border border-slate-100 flex items-center justify-between">
+                                        <div>
+                                            <span className="font-bold text-slate-700 text-sm block">שלילי (למטה)</span>
+                                            <span className="text-xs text-slate-400 font-mono block" dir="ltr">b = -3</span>
+                                        </div>
+                                        <MiniGraph m={0.5} b={-3} highlight="b" label="" />
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+
+                        {/* Examples Section */}
+                        <div className="bg-white p-8 border-t border-slate-200">
+                            <div className="flex items-center gap-3 mb-6">
+                                <div className="bg-slate-100 p-2 rounded-lg text-slate-700">
+                                    <Icon name="calculator" size={24} />
+                                </div>
+                                <h3 className="text-xl font-bold text-slate-800">ניתוח דוגמאות מהחיים</h3>
+                            </div>
+                            
+                            <div className="grid md:grid-cols-3 gap-4">
+                                <EquationCard 
+                                    eq="y = 2x + 1"
+                                    m={2}
+                                    b={1}
+                                    analysis={{
+                                        slope: "חיובי (עולה), כל צעד ימינה מעלה אותנו 2 משבצות.",
+                                        intercept: "הקו מתחיל במשבצת 1 מעל האפס בציר ה-Y."
+                                    }}
+                                />
+                                
+                                <EquationCard 
+                                    eq="y = -x + 3"
+                                    m={-1}
+                                    b={3}
+                                    analysis={{
+                                        slope: "שלילי (יורד), השיפוע הוא מינוס 1 (ירידה מתונה).",
+                                        intercept: "הקו מתחיל גבוה, ב-3 משבצות מעל האפס."
+                                    }}
+                                />
+                                
+                                <EquationCard 
+                                    eq="y = 0.5x - 2"
+                                    m={0.5}
+                                    b={-2}
+                                    analysis={{
+                                        slope: "חיובי אבל מתון (חצי), עליה איטית יותר.",
+                                        intercept: "הקו מתחיל מתחת לאדמה, במינוס 2."
+                                    }}
+                                />
+                            </div>
+                        </div>
+                        
+                        <div className="bg-slate-50 p-4 text-center border-t border-slate-200 text-xs text-slate-400">
+                            נוצר עבור משחק הפונקציות
+                        </div>
+                    </div>
+                </div>
+            );
+        };
+
+        const root = ReactDOM.createRoot(document.getElementById('root'));
+        root.render(<LinearFunctionInfographic />);
+    </script>
+</body>
+</html>

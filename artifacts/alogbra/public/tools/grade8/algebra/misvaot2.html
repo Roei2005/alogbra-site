@@ -1,0 +1,659 @@
+<!DOCTYPE html>
+<html lang="he" dir="rtl">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <title>שברים ומשוואות - המדריך המלא</title>
+    
+    <!-- React & ReactDOM -->
+    <script crossorigin src="https://unpkg.com/react@18/umd/react.production.min.js"></script>
+    <script crossorigin src="https://unpkg.com/react-dom@18/umd/react-dom.production.min.js"></script>
+    
+    <!-- Babel -->
+    <script src="https://unpkg.com/@babel/standalone/babel.min.js"></script>
+    
+    <!-- Tailwind CSS -->
+    <script src="https://cdn.tailwindcss.com"></script>
+    
+    <!-- Google Fonts -->
+    <link href="https://fonts.googleapis.com/css2?family=Rubik:wght@400;500;700;900&display=swap" rel="stylesheet">
+
+    <style>
+        body {
+            font-family: 'Rubik', sans-serif;
+            background-color: #f0f9ff;
+            -webkit-tap-highlight-color: transparent;
+        }
+        .no-break { white-space: nowrap; }
+        
+        /* סגנון לשברים */
+        .fraction-wrapper {
+            display: inline-flex;
+            flex-direction: column;
+            align-items: center;
+            vertical-align: middle;
+            margin: 0 0.5rem;
+            position: relative;
+        }
+        
+        .numerator {
+            border-bottom: 2px solid currentColor;
+            padding: 0 4px;
+            text-align: center;
+            width: 100%;
+            display: block;
+            white-space: nowrap;
+        }
+        .denominator {
+            padding-top: 2px;
+            text-align: center;
+            width: 100%;
+            display: block;
+            white-space: nowrap;
+        }
+
+        /* הבלון של הכופל */
+        .multiplier-badge {
+            position: absolute;
+            top: -2.8rem;
+            left: 50%;
+            transform: translateX(-50%);
+            color: #ef4444; /* red-500 */
+            font-weight: 900;
+            font-size: 1.2rem;
+            animation: bounce 1s infinite;
+            background: white;
+            padding: 2px 6px;
+            border-radius: 50%;
+            box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+            border: 2px solid #fca5a5;
+            z-index: 10;
+        }
+        .multiplier-line {
+            position: absolute;
+            top: -1.2rem;
+            left: 50%;
+            transform: translateX(-50%);
+            width: 140%;
+            height: 12px;
+            border-top: 2px solid #fca5a5;
+            border-radius: 50% 50% 0 0;
+        }
+
+        @keyframes bounce {
+            0%, 100% { transform: translateX(-50%) translateY(0); }
+            50% { transform: translateX(-50%) translateY(-5px); }
+        }
+
+        .fade-in { animation: fadeIn 0.5s ease-out; }
+        @keyframes fadeIn { from { opacity: 0; transform: translateY(10px); } to { opacity: 1; transform: translateY(0); } }
+        
+        /* גלילה חלקה */
+        ::-webkit-scrollbar { width: 8px; height: 8px; }
+        ::-webkit-scrollbar-track { background: #f1f1f1; }
+        ::-webkit-scrollbar-thumb { background: #cbd5e1; border-radius: 4px; }
+        ::-webkit-scrollbar-thumb:hover { background: #94a3b8; }
+    </style>
+</head>
+<body class="min-h-screen flex flex-col">
+    <div id="root" class="flex-grow"></div>
+
+    <!-- פוטר קבוע -->
+    <footer class="bg-slate-800 text-slate-400 text-center py-4 text-sm mt-auto">
+        <p>© כל הזכויות שמורות לאלוגברה</p>
+    </footer>
+
+    <script type="text/babel">
+        const { useState } = React;
+
+        // --- אייקונים ---
+        const Icons = {
+            Pizza: () => <svg className="w-8 h-8 text-orange-500" fill="none" stroke="currentColor" viewBox="0 0 24 24" strokeWidth="2"><path strokeLinecap="round" strokeLinejoin="round" d="M10.29 3.86L1.82 18a2 2 0 0 0 1.71 3h16.94a2 2 0 0 0 1.71-3L13.71 3.86a2 2 0 0 0-3.42 0z"></path></svg>,
+            Warning: () => <svg className="w-8 h-8 text-red-500" fill="none" stroke="currentColor" viewBox="0 0 24 24" strokeWidth="2"><path strokeLinecap="round" strokeLinejoin="round" d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z"></path></svg>,
+            Check: () => <svg className="w-6 h-6 text-green-600" fill="none" stroke="currentColor" viewBox="0 0 24 24" strokeWidth="3"><path strokeLinecap="round" strokeLinejoin="round" d="M5 13l4 4L19 7"></path></svg>,
+            ArrowLeft: () => <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24" strokeWidth="2"><path strokeLinecap="round" strokeLinejoin="round" d="M10 19l-7-7m0 0l7-7m-7 7h18"></path></svg>,
+            Home: () => <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24" strokeWidth="2"><path strokeLinecap="round" strokeLinejoin="round" d="M3 9l9-7 9 7v11a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z"></path><polyline points="9 22 9 12 15 12 15 22"></polyline></svg>,
+            X: () => <svg className="w-6 h-6 text-red-600" fill="none" stroke="currentColor" viewBox="0 0 24 24" strokeWidth="3"><path strokeLinecap="round" strokeLinejoin="round" d="M6 18L18 6M6 6l12 12"></path></svg>,
+            Bomb: () => <svg className="w-8 h-8 text-gray-700" fill="none" stroke="currentColor" viewBox="0 0 24 24" strokeWidth="2"><path strokeLinecap="round" strokeLinejoin="round" d="M21 12a9 9 0 11-18 0 9 9 0 0118 0z"></path><path strokeLinecap="round" strokeLinejoin="round" d="M9 10a1 1 0 011-1h4a1 1 0 011 1v4a1 1 0 01-1 1h-4a1 1 0 01-1-1v-4z"></path></svg>,
+            Trophy: () => <svg className="w-8 h-8 text-yellow-500" fill="none" stroke="currentColor" viewBox="0 0 24 24" strokeWidth="2"><path strokeLinecap="round" strokeLinejoin="round" d="M8 21h8m-4-9v9m-4.8-9A4.8 4.8 0 0112 7.2 4.8 4.8 0 0116.8 12M3 12h.01M21 12h.01M3 7h.01M21 7h.01"></path></svg>,
+            Bulb: () => <svg className="w-6 h-6 text-yellow-400" fill="none" stroke="currentColor" viewBox="0 0 24 24" strokeWidth="2"><path strokeLinecap="round" strokeLinejoin="round" d="M9.663 17h4.673M12 3v1m6.364 1.636l-.707.707M21 12h-1M4 12H3m3.343-5.657l-.707-.707m2.828 9.9a5 5 0 117.072 0l-.548.547A3.374 3.374 0 0014 18.469V19a2 2 0 11-4 0v-.531c0-.895-.356-1.754-.988-2.386l-.548-.547z"></path></svg>
+        };
+
+        // --- רכיב תצוגת שבר ---
+        const Fraction = ({ top, bottom, multiplier }) => (
+            <div className={`fraction-wrapper font-bold text-xl md:text-2xl ${multiplier ? 'mt-8' : ''}`}>
+                {multiplier && <div className="multiplier-badge">{multiplier}</div>}
+                {multiplier && <div className="multiplier-line"></div>}
+                <span className="numerator">{top}</span>
+                <span className="denominator">{bottom}</span>
+            </div>
+        );
+
+        const Step = ({ num, title, children }) => (
+            <div className="flex gap-4 mb-8 fade-in bg-white p-4 rounded-2xl border border-indigo-50 shadow-sm">
+                <div className="flex-shrink-0 w-10 h-10 bg-indigo-100 text-indigo-700 font-bold rounded-full flex items-center justify-center border-2 border-indigo-200 text-xl">
+                    {num}
+                </div>
+                <div className="flex-1 overflow-x-auto">
+                    <h4 className="font-bold text-xl text-indigo-900 mb-3 border-b border-indigo-50 pb-2">{title}</h4>
+                    <div className="text-gray-700 text-lg leading-relaxed">
+                        {children}
+                    </div>
+                </div>
+            </div>
+        );
+
+        // --- שיעור 1: מכנה מספרי ---
+        const NumericalLesson = ({ onFinish }) => {
+            const [showSteps, setShowSteps] = useState(false);
+
+            return (
+                <div className="max-w-3xl mx-auto pb-20 fade-in px-2">
+                    <div className="bg-white p-6 md:p-10 rounded-3xl shadow-xl border-t-8 border-blue-500">
+                        <h2 className="text-3xl font-black text-gray-800 mb-4 text-center">איך נפטרים מהמכנה?</h2>
+                        <p className="text-xl text-center text-gray-600 mb-8">המטרה: להפוך משוואה עם שברים למשוואה רגילה.</p>
+
+                        <div className="bg-indigo-50 p-6 rounded-2xl mb-8 border border-indigo-100 overflow-x-auto">
+                            <h3 className="font-bold text-lg text-indigo-800 mb-4 text-center">התרגיל שלנו:</h3>
+                            <div className="flex justify-center items-center gap-2 dir-ltr no-break min-w-max mx-auto" style={{direction: 'ltr'}}>
+                                <Fraction top="x" bottom="3" />
+                                <span className="text-2xl font-bold">+</span>
+                                <Fraction top="x" bottom="4" />
+                                <span className="text-2xl font-bold">=</span>
+                                <span className="text-3xl font-bold">7</span>
+                            </div>
+                        </div>
+
+                        {!showSteps ? (
+                            <button onClick={() => setShowSteps(true)} className="w-full py-4 bg-blue-600 hover:bg-blue-700 text-white font-bold rounded-2xl text-xl shadow-lg transition-transform hover:scale-[1.01] flex justify-center items-center gap-2">
+                                לחצו להסבר המלא <Icons.ArrowLeft />
+                            </button>
+                        ) : (
+                            <div className="space-y-2">
+                                <Step num="1" title="מי המכנה המשותף?">
+                                    <p>המכנים הם <strong>3</strong> ו-<strong>4</strong>.</p>
+                                    <p>המספר הכי קטן ששניהם נכנסים בו הוא <strong>12</strong>.</p>
+                                </Step>
+
+                                <Step num="2" title="מה חסר לכל אחד?">
+                                    <p className="mb-4">נבדוק במה צריך לכפול כל מכנה כדי להגיע ל-12:</p>
+                                    <ul className="list-disc list-inside bg-gray-50 p-4 rounded-xl text-base space-y-2">
+                                        <li>ל-3 חסר <strong>4</strong> (כדי להיות 12).</li>
+                                        <li>ל-4 חסר <strong>3</strong>.</li>
+                                        <li>ל-7 (בלי מכנה) חסר <strong>12</strong> (הכל).</li>
+                                    </ul>
+                                    <div className="flex justify-center items-center gap-4 mt-8 mb-4 overflow-x-auto py-6 px-2" style={{direction: 'ltr'}}>
+                                        <Fraction top="x" bottom="3" multiplier="4" />
+                                        <span className="text-2xl font-bold text-gray-400">+</span>
+                                        <Fraction top="x" bottom="4" multiplier="3" />
+                                        <span className="text-2xl font-bold text-gray-400">=</span>
+                                        <div className="fraction-wrapper mt-8">
+                                            <div className="multiplier-badge">12</div>
+                                            <div className="multiplier-line"></div>
+                                            <span className="text-3xl font-bold">7</span>
+                                        </div>
+                                    </div>
+                                </Step>
+
+                                <Step num="3" title="כופלים ומעיפים את המכנה">
+                                    <div className="text-center my-4 font-mono text-xl md:text-2xl bg-white border-2 border-dashed border-gray-300 p-4 rounded-xl overflow-x-auto" style={{direction: 'ltr'}}>
+                                        <span className="text-red-500 font-bold">4</span>•x + <span className="text-red-500 font-bold">3</span>•x = <span className="text-red-500 font-bold">12</span>•7
+                                    </div>
+                                    <div className="text-center font-bold text-3xl text-indigo-700" style={{direction: 'ltr'}}>
+                                        4x + 3x = 84
+                                    </div>
+                                </Step>
+
+                                <Step num="4" title="פתרון סופי">
+                                    <div className="text-center text-xl font-bold mt-2" style={{direction: 'ltr'}}>7x = 84</div>
+                                    <div className="text-center mt-2">
+                                        <span className="inline-block bg-green-100 text-green-800 px-6 py-2 rounded-xl text-3xl font-black shadow-sm" style={{direction: 'ltr'}}>x = 12</span>
+                                    </div>
+                                </Step>
+
+                                <button onClick={onFinish} className="w-full mt-6 py-4 bg-gray-800 hover:bg-black text-white font-bold rounded-2xl text-xl shadow-lg flex items-center justify-center gap-2">
+                                    חזרה לתפריט <Icons.Home />
+                                </button>
+                            </div>
+                        )}
+                    </div>
+                </div>
+            );
+        };
+
+        // --- שיעור 2: מכנה עם נעלם ---
+        const VariableLesson = ({ onFinish }) => {
+            const [showSteps, setShowSteps] = useState(false);
+
+            return (
+                <div className="max-w-3xl mx-auto pb-20 fade-in px-2">
+                    <div className="bg-white p-6 md:p-10 rounded-3xl shadow-xl border-t-8 border-red-500">
+                        <h2 className="text-3xl font-black text-gray-800 mb-4 text-center flex items-center justify-center gap-2"><Icons.Warning /> מכנה עם X</h2>
+                        
+                        <div className="bg-red-50 p-4 rounded-xl text-center border border-red-100 mb-8">
+                            <p className="font-bold text-red-800 text-lg">חוק ברזל: אסור לחלק ב-0!</p>
+                            <p className="text-sm text-red-600">לכן תמיד נתחיל בבדיקת "תחום הגדרה".</p>
+                        </div>
+
+                        <div className="bg-gray-50 p-6 rounded-2xl mb-8 border border-gray-200 overflow-x-auto">
+                            <h3 className="font-bold text-xl text-gray-800 mb-4 text-center">התרגיל:</h3>
+                            <div className="flex justify-center items-center gap-2 dir-ltr min-w-max mx-auto" style={{direction: 'ltr'}}>
+                                <Fraction top="10" bottom="x" />
+                                <span className="text-2xl font-bold">+</span>
+                                <Fraction top="4" bottom="2x" />
+                                <span className="text-2xl font-bold">=</span>
+                                <span className="text-3xl font-bold">3</span>
+                            </div>
+                        </div>
+
+                        {!showSteps ? (
+                            <button onClick={() => setShowSteps(true)} className="w-full py-4 bg-red-500 hover:bg-red-600 text-white font-bold rounded-2xl text-xl shadow-lg transition-transform hover:scale-[1.01] flex justify-center items-center gap-2">
+                                איך פותרים? <Icons.ArrowLeft />
+                            </button>
+                        ) : (
+                            <div className="space-y-2">
+                                <Step num="1" title="תחום הגדרה">
+                                    <p>המכנים הם <span className="font-mono">x</span> ו-<span className="font-mono">2x</span>.</p>
+                                    <p>מתי הם שווים ל-0? כש-x הוא 0.</p>
+                                    <div className="mt-2 text-center">
+                                        <span className="bg-red-100 text-red-800 px-4 py-1 rounded-lg font-bold border border-red-200" style={{direction: 'ltr'}}>x ≠ 0</span>
+                                    </div>
+                                </Step>
+
+                                <Step num="2" title="מכנה משותף (גם ל-X)">
+                                    <p>אנחנו מחפשים ביטוי שמכיל את כולם.</p>
+                                    <p>הביטוי <span className="font-bold text-blue-600 text-xl dir-ltr">2x</span> מכיל גם את x וגם את 2x.</p>
+                                </Step>
+
+                                <Step num="3" title="מה חסר לכל אחד?">
+                                    <ul className="list-disc list-inside bg-gray-50 p-4 rounded-xl text-base space-y-2 mb-4">
+                                        <li>ל-<span className="font-mono">x</span> חסר <strong>2</strong>.</li>
+                                        <li>ל-<span className="font-mono">2x</span> לא חסר כלום (כופלים ב-<strong>1</strong>).</li>
+                                        <li>ל-3 חסר <strong>הכל</strong> (כופלים ב-<strong>2x</strong>).</li>
+                                    </ul>
+                                    <div className="flex justify-center items-center gap-4 mt-8 mb-4 overflow-x-auto py-6 px-2" style={{direction: 'ltr'}}>
+                                        <Fraction top="10" bottom="x" multiplier="2" />
+                                        <span className="text-2xl font-bold text-gray-400">+</span>
+                                        <Fraction top="4" bottom="2x" multiplier="1" />
+                                        <span className="text-2xl font-bold text-gray-400">=</span>
+                                        <div className="fraction-wrapper mt-8">
+                                            <div className="multiplier-badge">2x</div>
+                                            <div className="multiplier-line"></div>
+                                            <span className="text-3xl font-bold">3</span>
+                                        </div>
+                                    </div>
+                                </Step>
+
+                                <Step num="4" title="פתרון ובדיקה">
+                                    <div className="text-center my-4 font-mono text-lg bg-white border-2 border-dashed border-gray-300 p-4 rounded-xl overflow-x-auto" style={{direction: 'ltr'}}>
+                                        2•10 + 1•4 = 3•2x
+                                    </div>
+                                    <div className="text-center font-bold text-2xl text-gray-800 mb-2" style={{direction: 'ltr'}}>20 + 4 = 6x</div>
+                                    <div className="text-center font-bold text-2xl text-gray-800 mb-4" style={{direction: 'ltr'}}>24 = 6x</div>
+                                    <div className="text-center">
+                                        <span className="inline-block bg-green-100 text-green-800 px-6 py-2 rounded-xl text-3xl font-black shadow-sm" style={{direction: 'ltr'}}>x = 4</span>
+                                    </div>
+                                    <div className="mt-4 text-center font-bold text-green-700">
+                                        האם 4 מותר? כן! (כי הוא לא 0)
+                                    </div>
+                                </Step>
+
+                                <button onClick={onFinish} className="w-full mt-6 py-4 bg-gray-800 hover:bg-black text-white font-bold rounded-2xl text-xl shadow-lg flex items-center justify-center gap-2">
+                                    חזרה לתפריט <Icons.Home />
+                                </button>
+                            </div>
+                        )}
+                    </div>
+                </div>
+            );
+        };
+
+        // --- שיעור 3: תרגול מתקדם (מוקשים) ---
+        const AdvancedLesson = ({ onFinish }) => {
+            const [showSteps, setShowSteps] = useState(false);
+
+            return (
+                <div className="max-w-3xl mx-auto pb-20 fade-in px-2">
+                    <div className="bg-white p-6 md:p-10 rounded-3xl shadow-xl border-t-8 border-purple-600">
+                        <div className="flex items-center justify-center gap-2 mb-4">
+                            <Icons.Bomb />
+                            <h2 className="text-3xl font-black text-gray-800">מוקש המינוס! 💣</h2>
+                        </div>
+                        
+                        <p className="text-xl text-center text-gray-600 mb-8">
+                            שימו לב: כשיש מינוס לפני שבר, הוא תקף לכל המונה (כאילו יש סוגריים).
+                        </p>
+
+                        <div className="bg-purple-50 p-6 rounded-2xl mb-8 border border-purple-100 overflow-x-auto">
+                            <h3 className="font-bold text-lg text-purple-800 mb-4 text-center">תרגיל מורכב:</h3>
+                            <div className="flex justify-center items-center gap-2 dir-ltr no-break min-w-max mx-auto" style={{direction: 'ltr'}}>
+                                <Fraction top="x + 2" bottom="4" />
+                                <span className="text-3xl font-bold text-red-500 mx-1">-</span>
+                                <Fraction top="x - 1" bottom="3" />
+                                <span className="text-2xl font-bold">=</span>
+                                <span className="text-3xl font-bold">2</span>
+                            </div>
+                        </div>
+
+                        {!showSteps ? (
+                            <button onClick={() => setShowSteps(true)} className="w-full py-4 bg-purple-600 hover:bg-purple-700 text-white font-bold rounded-2xl text-xl shadow-lg transition-transform hover:scale-[1.01] flex justify-center items-center gap-2">
+                                איך נזהרים מהמוקש? <Icons.ArrowLeft />
+                            </button>
+                        ) : (
+                            <div className="space-y-2">
+                                <Step num="1" title="מכנה משותף">
+                                    <p>בין 4 ל-3, המכנה המשותף הוא <strong>12</strong>.</p>
+                                </Step>
+
+                                <Step num="2" title="מה חסר?">
+                                    <ul className="list-disc list-inside bg-gray-50 p-4 rounded-xl text-base space-y-2 mb-4">
+                                        <li>ל-4 חסר <strong>3</strong>.</li>
+                                        <li>ל-3 חסר <strong>4</strong>.</li>
+                                        <li>ל-2 חסר <strong>12</strong>.</li>
+                                    </ul>
+                                    <div className="flex justify-center items-center gap-4 mt-8 mb-4 overflow-x-auto py-6 px-2" style={{direction: 'ltr'}}>
+                                        <Fraction top="x+2" bottom="4" multiplier="3" />
+                                        <span className="text-3xl font-bold text-red-500 mx-1">-</span>
+                                        <Fraction top="x-1" bottom="3" multiplier="4" />
+                                        <span className="text-2xl font-bold">=</span>
+                                        <div className="fraction-wrapper mt-8">
+                                            <div className="multiplier-badge">12</div>
+                                            <div className="multiplier-line"></div>
+                                            <span className="text-3xl font-bold">2</span>
+                                        </div>
+                                    </div>
+                                </Step>
+
+                                <Step num="3" title="השלב הקריטי: סוגריים!">
+                                    <p>כשכופלים, חובה לשים סוגריים על המונים, במיוחד בגלל המינוס!</p>
+                                    <div className="text-center my-4 font-mono text-lg md:text-xl bg-red-50 border-2 border-red-200 p-4 rounded-xl text-red-900 overflow-x-auto" style={{direction: 'ltr'}}>
+                                        3(x + 2) - 4(x - 1) = 12•2
+                                    </div>
+                                    <p className="text-sm text-gray-500 text-center">שימו לב: המינוס 4 כופל את הכל!</p>
+                                </Step>
+
+                                <Step num="4" title="פתיחת סוגריים ופתרון">
+                                    <div className="text-center font-bold text-xl mb-2" style={{direction: 'ltr'}}>3x + 6 - 4x + 4 = 24</div>
+                                    <div className="text-center text-sm text-gray-500 mb-4">(שימו לב: מינוס 4 כפול מינוס 1 זה פלוס 4)</div>
+                                    
+                                    <p className="text-center">כינוס איברים:</p>
+                                    <div className="text-center font-bold text-xl mb-2" style={{direction: 'ltr'}}>-x + 10 = 24</div>
+                                    <p className="text-center">העברת אגפים:</p>
+                                    <div className="text-center font-bold text-xl mb-4" style={{direction: 'ltr'}}>-x = 14</div>
+                                    
+                                    <div className="text-center">
+                                        <span className="inline-block bg-green-100 text-green-800 px-6 py-2 rounded-xl text-3xl font-black shadow-sm" style={{direction: 'ltr'}}>x = -14</span>
+                                    </div>
+                                </Step>
+
+                                <button onClick={onFinish} className="w-full mt-6 py-4 bg-gray-800 hover:bg-black text-white font-bold rounded-2xl text-xl shadow-lg flex items-center justify-center gap-2">
+                                    חזרה לתפריט <Icons.Home />
+                                </button>
+                            </div>
+                        )}
+                    </div>
+                </div>
+            );
+        };
+
+        // --- מסך 4: מבחן מסכם ---
+        const FinalTest = ({ onBack }) => {
+            const questions = [
+                {
+                    q: "מהו המכנה המשותף עבור 2, 5 ו-10?",
+                    term: <div className="dir-ltr flex justify-center gap-2 text-xl font-bold"><Fraction top="1" bottom="2" />,<Fraction top="1" bottom="5" />,<Fraction top="1" bottom="10" /></div>,
+                    options: ["50", "20", "10", "17"],
+                    correct: 2,
+                    hint: "האם 10 מתחלק גם ב-2 וגם ב-5? אם כן, הוא המנצח.",
+                    explanation: "10 הוא המספר הכי קטן שמתחלק בכולם (10, 5, 2)."
+                },
+                {
+                    q: "מהו תחום ההגדרה?",
+                    term: <div className="dir-ltr flex justify-center text-xl font-bold"><Fraction top="5" bottom="x-4" /> = 3</div>,
+                    options: ["x ≠ 0", "x ≠ 4", "x ≠ -4", "כל x"],
+                    correct: 1,
+                    hint: "מתי המכנה (x-4) יהיה שווה לאפס?",
+                    explanation: "אם x יהיה 4, נקבל 4-4=0, וזה אסור."
+                },
+                {
+                    q: "במשוואה הזו, במה נכפול את ה-3?",
+                    term: <div className="dir-ltr flex justify-center text-xl font-bold"><Fraction top="x" bottom="5" /> + 3 = <Fraction top="x" bottom="2" /></div>,
+                    options: ["ב-5", "ב-2", "ב-10 (הכל)", "לא כופלים"],
+                    correct: 2,
+                    hint: "המכנה המשותף הוא 10. ל-3 אין מכנה, אז מה חסר לו?",
+                    explanation: "למספר שלם חסר 'הכל'. נכפול אותו במכנה המשותף כולו (10)."
+                },
+                {
+                    q: "איזו משוואה נכונה לאחר כפל במכנה משותף?",
+                    term: <div className="dir-ltr flex justify-center text-xl font-bold"><Fraction top="x" bottom="2" /> - <Fraction top="1" bottom="3" /> = 2</div>,
+                    options: ["3x - 2 = 12", "3x - 2 = 2", "x - 1 = 12", "2x - 3 = 12"],
+                    correct: 0,
+                    hint: "המכנה המשותף הוא 6. ל-x חסר 3, ל-1 חסר 2, ל-2 חסר 6.",
+                    explanation: "נכפול ב-6: נקבל 3x (כי 6/2=3), מינוס 2 (כי 6/3=2), שווה 12 (כי 2*6=12)."
+                },
+                {
+                    q: "מהו המכנה המשותף עבור x ו-3x?",
+                    term: "",
+                    options: ["3x", "x", "3", "3x²"],
+                    correct: 0,
+                    hint: "מי מכיל את מי? 3x מכיל בתוכו כבר את x.",
+                    explanation: "3x הוא הביטוי שמכיל את שניהם."
+                },
+                {
+                    q: "פתרו את המשוואה:",
+                    term: <div className="dir-ltr flex justify-center text-xl font-bold"><Fraction top="x" bottom="2" /> + <Fraction top="x" bottom="3" /> = 5</div>,
+                    options: ["x = 6", "x = 5", "x = 10", "x = 30"],
+                    correct: 0,
+                    hint: "המכנה המשותף הוא 6. כפלו את הכל ב-6.",
+                    explanation: "3x + 2x = 30 -> 5x = 30 -> x = 6."
+                },
+                {
+                    q: "פתרו את המשוואה:",
+                    term: <div className="dir-ltr flex justify-center text-xl font-bold"><Fraction top="x" bottom="4" /> = 2</div>,
+                    options: ["x = 8", "x = 2", "x = 6", "x = 0.5"],
+                    correct: 0,
+                    hint: "כפלו ב-4.",
+                    explanation: "x חלקי 4 שווה 2. הפעולה ההפוכה היא כפל: 2 כפול 4 שווה 8."
+                },
+                {
+                    q: "תחום הגדרה למתקדמים:",
+                    term: <div className="dir-ltr flex justify-center text-xl font-bold"><Fraction top="1" bottom="x" /> + <Fraction top="1" bottom="x+2" /></div>,
+                    options: ["x ≠ 0", "x ≠ -2", "גם x≠0 וגם x≠-2", "אין מגבלה"],
+                    correct: 2,
+                    hint: "יש כאן שני מכנים שונים. שניהם צריכים להיות תקינים.",
+                    explanation: "אסור שהמכנה הראשון יתאפס (0) ואסור שהשני יתאפס (-2)."
+                },
+                {
+                    q: "מה השלב הראשון בפתרון?",
+                    term: <div className="dir-ltr flex justify-center text-xl font-bold"><Fraction top="3" bottom="2x" /> = 1</div>,
+                    options: ["להעביר אגף", "תחום הגדרה", "לכפול ב-3", "לחלק ב-2"],
+                    correct: 1,
+                    hint: "חוק ברזל: קודם כל בודקים מה אסור.",
+                    explanation: "תמיד מתחילים בתחום הגדרה (x≠0) כדי לא ליפול בפח."
+                },
+                {
+                    q: "פתרו:",
+                    term: <div className="dir-ltr flex justify-center text-xl font-bold"><Fraction top="x-1" bottom="3" /> = <Fraction top="x+1" bottom="4" /></div>,
+                    options: ["x = 7", "x = 1", "x = 0", "x = -1"],
+                    correct: 0,
+                    hint: "כפל בהצלבה: 4 כפול (x-1) שווה ל-3 כפול (x+1).",
+                    explanation: "4(x-1) = 3(x+1) -> 4x-4 = 3x+3 -> x=7."
+                }
+            ];
+
+            const [currentQ, setCurrentQ] = useState(0);
+            const [selected, setSelected] = useState(null);
+            const [score, setScore] = useState(0);
+            const [finished, setFinished] = useState(false);
+            const [showHint, setShowHint] = useState(false);
+
+            const handleAnswer = (index) => {
+                if (selected !== null) return;
+                setSelected(index);
+                if (index === questions[currentQ].correct) {
+                    setScore(score + 1);
+                }
+            };
+
+            const next = () => {
+                if (currentQ < questions.length - 1) {
+                    setCurrentQ(currentQ + 1);
+                    setSelected(null);
+                    setShowHint(false);
+                } else {
+                    setFinished(true);
+                }
+            };
+
+            if (finished) {
+                return (
+                    <div className="fade-in max-w-xl mx-auto bg-white p-10 rounded-3xl shadow-2xl text-center border-t-8 border-indigo-500 mt-8">
+                        <div className="text-7xl mb-6">🏆</div>
+                        <h2 className="text-4xl font-black text-indigo-900 mb-4">סיימת את המבחן!</h2>
+                        <p className="text-2xl text-gray-600 mb-8">הציון שלך: <span className="font-bold text-indigo-600">{score * 10}</span></p>
+                        <button onClick={onBack} className="bg-gray-100 hover:bg-gray-200 text-gray-800 font-bold py-4 px-10 rounded-2xl text-xl transition-all">
+                            חזרה לתפריט
+                        </button>
+                    </div>
+                );
+            }
+
+            const q = questions[currentQ];
+
+            return (
+                <div className="fade-in max-w-3xl mx-auto mt-4 px-2">
+                    <div className="flex justify-between items-center mb-6">
+                        <span className="bg-white text-gray-600 px-4 py-2 rounded-full font-bold shadow-sm">שאלה {currentQ + 1} / {questions.length}</span>
+                        <div className="flex items-center gap-2">
+                            <span className="font-bold text-indigo-600">ניקוד: {score * 10}</span>
+                        </div>
+                    </div>
+
+                    <div className="bg-white rounded-3xl shadow-xl border border-gray-100 overflow-hidden">
+                        <div className="p-8 text-center border-b border-gray-100 bg-gray-50">
+                            <h3 className="text-2xl font-bold text-gray-800 mb-6">{q.q}</h3>
+                            {q.term && (
+                                <div className="bg-white inline-block px-8 py-4 rounded-2xl shadow-sm border border-gray-200 mb-2 overflow-x-auto max-w-full">
+                                    {q.term}
+                                </div>
+                            )}
+                            
+                            {!showHint && selected === null && (
+                                <button onClick={() => setShowHint(true)} className="block mx-auto mt-4 text-yellow-600 font-bold text-sm flex items-center gap-1 hover:bg-yellow-50 px-3 py-1 rounded-lg transition-colors">
+                                    <Icons.Bulb /> אני צריך רמז
+                                </button>
+                            )}
+                            {showHint && (
+                                <div className="mt-4 bg-yellow-50 text-yellow-800 p-3 rounded-xl text-sm border border-yellow-200 inline-block fade-in">
+                                    💡 {q.hint}
+                                </div>
+                            )}
+                        </div>
+
+                        <div className="p-8 grid grid-cols-1 md:grid-cols-2 gap-4">
+                            {q.options.map((opt, idx) => {
+                                let style = "w-full p-5 text-xl font-bold rounded-2xl border-2 transition-all duration-200 flex justify-between items-center ";
+                                if (selected === null) style += "border-gray-200 hover:border-indigo-400 hover:bg-indigo-50 text-gray-700 cursor-pointer";
+                                else if (idx === q.correct) style += "bg-green-100 border-green-500 text-green-800";
+                                else if (idx === selected) style += "bg-red-100 border-red-500 text-red-800";
+                                else style += "border-gray-100 text-gray-400 opacity-50 cursor-not-allowed";
+
+                                return (
+                                    <button key={idx} onClick={() => handleAnswer(idx)} className={style} disabled={selected !== null} dir="ltr">
+                                        <span className="w-full text-center">{opt}</span>
+                                        {selected !== null && idx === q.correct && <Icons.Check />}
+                                        {selected === idx && idx !== q.correct && <Icons.X />}
+                                    </button>
+                                );
+                            })}
+                        </div>
+
+                        {selected !== null && (
+                            <div className="bg-indigo-50 p-8 border-t border-indigo-100 animate-in fade-in">
+                                <h4 className="font-bold text-indigo-900 text-xl mb-2">הסבר:</h4>
+                                <p className="text-indigo-800 text-lg leading-relaxed mb-6">{q.explanation}</p>
+                                <button onClick={next} className="w-full bg-indigo-600 hover:bg-indigo-700 text-white font-bold py-4 rounded-2xl shadow-lg text-xl flex justify-center items-center gap-2">
+                                    {currentQ < questions.length - 1 ? 'לשאלה הבאה' : 'סיום'} <Icons.ArrowLeft />
+                                </button>
+                            </div>
+                        )}
+                    </div>
+                </div>
+            );
+        };
+
+        // --- מסך ראשי ---
+        const Menu = ({ onSelect }) => (
+            <div className="max-w-4xl mx-auto px-4 py-12 text-center fade-in">
+                
+                {/* כפתור חזרה ללובי - ממוקם בתוך הקומפוננטה הראשית */}
+                <div className="absolute top-4 left-4">
+                    <a href="../index.html" className="flex items-center gap-2 text-gray-500 hover:text-indigo-600 font-bold bg-white px-4 py-2 rounded-xl shadow-sm border border-gray-200 transition-all hover:shadow-md">
+                        <Icons.Home /> חזרה ללובי כיתה ח'
+                    </a>
+                </div>
+
+                <h1 className="text-4xl md:text-6xl font-black text-indigo-900 mb-4 tracking-tight">שברים ומשוואות</h1>
+                <p className="text-xl md:text-2xl text-gray-600 font-light mb-12">המדריך המלא לכיתה ח'</p>
+
+                <div className="grid md:grid-cols-2 gap-6 mb-6">
+                    <button onClick={() => onSelect('numerical')} className="bg-white p-8 rounded-3xl shadow-xl border-2 border-blue-100 hover:border-blue-500 hover:-translate-y-1 transition-all group relative overflow-hidden text-right">
+                        <div className="absolute top-0 left-0 w-3 h-full bg-blue-500"></div>
+                        <div className="text-blue-500 mb-4 bg-blue-50 w-fit p-3 rounded-2xl"><Icons.Pizza /></div>
+                        <h3 className="text-2xl font-black text-gray-800 mb-2 group-hover:text-blue-600">1. מכנה מספרי</h3>
+                        <p className="text-gray-500 text-lg">איך מוצאים מה חסר לכל מספר וכופלים.</p>
+                    </button>
+
+                    <button onClick={() => onSelect('variable')} className="bg-white p-8 rounded-3xl shadow-xl border-2 border-red-100 hover:border-red-500 hover:-translate-y-1 transition-all group relative overflow-hidden text-right">
+                        <div className="absolute top-0 left-0 w-3 h-full bg-red-500"></div>
+                        <div className="text-red-500 mb-4 bg-red-50 w-fit p-3 rounded-2xl"><Icons.Warning /></div>
+                        <h3 className="text-2xl font-black text-gray-800 mb-2 group-hover:text-red-600">2. מכנה עם X</h3>
+                        <p className="text-gray-500 text-lg">רמה מתקדמת: תחום הגדרה ומכנה עם נעלמים.</p>
+                    </button>
+                </div>
+
+                <div className="grid md:grid-cols-2 gap-6">
+                    <button onClick={() => onSelect('advanced')} className="bg-white p-8 rounded-3xl shadow-xl border-2 border-purple-100 hover:border-purple-500 hover:-translate-y-1 transition-all group relative overflow-hidden text-right">
+                        <div className="absolute top-0 left-0 w-3 h-full bg-purple-500"></div>
+                        <div className="text-purple-500 mb-4 bg-purple-50 w-fit p-3 rounded-2xl"><Icons.Bomb /></div>
+                        <h3 className="text-2xl font-black text-gray-800 mb-2 group-hover:text-purple-600">3. תרגול מורכב</h3>
+                        <p className="text-gray-500 text-lg">זהירות מוקש! מינוס לפני שבר וסוגריים.</p>
+                    </button>
+
+                    <button onClick={() => onSelect('test')} className="bg-gradient-to-br from-indigo-600 to-blue-600 text-white p-8 rounded-3xl shadow-xl hover:shadow-2xl hover:-translate-y-1 transition-all group relative overflow-hidden text-right flex flex-col justify-between">
+                        <div>
+                            <div className="text-yellow-300 mb-4 bg-white/20 w-fit p-3 rounded-2xl"><Icons.Trophy /></div>
+                            <h3 className="text-2xl font-black mb-2">4. מבחן מסכם</h3>
+                            <p className="text-indigo-100 text-lg">10 שאלות שיבדקו אם אתם אלופים!</p>
+                        </div>
+                        <div className="mt-4 flex items-center gap-2 font-bold text-lg">להתחיל <Icons.ArrowLeft /></div>
+                    </button>
+                </div>
+            </div>
+        );
+
+        const App = () => {
+            const [view, setView] = useState('menu');
+
+            return (
+                <div className="min-h-screen py-6 px-2 pb-20">
+                    {view !== 'menu' && (
+                        <button onClick={() => setView('menu')} className="fixed top-6 right-6 bg-white p-3 rounded-full shadow-md text-gray-500 hover:text-indigo-600 z-50 border border-gray-100">
+                            <Icons.Home />
+                        </button>
+                    )}
+                    
+                    {view === 'menu' && <Menu onSelect={setView} />}
+                    {view === 'numerical' && <NumericalLesson onFinish={() => setView('menu')} />}
+                    {view === 'variable' && <VariableLesson onFinish={() => setView('menu')} />}
+                    {view === 'advanced' && <AdvancedLesson onFinish={() => setView('menu')} />}
+                    {view === 'test' && <FinalTest onBack={() => setView('menu')} />}
+                </div>
+            );
+        };
+
+        const root = ReactDOM.createRoot(document.getElementById('root'));
+        root.render(<App />);
+    </script>
+</body>
+</html>

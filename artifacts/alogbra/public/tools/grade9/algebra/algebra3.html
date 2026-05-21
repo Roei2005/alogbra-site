@@ -1,0 +1,459 @@
+<!DOCTYPE html>
+<html lang="he" dir="rtl">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>פירוק לגורמים (הוצאת גורם משותף)</title>
+    
+    <!-- Tailwind CSS -->
+    <script src="https://cdn.tailwindcss.com"></script>
+    
+    <!-- React & ReactDOM -->
+    <script crossorigin src="https://unpkg.com/react@18/umd/react.development.js"></script>
+    <script crossorigin src="https://unpkg.com/react-dom@18/umd/react-dom.development.js"></script>
+    
+    <!-- Babel (for JSX) -->
+    <script src="https://unpkg.com/@babel/standalone/babel.min.js"></script>
+    
+    <style>
+        @keyframes fadeIn { from { opacity: 0; } to { opacity: 1; } }
+        @keyframes fadeInUp { from { opacity: 0; transform: translateY(20px); } to { opacity: 1; transform: translateY(0); } }
+        @keyframes scaleUp { from { transform: scale(0.9); opacity: 0; } to { transform: scale(1); opacity: 1; } }
+        @keyframes popIn { 0% { transform: scale(0); } 80% { transform: scale(1.1); } 100% { transform: scale(1); } }
+
+        .animate-fade-in { animation: fadeIn 0.5s ease-out; }
+        .animate-fade-in-up { animation: fadeInUp 0.5s ease-out; }
+        .animate-scale-up { animation: scaleUp 0.3s ease-out; }
+        .animate-pop-in { animation: popIn 0.4s cubic-bezier(0.175, 0.885, 0.32, 1.275); }
+        
+        .math-font { font-family: 'Courier New', Courier, monospace; letter-spacing: 0.05em; font-weight: bold; }
+    </style>
+</head>
+<body class="bg-indigo-50 text-gray-800 font-sans">
+    <div id="root"></div>
+
+    <script type="text/babel">
+        const { useState } = React;
+
+        // --- Icons ---
+        const IconBase = ({ children, className, ...props }) => (
+            <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className={className} {...props}>{children}</svg>
+        );
+
+        const Lightbulb = (props) => <IconBase {...props}><line x1="9" y1="18" x2="15" y2="18"></line><line x1="10" y1="22" x2="14" y2="22"></line><path d="M15.09 14c.18-.98.65-1.74 1.41-2.5A4.65 4.65 0 0 0 16.5 5c-1.79-2.25-5.91-2.06-7.81.36-.63.81-1 1.93-1 2.95 0 .97.38 1.9 1.06 2.65.62.61.94 1.14 1.34 2.04"></path></IconBase>;
+        const Layers = (props) => <IconBase {...props}><polygon points="12 2 2 7 12 12 22 7 12 2"></polygon><polyline points="2 17 12 22 22 17"></polyline><polyline points="2 12 12 17 22 12"></polyline></IconBase>;
+        const CheckCircle = (props) => <IconBase {...props}><path d="M22 11.08V12a10 10 0 1 1-5.93-9.14"/><polyline points="22 4 12 14.01 9 11.01"/></IconBase>;
+        const XCircle = (props) => <IconBase {...props}><circle cx="12" cy="12" r="10"/><line x1="15" y1="9" x2="9" y2="15"/><line x1="9" y1="9" x2="15" y2="15"/></IconBase>;
+        const ArrowLeft = (props) => <IconBase {...props}><line x1="19" y1="12" x2="5" y2="12"></line><polyline points="12 19 5 12 12 5"></polyline></IconBase>;
+        const ArrowRight = (props) => <IconBase {...props}><line x1="5" y1="12" x2="19" y2="12"/><polyline points="12 5 19 12 12 19"/></IconBase>;
+        const ZoomIn = (props) => <IconBase {...props}><circle cx="11" cy="11" r="8"></circle><line x1="21" y1="21" x2="16.65" y2="16.65"></line><line x1="11" y1="8" x2="11" y2="14"></line><line x1="8" y1="11" x2="14" y2="11"></line></IconBase>;
+
+        // --- Data: Questions ---
+        const questions = [
+            {
+                id: 1,
+                question: 'הוציאו גורם משותף (מספר):',
+                mathExp: '5x + 15',
+                options: [
+                    '5(x + 3)',
+                    '5(x + 15)',
+                    'x(5 + 15)',
+                    '5x(1 + 3)'
+                ],
+                correctIndex: 0,
+                explanation: 'הגורם המשותף ל-5 ו-15 הוא 5. אם נוציא 5 מחוץ לסוגריים: 5x לחלק ל-5 זה x, ו-15 לחלק ל-5 זה 3. לכן: 5(x+3).'
+            },
+            {
+                id: 2,
+                question: 'הוציאו גורם משותף (נעלם):',
+                mathExp: 'x² + 4x',
+                options: [
+                    'x(x + 4x)',
+                    '4(x² + x)',
+                    'x(x + 4)',
+                    'x²(1 + 4)'
+                ],
+                correctIndex: 2,
+                explanation: 'בשני האיברים יש x. נוציא x החוצה. מ-x² נשאר x אחד, ומ-4x נשאר ה-4. התשובה היא x(x+4).'
+            },
+            {
+                id: 3,
+                question: 'זהירות! מוציאים את כל האיבר:',
+                mathExp: '8x + 8',
+                options: [
+                    '8(x)',
+                    '8(x + 0)',
+                    '8(x + 1)',
+                    'x(8 + 1)'
+                ],
+                correctIndex: 2,
+                explanation: 'הגורם המשותף הוא 8. כשמוציאים את 8 מתוך 8, נשאר 1 (כי 8 כפול 1 זה 8). אסור להשאיר מקום ריק או 0! התשובה: 8(x+1).'
+            },
+            {
+                id: 4,
+                question: 'רמה בינונית (מספר ונעלם):',
+                mathExp: '6x² - 9x',
+                options: [
+                    '3(2x² - 3x)',
+                    '3x(2x - 3)',
+                    'x(6x - 9)',
+                    '3x(2x - 1)'
+                ],
+                correctIndex: 1,
+                explanation: 'נסתכל על המספרים: המשותף ל-6 ו-9 הוא 3. נסתכל על הנעלמים: המשותף ל-x² ו-x הוא x. ביחד הגורם המשותף הוא 3x.'
+            },
+            {
+                id: 5,
+                question: 'רמה גבוהה (חזקות):',
+                mathExp: '5x³ + 10x²',
+                options: [
+                    '5x(x² + 2)',
+                    '5x²(x + 2)',
+                    '5(x³ + 2x²)',
+                    '10x²(x + 1)'
+                ],
+                correctIndex: 1,
+                explanation: 'המספר המשותף הוא 5. בחזקות, לוקחים את החזקה הכי נמוכה שקיימת בשני האיברים, שזה x². לכן מוציאים 5x². נשאר x מהראשון ו-2 מהשני.'
+            }
+        ];
+
+        // --- Data: Learning Steps ---
+        const learnSteps = [
+            {
+                title: "הרעיון: רוורס!",
+                subTitle: "פתיחת סוגריים מול פירוק לגורמים",
+                description: "עד עכשיו למדנו לפתוח סוגריים (לכפול). פירוק לגורמים הוא הפעולה ההפוכה בדיוק: אנחנו רוצים לחזור למצב של סוגריים.",
+                visualStructure: {
+                    left: { label: "פתיחת סוגריים", exp: "2(x + 4)", arrow: "→", res: "2x + 8" },
+                    right: { label: "פירוק לגורמים", exp: "2x + 8", arrow: "→", res: "2(x + 4)" }
+                },
+                tip: "אנחנו מחפשים: מה מסתתר בכל האיברים? מה משותף לכולם?"
+            },
+            {
+                title: "רמה 1: גורם משותף מספרי",
+                subTitle: "3x + 12",
+                description: "בואו נפרק כל איבר ונראה ממה הוא מורכב.",
+                steps: [
+                    { text: "נפרק את 3x", val: "3 • x" },
+                    { text: "נפרק את 12", val: "3 • 4" },
+                    { text: "מה משותף לשניהם? המספר 3!", highlight: "3" },
+                    { text: "נוציא את 3 החוצה, ונכתוב בסוגריים מה שנשאר.", result: "3(x + 4)" }
+                ]
+            },
+            {
+                title: "רמה 2: נעלם משותף",
+                subTitle: "x² + 5x",
+                description: "כאן המספרים לא עוזרים, אבל הנעלם x נמצא בשני האיברים.",
+                steps: [
+                    { text: "נפרק את x² (זה בעצם x כפול x)", val: "x • x" },
+                    { text: "נפרק את 5x", val: "5 • x" },
+                    { text: "מה משותף? ה-x!", highlight: "x" },
+                    { text: "נוציא x החוצה. מהראשון נשאר x, מהשני נשאר 5.", result: "x(x + 5)" }
+                ]
+            },
+            {
+                title: "רמה 3: המוקש (כשנשאר 1)",
+                subTitle: "4x + 4",
+                description: "מה קורה כשהוצאנו את הכל?",
+                steps: [
+                    { text: "נפרק את 4x", val: "4 • x" },
+                    { text: "נפרק את 4 (חשוב לזכור שהוא 4 כפול 1)", val: "4 • 1" },
+                    { text: "הגורם המשותף הוא 4", highlight: "4" },
+                    { text: "נוציא 4. במקום האיבר השני נשאר 1.", result: "4(x + 1)" }
+                ],
+                tip: "טיפ חשוב: אם היו בהתחלה 2 איברים, חייבים להיות בסוגריים 2 איברים!"
+            },
+            {
+                title: "רמה 4: גבוהה (מספר ונעלם)",
+                subTitle: "6x³ - 8x²",
+                description: "כאן צריך למצוא גם את המספר הכי גדול שמשותף, וגם את החזקה הכי גדולה משותפת.",
+                steps: [
+                    { text: "מספרים: ל-6 ול-8 המשותף הכי גדול הוא 2", val: "2" },
+                    { text: "נעלמים: ל-x³ ול-x² המשותף הוא x² (החזקה הנמוכה)", val: "x²" },
+                    { text: "ביחד הגורם המשותף הוא:", highlight: "2x²" },
+                    { text: "מה נשאר? מ-6 נשאר 3, מ-x³ נשאר x. מ-8 נשאר 4.", result: "2x²(3x - 4)" }
+                ]
+            }
+        ];
+
+        // --- Main App Component ---
+        function FactorizationApp() {
+            const [activeTab, setActiveTab] = useState('learn');
+
+            return (
+                <div className="min-h-screen pb-10" dir="rtl">
+                    {/* Header */}
+                    <header className="bg-indigo-600 text-white p-4 shadow-lg sticky top-0 z-20">
+                        <div className="max-w-3xl mx-auto flex justify-between items-center">
+                            <h1 className="text-xl md:text-2xl font-bold flex items-center gap-2">
+                                <Layers className="w-6 h-6"/>
+                                פירוק לגורמים
+                            </h1>
+                            <span className="text-sm bg-indigo-700 px-3 py-1 rounded-full font-medium">כיתה ט'</span>
+                        </div>
+                    </header>
+
+                    {/* Navigation */}
+                    <nav className="bg-white shadow-sm border-b sticky top-16 z-10">
+                        <div className="max-w-3xl mx-auto flex">
+                            <TabButton 
+                                active={activeTab === 'learn'} 
+                                onClick={() => setActiveTab('learn')} 
+                                icon={<Lightbulb className="w-5 h-5"/>} 
+                                label="הסברים ודוגמאות" 
+                            />
+                            <TabButton 
+                                active={activeTab === 'practice'} 
+                                onClick={() => setActiveTab('practice')} 
+                                icon={<CheckCircle className="w-5 h-5"/>} 
+                                label="תרגול" 
+                            />
+                        </div>
+                    </nav>
+
+                    {/* Main Content */}
+                    <main className="max-w-3xl mx-auto p-4">
+                        {activeTab === 'learn' && <LearnSection />}
+                        {activeTab === 'practice' && <PracticeSection />}
+                    </main>
+                </div>
+            );
+        }
+
+        function TabButton({ active, onClick, icon, label }) {
+            return (
+                <button
+                    onClick={onClick}
+                    className={`flex-1 py-4 text-center font-medium transition-colors flex flex-col items-center justify-center gap-1 ${
+                        active ? 'text-indigo-600 border-b-2 border-indigo-600 bg-indigo-50' : 'text-gray-500 hover:bg-gray-50'
+                    }`}
+                >
+                    {icon}
+                    <span>{label}</span>
+                </button>
+            );
+        }
+
+        // --- Section 1: Learn ---
+        function LearnSection() {
+            const [currentStep, setCurrentStep] = useState(0);
+            const stepData = learnSteps[currentStep];
+
+            const nextStep = () => setCurrentStep(prev => Math.min(prev + 1, learnSteps.length - 1));
+            const prevStep = () => setCurrentStep(prev => Math.max(prev - 1, 0));
+
+            return (
+                <div className="space-y-6 animate-fade-in">
+                    {/* Progress Dots */}
+                    <div className="flex justify-center gap-2 mb-4">
+                        {learnSteps.map((_, i) => (
+                            <div 
+                                key={i} 
+                                className={`h-2 rounded-full transition-all duration-300 ${i === currentStep ? 'w-8 bg-indigo-600' : 'w-2 bg-gray-300'}`}
+                            />
+                        ))}
+                    </div>
+
+                    <div className="bg-white rounded-2xl shadow-xl border border-indigo-100 overflow-hidden">
+                        <div className="bg-indigo-50 p-6 border-b border-indigo-100">
+                            <h2 className="text-lg font-bold text-indigo-500 mb-1">{stepData.title}</h2>
+                            <h3 className="text-3xl font-bold text-indigo-900 math-font" dir="ltr">{stepData.subTitle}</h3>
+                            <p className="text-gray-700 mt-4 text-lg leading-relaxed">
+                                {stepData.description}
+                            </p>
+                        </div>
+
+                        <div className="p-6">
+                            {/* Visual Structure for Step 0 */}
+                            {stepData.visualStructure && (
+                                <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mb-6">
+                                    <div className="bg-red-50 p-4 rounded-xl text-center border border-red-100">
+                                        <div className="font-bold text-red-800 mb-2">{stepData.visualStructure.left.label}</div>
+                                        <div className="flex justify-center items-center gap-3 text-xl math-font text-red-600" dir="ltr">
+                                            <span>{stepData.visualStructure.left.exp}</span>
+                                            <span>{stepData.visualStructure.left.arrow}</span>
+                                            <span>{stepData.visualStructure.left.res}</span>
+                                        </div>
+                                    </div>
+                                    <div className="bg-green-50 p-4 rounded-xl text-center border border-green-100">
+                                        <div className="font-bold text-green-800 mb-2">{stepData.visualStructure.right.label}</div>
+                                        <div className="flex justify-center items-center gap-3 text-xl math-font text-green-600" dir="ltr">
+                                            <span>{stepData.visualStructure.right.exp}</span>
+                                            <span>{stepData.visualStructure.right.arrow}</span>
+                                            <span className="bg-green-200 px-2 rounded">{stepData.visualStructure.right.res}</span>
+                                        </div>
+                                    </div>
+                                </div>
+                            )}
+
+                            {/* Detailed Steps for other levels */}
+                            {stepData.steps && (
+                                <div className="space-y-3">
+                                    {stepData.steps.map((s, idx) => (
+                                        <div key={idx} className="flex items-center gap-3 bg-gray-50 p-3 rounded-lg border border-gray-100 animate-fade-in-up" style={{animationDelay: `${idx * 150}ms`}}>
+                                            <div className="bg-indigo-100 text-indigo-700 w-6 h-6 flex items-center justify-center rounded-full font-bold text-sm shrink-0">
+                                                {idx + 1}
+                                            </div>
+                                            <div className="flex-1">
+                                                <span className="text-gray-700">{s.text}</span>
+                                                {s.val && <span className="block mt-1 font-bold text-xl text-gray-800 math-font" dir="ltr">{s.val}</span>}
+                                                {s.highlight && <span className="block mt-1 font-bold text-xl text-indigo-600 bg-indigo-50 inline-block px-2 rounded math-font" dir="ltr">{s.highlight}</span>}
+                                                {s.result && (
+                                                    <div className="mt-2 p-3 bg-yellow-50 border-2 border-yellow-400 rounded-lg inline-block animate-pop-in">
+                                                        <span className="text-2xl font-bold text-indigo-900 math-font" dir="ltr">{s.result}</span>
+                                                    </div>
+                                                )}
+                                            </div>
+                                        </div>
+                                    ))}
+                                </div>
+                            )}
+
+                            {/* Tip Box */}
+                            {stepData.tip && (
+                                <div className="mt-6 bg-blue-50 p-4 rounded-xl border border-blue-200 flex items-start gap-3">
+                                    <Lightbulb className="text-blue-600 w-6 h-6 shrink-0 mt-1"/>
+                                    <p className="text-blue-800">{stepData.tip}</p>
+                                </div>
+                            )}
+                        </div>
+
+                        {/* Navigation Buttons */}
+                        <div className="p-4 bg-gray-50 border-t border-gray-100 flex justify-between">
+                            <button 
+                                onClick={prevStep} 
+                                disabled={currentStep === 0}
+                                className="flex items-center gap-2 px-4 py-2 rounded-lg font-bold text-gray-600 hover:bg-gray-200 disabled:opacity-30 disabled:cursor-not-allowed transition"
+                            >
+                                <ArrowRight className="w-4 h-4"/> הקודם
+                            </button>
+                            <button 
+                                onClick={nextStep} 
+                                disabled={currentStep === learnSteps.length - 1}
+                                className="flex items-center gap-2 px-6 py-2 rounded-lg font-bold bg-indigo-600 text-white hover:bg-indigo-700 shadow-md disabled:opacity-30 disabled:cursor-not-allowed transition"
+                            >
+                                הבא <ArrowLeft className="w-4 h-4"/>
+                            </button>
+                        </div>
+                    </div>
+                </div>
+            );
+        }
+
+        // --- Section 2: Practice ---
+        function PracticeSection() {
+            const [currentQ, setCurrentQ] = useState(0);
+            const [selected, setSelected] = useState(null);
+            const [checked, setChecked] = useState(false);
+            const [score, setScore] = useState(0);
+
+            const q = questions[currentQ];
+            const isCorrect = selected === q.correctIndex;
+
+            const handleSelect = (idx) => {
+                if (checked) return;
+                setSelected(idx);
+            };
+
+            const handleCheck = () => {
+                if (selected === null) return;
+                setChecked(true);
+                if (selected === q.correctIndex) setScore(s => s + 1);
+            };
+
+            const handleNext = () => {
+                if (currentQ < questions.length - 1) {
+                    setCurrentQ(c => c + 1);
+                    setSelected(null);
+                    setChecked(false);
+                } else {
+                    alert(`סיימת את התרגול! הציון שלך: ${score + (selected === q.correctIndex ? 0 : 0)} מתוך ${questions.length}`);
+                    setCurrentQ(0);
+                    setSelected(null);
+                    setChecked(false);
+                    setScore(0);
+                }
+            };
+
+            return (
+                <div className="animate-fade-in space-y-4">
+                    <div className="flex justify-between items-center text-sm font-bold text-gray-500">
+                        <span>שאלה {currentQ + 1} מתוך {questions.length}</span>
+                        <span className="text-indigo-600 bg-indigo-50 px-3 py-1 rounded-full">נקודות: {score}</span>
+                    </div>
+
+                    <div className="bg-white rounded-2xl shadow-lg border border-gray-200 overflow-hidden">
+                        <div className="bg-gray-50 p-8 text-center border-b border-gray-100">
+                            <h3 className="text-lg font-bold text-gray-800 mb-4">{q.question}</h3>
+                            <div className="text-4xl font-bold text-indigo-700 math-font inline-block px-6 py-3 bg-white rounded-xl shadow-sm border border-indigo-100" dir="ltr">
+                                {q.mathExp}
+                            </div>
+                        </div>
+
+                        <div className="p-6 grid gap-3">
+                            {q.options.map((opt, idx) => {
+                                let style = "border-2 bg-white hover:bg-indigo-50 hover:border-indigo-300";
+                                if (selected === idx) style = "border-2 border-indigo-600 bg-indigo-50";
+                                if (checked) {
+                                    if (idx === q.correctIndex) style = "border-2 border-green-500 bg-green-50 text-green-700";
+                                    else if (idx === selected) style = "border-2 border-red-500 bg-red-50 text-red-700 opacity-60";
+                                    else style = "opacity-40 border-gray-100 grayscale";
+                                }
+
+                                return (
+                                    <button
+                                        key={idx}
+                                        onClick={() => handleSelect(idx)}
+                                        className={`w-full p-4 rounded-xl text-xl math-font transition-all duration-200 flex justify-between items-center ${style}`}
+                                    >
+                                        <span dir="ltr" className="w-full text-center">{opt}</span>
+                                        {checked && idx === q.correctIndex && <CheckCircle className="shrink-0 text-green-600"/>}
+                                        {checked && idx === selected && idx !== q.correctIndex && <XCircle className="shrink-0 text-red-600"/>}
+                                    </button>
+                                );
+                            })}
+                        </div>
+
+                        {checked && (
+                            <div className={`p-6 border-t ${isCorrect ? 'bg-green-50' : 'bg-red-50'} animate-fade-in`}>
+                                <div className="flex gap-4">
+                                    <div className={`p-3 rounded-full h-fit shrink-0 ${isCorrect ? 'bg-green-200 text-green-700' : 'bg-red-200 text-red-700'}`}>
+                                        {isCorrect ? <CheckCircle className="w-6 h-6"/> : <XCircle className="w-6 h-6"/>}
+                                    </div>
+                                    <div>
+                                        <h4 className={`font-bold text-xl mb-2 ${isCorrect ? 'text-green-800' : 'text-red-800'}`}>
+                                            {isCorrect ? 'כל הכבוד!' : 'אופס, לא בדיוק...'}
+                                        </h4>
+                                        <p className="text-gray-800 text-lg leading-relaxed">{q.explanation}</p>
+                                    </div>
+                                </div>
+                                <div className="mt-6 flex justify-center">
+                                    <button onClick={handleNext} className="bg-indigo-600 text-white px-10 py-3 rounded-full font-bold shadow-lg hover:bg-indigo-700 transition flex items-center gap-2 transform hover:scale-105 active:scale-95">
+                                        {currentQ < questions.length - 1 ? 'לשאלה הבאה' : 'סיים תרגול'}
+                                        <ArrowLeft className="w-5 h-5"/>
+                                    </button>
+                                </div>
+                            </div>
+                        )}
+
+                        {!checked && (
+                            <div className="p-6 pt-0">
+                                <button
+                                    onClick={handleCheck}
+                                    disabled={selected === null}
+                                    className="w-full bg-indigo-600 text-white py-4 rounded-xl font-bold text-xl shadow-md hover:bg-indigo-700 disabled:opacity-50 disabled:cursor-not-allowed transition transform active:scale-95"
+                                >
+                                    בדיקה
+                                </button>
+                            </div>
+                        )}
+                    </div>
+                </div>
+            );
+        }
+
+        const root = ReactDOM.createRoot(document.getElementById('root'));
+        root.render(<FactorizationApp />);
+    </script>
+</body>
+</html>

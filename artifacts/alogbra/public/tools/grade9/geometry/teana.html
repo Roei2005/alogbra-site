@@ -1,0 +1,640 @@
+<!DOCTYPE html>
+<html lang="he" dir="rtl">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <title>כתיבת טענה ונימוק - גאומטריה</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script crossorigin src="https://unpkg.com/react@18/umd/react.production.min.js"></script>
+    <script crossorigin src="https://unpkg.com/react-dom@18/umd/react-dom.production.min.js"></script>
+    <script src="https://unpkg.com/@babel/standalone/babel.min.js"></script>
+    <link href="https://fonts.googleapis.com/css2?family=Rubik:wght@400;500;700;900&display=swap" rel="stylesheet">
+    
+    <style>
+        body {
+            font-family: 'Rubik', sans-serif;
+            background-color: #f3f4f6;
+            color: #1f2937;
+        }
+        /* עיצוב גלילה מותאם */
+        .custom-scrollbar::-webkit-scrollbar {
+            width: 6px;
+            height: 6px;
+        }
+        .custom-scrollbar::-webkit-scrollbar-track {
+            background: #f1f5f9;
+        }
+        .custom-scrollbar::-webkit-scrollbar-thumb {
+            background-color: #cbd5e1;
+            border-radius: 20px;
+        }
+        
+        /* אנימציות */
+        @keyframes fadeIn {
+            from { opacity: 0; transform: translateY(10px); }
+            to { opacity: 1; transform: translateY(0); }
+        }
+        .animate-in {
+            animation: fadeIn 0.4s ease-out forwards;
+        }
+    </style>
+</head>
+<body class="min-h-screen flex flex-col">
+
+    <div id="root" class="flex-grow"></div>
+
+    <script type="text/babel" data-presets="env,react">
+        const { useState, useEffect } = React;
+
+        // --- אייקונים (SVG) ---
+        const IconBase = ({ d, className = "", color = "currentColor", fill = "none" }) => (
+            <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill={fill} stroke={color} strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className={className}>
+                {d}
+            </svg>
+        );
+
+        const Book = () => <IconBase d={<><path d="M2 3h6a4 4 0 0 1 4 4v14a3 3 0 0 0-3-3H2z"/><path d="M22 3h-6a4 4 0 0 0-4 4v14a3 3 0 0 1 3-3h7z"/></>} />;
+        const Pen = () => <IconBase d={<><path d="M12 19l7-7 3 3-7 7-3-3z"/><path d="M18 13l-1.5-7.5L2 2l3.5 14.5L13 18l5-5z"/><path d="M2 2l7.586 7.586"/><circle cx="11" cy="11" r="2"/></>} />;
+        const Check = () => <IconBase color="green" width="16" height="16" d={<><path d="M22 11.08V12a10 10 0 1 1-5.93-9.14"/><polyline points="22 4 12 14.01 9 11.01"/></>} />;
+        const Cross = () => <IconBase color="red" width="16" height="16" d={<><circle cx="12" cy="12" r="10"/><line x1="15" y1="9" x2="9" y2="15"/><line x1="9" y1="9" x2="15" y2="15"/></>} />;
+        const ArrowLeft = () => <IconBase d={<polyline points="15 18 9 12 15 6"/>} />;
+        const Award = () => <IconBase d={<><circle cx="12" cy="8" r="7"/><polyline points="8.21 13.89 7 23 12 20 17 23 15.79 13.88"/></>} />;
+        const Info = () => <IconBase d={<><circle cx="12" cy="12" r="10"/><line x1="12" y1="16" x2="12" y2="12"/><line x1="12" y1="8" x2="12.01" y2="8"/></>} />;
+        const Therefore = () => <IconBase strokeWidth="3" d={<><path d="M7 7l5 5 5-5"/><path d="M7 13l5 5 5-5"/></>} />; // סמל כללי להמחשה
+        const Lightbulb = () => <IconBase color="#eab308" d={<><path d="M15 14c.2-1 .7-1.7 1.5-2.5 1-1 1.5-2.2 1.5-3.5A6 6 0 0 0 6 8c0 1 .2 2.2 1.5 3.5.7.7 1.3 1.5 1.5 2.5"/><path d="M9 18h6"/><path d="M10 22h4"/></>} />;
+        const Unlock = () => <IconBase d={<><rect x="3" y="11" width="18" height="11" rx="2" ry="2"/><path d="M7 11V7a5 5 0 0 1 9.9-1"/></>} />;
+
+
+        // --- נתונים ---
+        const THEOREMS = [
+            { id: 'adj_angles', category: 'basics', title: 'זוויות צמודות', text: 'סכום זוויות צמודות הוא 180 מעלות.' },
+            { id: 'vert_angles', category: 'basics', title: 'זוויות קודקודיות', text: 'זוויות קודקודיות שוות זו לזו.' },
+            { id: 'triangle_sum', category: 'triangles', title: 'סכום זוויות במשולש', text: 'סכום הזוויות במשולש הוא 180 מעלות.' },
+            { id: 'isosceles_sides', category: 'triangles', title: 'משולש שווה שוקיים - שוקיים', text: 'במשולש שווה שוקיים, השוקיים שוות.' },
+            { id: 'isosceles_angles', category: 'triangles', title: 'משולש שווה שוקיים - זוויות בסיס', text: 'במשולש שווה שוקיים, זוויות הבסיס שוות.' },
+            { id: 'triangle_inequality', category: 'triangles', title: 'אי שוויון המשולש', text: 'סכום כל שתי צלעות במשולש גדול מהצלע השלישית.' },
+            { id: 'isosceles_lines', category: 'triangles', title: 'משולש שווה שוקיים - קווים מיוחדים', text: 'במשולש שווה שוקיים, חוצה זווית הראש, התיכון לבסיס והגובה לבסיס מתלכדים.' },
+            { id: 'isosceles_conv', category: 'triangles', title: 'זיהוי משולש שווה שוקיים', text: 'אם במשולש חוצה זווית הוא גובה, אז המשולש הוא שווה שוקיים (תקף גם לתיכון).', isConverse: true },
+            { id: 'congruence_sas', category: 'triangles', title: 'חפיפה צ.ז.צ', text: 'אם בשני משולשים שוות בהתאמה שתי צלעות והזווית הכלואה ביניהן, המשולשים חופפים.' },
+            { id: 'congruence_asa', category: 'triangles', title: 'חפיפה ז.צ.ז', text: 'אם בשני משולשים שוות בהתאמה שתי זוויות והצלע הכלואה ביניהן, המשולשים חופפים.' },
+            { id: 'congruence_sss', category: 'triangles', title: 'חפיפה צ.צ.צ', text: 'אם בשני משולשים שוות בהתאמה שלוש הצלעות, המשולשים חופפים.' },
+            { id: 'parallel_lines_conv', category: 'parallel', title: 'זיהוי ישרים מקבילים', text: 'אם בין שני ישרים יש זוג זוויות מתאימות / מתחלפות שוות, אז הישרים מקבילים.', isConverse: true },
+            { id: 'parallel_lines_corr', category: 'parallel', title: 'ישרים מקבילים - מתאימות', text: 'אם שני ישרים מקבילים נחתכים על ידי ישר שלישי, אז זוויות מתאימות שוות זו לזו.' },
+            { id: 'parallel_lines_alt', category: 'parallel', title: 'ישרים מקבילים - מתחלפות', text: 'אם שני ישרים מקבילים נחתכים על ידי ישר שלישי, אז זוויות מתחלפות שוות זו לזו.' },
+            { id: 'par_opp_angles', category: 'parallelogram', title: 'מקבילית - זוויות נגדיות', text: 'במקבילית, זוויות נגדיות שוות.' },
+            { id: 'par_opp_sides', category: 'parallelogram', title: 'מקבילית - צלעות נגדיות', text: 'במקבילית, צלעות נגדיות שוות.' },
+            { id: 'par_diag', category: 'parallelogram', title: 'מקבילית - אלכסונים', text: 'במקבילית האלכסונים חוצים זה את זה.' },
+            { id: 'par_conv_angles', category: 'parallelogram', title: 'זיהוי מקבילית (זוויות)', text: 'מרובע שבו כל זוג זוויות נגדיות שוות הוא מקבילית.', isConverse: true },
+            { id: 'par_conv_sides', category: 'parallelogram', title: 'זיהוי מקבילית (צלעות)', text: 'מרובע שבו כל שתי צלעות נגדיות שוות זו לזו הוא מקבילית.', isConverse: true },
+            { id: 'par_conv_pair', category: 'parallelogram', title: 'זיהוי מקבילית (זוג אחד)', text: 'מרובע שבו זוג צלעות מקבילות ושוות הוא מקבילית.', isConverse: true },
+            { id: 'par_conv_diag', category: 'parallelogram', title: 'זיהוי מקבילית (אלכסונים)', text: 'מרובע שאלכסוניו חוצים זה את זה הוא מקבילית.', isConverse: true },
+            { id: 'rhombus_diag_bisect', category: 'rhombus', title: 'מעוין - אלכסונים חוצי זווית', text: 'במעוין האלכסונים חוצים את הזוויות.' },
+            { id: 'rhombus_sides', category: 'rhombus', title: 'מעוין - צלעות', text: 'במעוין כל הצלעות שוות זו לזו.' },
+            { id: 'rhombus_diag_perp', category: 'rhombus', title: 'מעוין - אלכסונים מאונכים', text: 'במעוין האלכסונים מאונכים זה לזה.' },
+            { id: 'rhombus_conv_adj', category: 'rhombus', title: 'זיהוי מעוין (צלעות סמוכות)', text: 'מקבילית שבה זוג צלעות סמוכות שוות היא מעוין.', isConverse: true },
+            { id: 'rhombus_conv_perp', category: 'rhombus', title: 'זיהוי מעוין (אלכסונים מאונכים)', text: 'מקבילית שבה האלכסונים מאונכים זה לזה היא מעוין.', isConverse: true },
+            { id: 'rhombus_conv_bisect', category: 'rhombus', title: 'זיהוי מעוין (אלכסון חוצה זווית)', text: 'מקבילית שבה אלכסון הוא חוצה זווית היא מעוין.', isConverse: true },
+            { id: 'rect_angles', category: 'rectangle', title: 'מלבן - זוויות', text: 'כל הזוויות במלבן ישרות (שוות ל-90 מעלות).' },
+            { id: 'rect_diag', category: 'rectangle', title: 'מלבן - אלכסונים', text: 'אלכסוני המלבן שווים זה לזה.' },
+            { id: 'rect_conv_diag', category: 'rectangle', title: 'זיהוי מלבן (אלכסונים)', text: 'מקבילית שבה האלכסונים שווים זה לזה היא מלבן.', isConverse: true },
+        ];
+
+        const EXERCISES = [
+            {
+                id: 1,
+                title: 'דוגמה: תכונות המקבילית',
+                description: 'נתונה מקבילית ABCD. האלכסון BD מחלק את המקבילית לשני משולשים. הוכח כי המשולשים ABD ו-CDB חופפים.',
+                difficulty: 'קל',
+                type: 'דוגמה',
+                shapeSvg: (
+                    <svg viewBox="0 0 240 140" className="w-full h-full stroke-blue-700 stroke-2 fill-none">
+                        <path d="M60 100 L200 100 L180 40 L40 40 Z" />
+                        <line x1="60" y1="100" x2="180" y2="40" className="stroke-blue-400 stroke-1 stroke-dasharray-4" />
+                        <text x="35" y="35" className="fill-gray-700 text-sm font-sans font-medium" style={{textAnchor: 'middle'}}>A</text>
+                        <text x="185" y="35" className="fill-gray-700 text-sm font-sans font-medium" style={{textAnchor: 'middle'}}>B</text>
+                        <text x="205" y="115" className="fill-gray-700 text-sm font-sans font-medium" style={{textAnchor: 'middle'}}>C</text>
+                        <text x="55" y="115" className="fill-gray-700 text-sm font-sans font-medium" style={{textAnchor: 'middle'}}>D</text>
+                    </svg>
+                ),
+                initialRows: [
+                    { id: 1, claim: 'ABCD מקבילית', reason: 'נתון', type: 'given', isLocked: true, missingField: 'none' },
+                    { id: 2, claim: 'AB = DC', reason: 'במקבילית, צלעות נגדיות שוות זו לזו', type: 'claim', isLocked: true, missingField: 'none' },
+                    { id: 3, claim: 'AD = BC', reason: 'במקבילית, צלעות נגדיות שוות זו לזו', type: 'claim', isLocked: true, missingField: 'none' },
+                    { id: 4, claim: 'BD = DB', reason: 'צלע משותפת', type: 'claim', isLocked: true, missingField: 'none', showsTherefore: true },
+                    { id: 5, claim: 'ΔABD ≅ ΔCDB', reason: 'לפי משפט חפיפה צ.צ.צ (שורות 2,3,4)', type: 'conclusion', isLocked: true, missingField: 'none' }
+                ],
+                solutionNote: "פתרון לדוגמה: השתמשנו בתכונות הבסיסיות של מקבילית (צלעות נגדיות שוות) ובצלע משותפת כדי להוכיח חפיפה לפי צ.צ.צ."
+            },
+            {
+                id: 2,
+                title: 'תרגול: משולש שווה שוקיים',
+                description: 'נתון משולש ABC. הקטע AD הוא גובה לצלע BC (כלומר AD ⊥ BC). כמו כן נתון ש-AD הוא חוצה הזווית A (כלומר ∢BAD = ∢CAD). הוכח: המשולש ABC הוא שווה שוקיים.',
+                difficulty: 'בינוני',
+                type: 'אינטראקטיבי',
+                note: 'שים לב: ניתן לפתור גם על ידי חפיפת משולשים, אך השימוש במשפט הזיהוי מקצר את הדרך משמעותית.',
+                shapeSvg: (
+                    <svg viewBox="0 0 200 190" className="w-full h-full stroke-purple-700 stroke-2 fill-none">
+                        <path d="M100 20 L180 160 L20 160 Z" />
+                        <line x1="100" y1="20" x2="100" y2="160" className="stroke-purple-400 stroke-1" />
+                        <rect x="100" y="150" width="10" height="10" className="stroke-purple-400 stroke-1 fill-none" />
+                        <text x="100" y="15" className="fill-gray-700 text-sm font-sans font-medium" style={{textAnchor: 'middle'}}>A</text>
+                        <text x="10" y="170" className="fill-gray-700 text-sm font-sans font-medium" style={{textAnchor: 'middle'}}>B</text>
+                        <text x="190" y="170" className="fill-gray-700 text-sm font-sans font-medium" style={{textAnchor: 'middle'}}>C</text>
+                        <text x="100" y="180" className="fill-gray-700 text-sm font-sans font-medium" style={{textAnchor: 'middle'}}>D</text>
+                        <path d="M95 40 Q100 50 105 40" className="stroke-purple-400 stroke-1 fill-none" />
+                    </svg>
+                ),
+                initialRows: [
+                    { id: 1, claim: 'AD ⊥ BC (גובה)', reason: 'נתון', type: 'given', isLocked: true, missingField: 'none' },
+                    { id: 2, claim: '∢BAD = ∢CAD (חוצה זווית)', reason: 'נתון', type: 'given', isLocked: true, missingField: 'none', showsTherefore: true },
+                    { 
+                        id: 3, 
+                        claim: 'ΔABC הוא משולש שווה שוקיים', 
+                        reason: '', 
+                        type: 'conclusion', 
+                        isLocked: false, 
+                        missingField: 'reason',
+                        correctOptions: ['אם במשולש חוצה זווית הוא גובה, אז המשולש הוא שווה שוקיים', 'אם במשולש הגובה וחוצה הזווית מתלכדים אז המשולש הוא שווה שוקיים', 'זיהוי משולש שווה שוקיים'],
+                        hint: 'יש לנו משולש שבו אותו ישר (AD) הוא גם גובה וגם חוצה זווית. חפש משפט מתאים ברשימה (משפטי משולשים).'
+                    }
+                ],
+                solutionNote: "השתמשנו במשפט הזיהוי: אם במשולש אחד הקווים המיוחדים (גובה) מתלכד עם קו מיוחד אחר (חוצה זווית), המשולש הוא שווה שוקיים."
+            },
+            {
+                id: 3,
+                title: 'תרגול עצמאי: זיהוי מעוין',
+                description: 'נתונה מקבילית ABCD. האלכסון AC חוצה את הזווית A (כלומר ∢DAC = ∢BAC). הוכח כי המקבילית ABCD היא מעוין.',
+                difficulty: 'קל', 
+                type: 'עצמאי',
+                shapeSvg: (
+                    <svg viewBox="0 0 200 160" className="w-full h-full stroke-green-700 stroke-2 fill-none">
+                        <path d="M100 20 L170 80 L100 140 L30 80 Z" />
+                        <line x1="100" y1="20" x2="100" y2="140" className="stroke-green-400 stroke-1" />
+                        <line x1="30" y1="80" x2="170" y2="80" className="stroke-green-400 stroke-1" />
+                        <text x="100" y="15" className="fill-gray-700 text-sm font-sans font-medium" style={{textAnchor: 'middle'}}>A</text>
+                        <text x="185" y="85" className="fill-gray-700 text-sm font-sans font-medium" style={{textAnchor: 'middle'}}>B</text>
+                        <text x="100" y="155" className="fill-gray-700 text-sm font-sans font-medium" style={{textAnchor: 'middle'}}>C</text>
+                        <text x="15" y="85" className="fill-gray-700 text-sm font-sans font-medium" style={{textAnchor: 'middle'}}>D</text>
+                        <path d="M90 35 Q100 45 110 35" className="stroke-green-400 stroke-1 fill-none" />
+                    </svg>
+                ),
+                initialRows: [
+                    { id: 1, claim: 'ABCD מקבילית', reason: 'נתון', type: 'given', isLocked: true, missingField: 'none' },
+                    { id: 2, claim: 'AC חוצה את זווית A', reason: 'נתון', type: 'given', isLocked: true, missingField: 'none', showsTherefore: true },
+                    { 
+                        id: 3, 
+                        claim: 'ABCD מעוין', 
+                        reason: '', 
+                        type: 'conclusion', 
+                        isLocked: false, 
+                        missingField: 'reason',
+                        correctOptions: ['מקבילית שבה אלכסון הוא חוצה זווית היא מעוין', 'זיהוי מעוין (אלכסון חוצה זווית)'],
+                        hint: 'חפש משפט זיהוי של מעוין הקשור למקבילית ואלכסון שחוצה זווית.'
+                    }
+                ],
+                solutionNote: "השתמשנו במשפט הזיהוי: מקבילית שבה אחד האלכסונים חוצה את הזווית היא מעוין."
+            }
+        ];
+
+        // --- קומפוננטות ---
+
+        const ExplanationBox = () => (
+            <div className="bg-white p-6 rounded-2xl shadow-sm border border-blue-100 text-right mb-8">
+                <h2 className="text-2xl font-bold text-blue-900 mb-4 flex items-center gap-2 border-b border-blue-100 pb-3">
+                    <Pen />
+                    איך כותבים הוכחה בגאומטריה?
+                </h2>
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                    <div className="bg-blue-50 p-4 rounded-xl">
+                        <h3 className="font-bold text-lg text-blue-800 mb-2">1. מבנה הטבלה</h3>
+                        <p className="text-gray-700 leading-relaxed text-sm">
+                            כל הוכחה בנויה מטבלה עם שתי עמודות:
+                            <br/>
+                            <strong>טענה (מה?):</strong> העובדה המתמטית (למשל: AB = CD).
+                            <br/>
+                            <strong>נימוק (למה?):</strong> הסיבה שהטענה נכונה ("נתון", משפט גאומטרי, או חישוב).
+                        </p>
+                    </div>
+                    <div className="bg-indigo-50 p-4 rounded-xl">
+                        <h3 className="font-bold text-lg text-indigo-800 mb-2 flex items-center gap-2">
+                           2. מכאן נובע <span className="text-indigo-600"><Therefore /></span>
+                        </h3>
+                        <p className="text-gray-700 leading-relaxed text-sm">
+                            כאשר אנחנו מגיעים למסקנה חשובה המבוססת על השורות הקודמות, נשתמש בסימן ה"מכאן נובע" (⇓).
+                            <br/>
+                            לדוגמה: אם הוכחנו שצלעות נגדיות שוות ושמקבילות, <strong>מכאן נובע</strong> שהמרובע הוא מקבילית.
+                        </p>
+                    </div>
+                </div>
+            </div>
+        );
+
+        const TheoremsList = () => {
+            const [activeCategory, setActiveCategory] = useState('basics');
+
+            const categories = [
+                { id: 'basics', label: 'בסיס' },
+                { id: 'triangles', label: 'משולשים וחפיפה' },
+                { id: 'parallel', label: 'ישרים מקבילים' },
+                { id: 'parallelogram', label: 'מקבילית' },
+                { id: 'rectangle', label: 'מלבן' },
+                { id: 'rhombus', label: 'מעוין' },
+            ];
+
+            const showReminder = activeCategory === 'rectangle' || activeCategory === 'rhombus';
+
+            return (
+                <div className="bg-white rounded-xl shadow-sm border border-gray-200 overflow-hidden flex flex-col h-[500px] text-right sticky top-4" dir="rtl">
+                    <div className="bg-gray-100 border-b border-gray-200 p-2 text-center font-bold text-gray-700">
+                        <div className="flex items-center justify-center gap-2">
+                           <Book />
+                           מאגר משפטים לבגרות
+                        </div>
+                    </div>
+                    <div className="bg-gray-50 border-b border-gray-200 p-2 overflow-x-auto whitespace-nowrap custom-scrollbar">
+                        <div className="flex gap-2">
+                            {categories.map((cat) => (
+                                <button
+                                    key={cat.id}
+                                    onClick={() => setActiveCategory(cat.id)}
+                                    className={`px-3 py-1.5 rounded-full text-xs font-bold transition-all ${
+                                        activeCategory === cat.id
+                                            ? 'bg-blue-600 text-white shadow-md'
+                                            : 'bg-white text-gray-600 border border-gray-200 hover:bg-gray-100'
+                                    }`}
+                                >
+                                    {cat.label}
+                                </button>
+                            ))}
+                        </div>
+                    </div>
+                    
+                    <div className="p-3 space-y-2 overflow-y-auto flex-1 custom-scrollbar bg-gray-50/30">
+                        {showReminder && (
+                            <div className="bg-amber-50 border border-amber-200 p-2 rounded-lg text-xs text-amber-900 font-medium flex items-start gap-2 mb-2 animate-in">
+                                <div className="shrink-0 mt-0.5"><Info /></div>
+                                <span>זכור: כל התכונות של מקבילית מתקיימות גם כאן (צלעות נגדיות שוות, אלכסונים חוצים זה את זה וכו׳).</span>
+                            </div>
+                        )}
+                        
+                        {THEOREMS.filter(t => t.category === activeCategory).map((theorem) => (
+                            <div key={theorem.id} className="border border-gray-200 rounded-lg p-3 hover:bg-blue-50 hover:border-blue-200 transition-colors group bg-white shadow-sm">
+                                <div className="flex justify-between items-start mb-1">
+                                    <h4 className="font-bold text-blue-800 text-sm">{theorem.title}</h4>
+                                    {theorem.isConverse && (
+                                        <span className="bg-amber-100 text-amber-800 text-[10px] px-2 py-0.5 rounded-full font-bold border border-amber-200 whitespace-nowrap ml-2">
+                                            זיהוי
+                                        </span>
+                                    )}
+                                </div>
+                                <p className="text-gray-600 text-xs leading-relaxed">
+                                    {theorem.text}
+                                </p>
+                            </div>
+                        ))}
+                    </div>
+                </div>
+            );
+        };
+
+        const PracticeMode = () => {
+            const [currentExerciseIdx, setCurrentExerciseIdx] = useState(0);
+            const [userRows, setUserRows] = useState([]);
+            const [feedback, setFeedback] = useState({});
+            const [showHint, setShowHint] = useState({});
+            const [revealSolution, setRevealSolution] = useState(false);
+
+            const currentExercise = EXERCISES[currentExerciseIdx];
+
+            useEffect(() => {
+                if (currentExercise && currentExercise.initialRows) {
+                    // Reset for new exercise
+                    const rowsCopy = JSON.parse(JSON.stringify(currentExercise.initialRows));
+                    setUserRows(rowsCopy);
+                    setFeedback({});
+                    setShowHint({});
+                    setRevealSolution(false);
+                }
+            }, [currentExerciseIdx]);
+
+            const handleInputChange = (rowId, field, value) => {
+                setUserRows(prev => prev.map(row => {
+                    if (row.id === rowId) {
+                        return { 
+                            ...row, 
+                            userClaim: field === 'claim' ? value : row.userClaim,
+                            userReason: field === 'reason' ? value : row.userReason
+                        };
+                    }
+                    return row;
+                }));
+                
+                // Clear feedback on type
+                if (feedback[rowId]) {
+                    const newFeedback = { ...feedback };
+                    delete newFeedback[rowId];
+                    setFeedback(newFeedback);
+                }
+            };
+
+            const checkAnswer = (rowId) => {
+                const row = userRows.find(r => r.id === rowId);
+                if (!row) return;
+
+                const isClaimMissing = row.missingField === 'claim';
+                const userValue = isClaimMissing ? row.userClaim : row.userReason;
+                const correctOptions = row.correctOptions || [];
+                
+                const normalize = (s) => s?.trim().toLowerCase().replace(/[.,'":\-()]/g, '').replace(/\s+/g, ' ') || '';
+                const userNorm = normalize(userValue || '');
+                
+                const isCorrect = correctOptions.some(opt => {
+                     const optNorm = normalize(opt);
+                     return userNorm.includes(optNorm) || optNorm.includes(userNorm) || (userNorm.length > 5 && optNorm.length > 5 && Math.abs(userNorm.length - optNorm.length) < 5);
+                });
+
+                if ((userValue?.length || 0) < 3) {
+                    setFeedback(prev => ({
+                        ...prev,
+                        [rowId]: { status: 'incorrect', msg: 'אנא כתבו תשובה מפורטת יותר.' }
+                    }));
+                    return;
+                }
+
+                if (isCorrect) {
+                    setFeedback(prev => ({
+                        ...prev,
+                        [rowId]: { status: 'correct', msg: 'מצוין! תשובה נכונה.' }
+                    }));
+                } else {
+                    setFeedback(prev => ({
+                        ...prev,
+                        [rowId]: { status: 'incorrect', msg: 'לא מדויק. נסו שוב או היעזרו ברמז/ברשימת המשפטים.' }
+                    }));
+                }
+            };
+            
+            const handleRevealSolution = () => {
+                setRevealSolution(true);
+                // Fill in the correct answers automatically
+                setUserRows(prev => prev.map(row => {
+                    if (!row.isLocked) {
+                        // For simplicity, take the first correct option or a default text
+                        const correctText = row.correctOptions && row.correctOptions.length > 0 
+                            ? row.correctOptions[0] 
+                            : (row.missingField === 'claim' ? row.claim : row.reason);
+                            
+                        if (row.missingField === 'claim') {
+                            return { ...row, userClaim: correctText };
+                        } else if (row.missingField === 'reason') {
+                            return { ...row, userReason: correctText };
+                        }
+                    }
+                    return row;
+                }));
+            };
+
+            if (!currentExercise) return <div>טוען תרגיל...</div>;
+
+            return (
+                <div className="space-y-6 text-right" dir="rtl">
+                    {/* Exercise Header */}
+                    <div className="flex justify-between items-center bg-white p-4 rounded-xl shadow-sm border border-gray-200">
+                        <button 
+                            onClick={() => setCurrentExerciseIdx(Math.max(0, currentExerciseIdx - 1))}
+                            disabled={currentExerciseIdx === 0}
+                            className="p-2 hover:bg-gray-100 rounded-full disabled:opacity-30 transition transform rotate-180"
+                        >
+                            <ArrowLeft />
+                        </button>
+                        <div className="text-center">
+                            <h3 className="font-bold text-xl text-gray-800">{currentExercise.title}</h3>
+                            <div className="flex gap-2 justify-center mt-1">
+                                <span className={`text-xs px-2 py-1 rounded-full font-bold ${
+                                    currentExercise.difficulty === 'קל' ? 'bg-green-100 text-green-700' :
+                                    currentExercise.difficulty === 'בינוני' ? 'bg-yellow-100 text-yellow-700' :
+                                    'bg-red-100 text-red-700'
+                                }`}>
+                                    רמה: {currentExercise.difficulty}
+                                </span>
+                                <span className="text-xs px-2 py-1 rounded-full font-bold bg-blue-100 text-blue-700">
+                                    סוג: {currentExercise.type}
+                                </span>
+                            </div>
+                        </div>
+                        <button 
+                            onClick={() => setCurrentExerciseIdx(Math.min(EXERCISES.length - 1, currentExerciseIdx + 1))}
+                            disabled={currentExerciseIdx === EXERCISES.length - 1}
+                            className="p-2 hover:bg-gray-100 rounded-full disabled:opacity-30 transition"
+                        >
+                            <ArrowLeft />
+                        </button>
+                    </div>
+
+                    <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
+                        {/* Visuals & Description */}
+                        <div className="md:col-span-1 space-y-4 md:order-2">
+                            <div className="bg-white p-6 rounded-xl shadow-sm border border-gray-200 flex justify-center items-center min-h-[200px] w-full">
+                                <div className="w-full h-40">
+                                    {currentExercise.shapeSvg}
+                                </div>
+                            </div>
+                            <div className="bg-blue-50 p-5 rounded-xl border border-blue-100 text-right">
+                                <h4 className="font-bold text-blue-800 mb-3 border-b border-blue-200 pb-2 text-lg">נתונים וצריך להוכיח:</h4>
+                                <p className="text-gray-700 text-base leading-relaxed mb-2">{currentExercise.description}</p>
+                                {currentExercise.note && (
+                                    <p className="text-xs text-amber-700 bg-amber-50 p-2 rounded border border-amber-100 mt-2">
+                                        {currentExercise.note}
+                                    </p>
+                                )}
+                            </div>
+                        </div>
+
+                        {/* The Proof Table */}
+                        <div className="md:col-span-2 md:order-1">
+                            <div className="bg-white rounded-xl shadow-sm border border-gray-200 overflow-hidden text-right">
+                                <div className="grid grid-cols-12 bg-gray-100 border-b border-gray-300 font-bold text-gray-700 text-base p-4">
+                                    <div className="col-span-1 text-center">#</div>
+                                    <div className="col-span-6 border-r border-gray-300 px-4">נימוק</div>
+                                    <div className="col-span-5 px-4">טענה</div>
+                                </div>
+
+                                <div className="divide-y divide-gray-100">
+                                    {userRows.map((row) => (
+                                        <div key={row.id} className={`grid grid-cols-12 p-4 items-start transition-colors relative group ${row.isLocked ? 'bg-gray-50/50' : 'hover:bg-gray-50'}`}>
+                                            <div className="col-span-1 text-center font-mono text-gray-500 mt-2 text-sm">{row.id}</div>
+                                            
+                                            {/* Reason Column (Right Side) */}
+                                            <div className="col-span-6 px-4 border-r border-gray-100 relative">
+                                                {row.missingField === 'reason' && !row.isLocked && !revealSolution ? (
+                                                    <div className="space-y-3">
+                                                        <textarea
+                                                            value={row.userReason || ''}
+                                                            onChange={(e) => handleInputChange(row.id, 'reason', e.target.value)}
+                                                            placeholder="הקלד את הנימוק..."
+                                                            dir="rtl"
+                                                            className={`w-full p-3 text-base border rounded-lg focus:ring-2 focus:ring-blue-500 outline-none resize-none h-24 transition-all ${
+                                                                feedback[row.id]?.status === 'correct' ? 'border-green-500 bg-green-50' : 
+                                                                feedback[row.id]?.status === 'incorrect' ? 'border-red-300 bg-red-50' : 'border-gray-300'
+                                                            }`}
+                                                        />
+                                                        <div className="flex justify-between items-center gap-2">
+                                                            <button 
+                                                                onClick={() => checkAnswer(row.id)}
+                                                                className="text-sm bg-blue-600 text-white px-4 py-1.5 rounded-md hover:bg-blue-700 transition shadow-sm font-medium"
+                                                            >
+                                                                בדיקה
+                                                            </button>
+                                                            {feedback[row.id] && (
+                                                                <span className={`text-sm font-bold flex items-center gap-1 ${feedback[row.id].status === 'correct' ? 'text-green-600' : 'text-red-600'}`}>
+                                                                    {feedback[row.id].status === 'correct' ? <Check /> : <Cross />}
+                                                                    {feedback[row.id].msg}
+                                                                </span>
+                                                            )}
+                                                        </div>
+                                                        {row.hint && (
+                                                            <div className="mt-2">
+                                                                <button 
+                                                                    onClick={() => setShowHint(prev => ({...prev, [row.id]: !prev[row.id]}))}
+                                                                    className="text-xs text-blue-500 hover:underline flex items-center gap-1 font-medium"
+                                                                >
+                                                                    <Info /> {showHint[row.id] ? 'הסתר רמז' : 'צריך רמז?'}
+                                                                </button>
+                                                                {showHint[row.id] && <p className="text-xs text-gray-600 bg-yellow-50 p-2 rounded mt-2 border border-yellow-200 leading-relaxed">{row.hint}</p>}
+                                                            </div>
+                                                        )}
+                                                    </div>
+                                                ) : (
+                                                    <div className={`py-2 text-gray-900 text-base leading-relaxed ${revealSolution && row.missingField === 'reason' ? 'text-green-700 font-bold bg-green-50 p-2 rounded border border-green-200' : ''}`}>
+                                                        {revealSolution && row.missingField === 'reason' ? row.correctOptions[0] : (row.userReason || row.reason)}
+                                                    </div>
+                                                )}
+                                            </div>
+
+                                            {/* Claim Column (Left Side) */}
+                                            <div className="col-span-5 px-4 relative">
+                                                {row.showsTherefore && (
+                                                    <div className="absolute -right-8 top-1/2 -translate-y-1/2 text-indigo-500 bg-white p-1 rounded-full shadow-sm z-10 border border-indigo-100" title="מכאן נובע">
+                                                        <Therefore />
+                                                    </div>
+                                                )}
+
+                                                {row.missingField === 'claim' && !row.isLocked && !revealSolution ? (
+                                                    <div className="space-y-3">
+                                                        <textarea
+                                                            value={row.userClaim || ''}
+                                                            onChange={(e) => handleInputChange(row.id, 'claim', e.target.value)}
+                                                            placeholder="הקלד את הטענה..."
+                                                            dir="rtl"
+                                                            className={`w-full p-3 text-base border rounded-lg focus:ring-2 focus:ring-blue-500 outline-none resize-none h-24 transition-all ${
+                                                                feedback[row.id]?.status === 'correct' ? 'border-green-500 bg-green-50' : 
+                                                                feedback[row.id]?.status === 'incorrect' ? 'border-red-300 bg-red-50' : 'border-gray-300'
+                                                            }`}
+                                                        />
+                                                        <div className="flex justify-between items-center gap-2">
+                                                            <button 
+                                                                onClick={() => checkAnswer(row.id)}
+                                                                className="text-sm bg-blue-600 text-white px-4 py-1.5 rounded-md hover:bg-blue-700 transition shadow-sm font-medium"
+                                                            >
+                                                                בדיקה
+                                                            </button>
+                                                            {feedback[row.id] && (
+                                                                <span className={`text-sm font-bold flex items-center gap-1 ${feedback[row.id].status === 'correct' ? 'text-green-600' : 'text-red-600'}`}>
+                                                                    {feedback[row.id].status === 'correct' ? <Check /> : <Cross />}
+                                                                    {feedback[row.id].msg}
+                                                                </span>
+                                                            )}
+                                                        </div>
+                                                        {row.hint && (
+                                                            <div className="mt-2">
+                                                                <button 
+                                                                    onClick={() => setShowHint(prev => ({...prev, [row.id]: !prev[row.id]}))}
+                                                                    className="text-xs text-blue-500 hover:underline flex items-center gap-1 font-medium"
+                                                                >
+                                                                    <Info /> {showHint[row.id] ? 'הסתר רמז' : 'צריך רמז?'}
+                                                                </button>
+                                                                {showHint[row.id] && <p className="text-xs text-gray-600 bg-yellow-50 p-2 rounded mt-2 border border-yellow-200 leading-relaxed">{row.hint}</p>}
+                                                            </div>
+                                                        )}
+                                                    </div>
+                                                ) : (
+                                                    <div className={`py-2 text-gray-900 text-base font-bold leading-relaxed ${revealSolution && row.missingField === 'claim' ? 'text-green-700 bg-green-50 p-2 rounded border border-green-200' : ''}`} dir="ltr">
+                                                        {revealSolution && row.missingField === 'claim' ? row.correctOptions[0] : (row.userClaim || row.claim)}
+                                                    </div>
+                                                )}
+                                            </div>
+                                        </div>
+                                    ))}
+                                    
+                                    {/* Footer Q.E.D & Reveal Button */}
+                                    <div className="p-4 bg-gray-50 border-t border-gray-200 flex flex-col items-center gap-4">
+                                        <div className="font-serif font-bold text-xl tracking-widest text-gray-800">מ.ש.ל</div>
+                                        
+                                        {!revealSolution && currentExercise.type !== 'דוגמה' && (
+                                            <button 
+                                                onClick={handleRevealSolution}
+                                                className="flex items-center gap-2 bg-yellow-100 text-yellow-800 px-6 py-2 rounded-full font-bold hover:bg-yellow-200 transition shadow-sm border border-yellow-200"
+                                            >
+                                                <Lightbulb /> הצג פתרון מלא
+                                            </button>
+                                        )}
+                                        
+                                        {revealSolution && (
+                                            <div className="bg-green-100 border border-green-200 p-4 rounded-xl text-green-800 text-sm animate-in w-full text-center">
+                                                <strong>הסבר לפתרון:</strong> {currentExercise.solutionNote}
+                                            </div>
+                                        )}
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            );
+        };
+
+        const App = () => {
+            return (
+                <div className="min-h-screen bg-gray-100 font-sans text-gray-900 pb-12" dir="rtl">
+                    {/* Header */}
+                    <header className="bg-white border-b border-gray-200 sticky top-0 z-20 shadow-sm">
+                        <div className="max-w-7xl mx-auto px-6 h-20 flex items-center justify-between">
+                            <div className="flex items-center gap-4">
+                                <div className="bg-gradient-to-tr from-blue-600 to-blue-400 text-white p-3 rounded-xl shadow-md transform rotate-3">
+                                    <Award />
+                                </div>
+                                <div>
+                                    <h1 className="text-2xl font-extrabold text-gray-800 tracking-tight">כתיבת טענה ונימוק</h1>
+                                    <p className="text-sm text-gray-500 font-medium">כלי עזר לגאומטריה - כיתה ט׳</p>
+                                </div>
+                            </div>
+                        </div>
+                    </header>
+
+                    {/* Main Content */}
+                    <main className="max-w-7xl mx-auto px-6 py-10">
+                        <div className="mb-8">
+                            <ExplanationBox />
+                        </div>
+                        
+                        <div className="grid grid-cols-1 lg:grid-cols-4 gap-8">
+                            {/* Main Practice Area */}
+                            <div className="lg:col-span-3">
+                                <PracticeMode />
+                            </div>
+                            
+                            {/* Sidebar - Theorems */}
+                            <div className="lg:col-span-1">
+                                <TheoremsList />
+                            </div>
+                        </div>
+                    </main>
+                </div>
+            );
+        }
+
+        const root = ReactDOM.createRoot(document.getElementById('root'));
+        root.render(<App />);
+    </script>
+</body>
+</html>

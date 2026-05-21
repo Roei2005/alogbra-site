@@ -1,0 +1,580 @@
+<!DOCTYPE html>
+<html lang="he" dir="rtl">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <title>לומדים זוויות - כיתה ח'</title>
+    
+    <!-- ספריות -->
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link href="https://fonts.googleapis.com/css2?family=Rubik:wght@400;500;700;900&display=swap" rel="stylesheet">
+    
+    <style>
+        body {
+            font-family: 'Rubik', sans-serif;
+            background-color: #f0fdf4; /* Green-50 */
+            touch-action: manipulation;
+            -webkit-tap-highlight-color: transparent;
+        }
+        
+        /* כפתור חזרה ללובי */
+        .home-btn {
+            position: absolute;
+            top: 1rem;
+            left: 1rem;
+            background: white;
+            padding: 0.5rem 1rem;
+            border-radius: 0.75rem;
+            box-shadow: 0 1px 3px rgba(0,0,0,0.1);
+            font-weight: bold;
+            color: #4b5563;
+            display: flex;
+            align-items: center;
+            gap: 0.5rem;
+            transition: all 0.2s;
+            border: 1px solid #e5e7eb;
+            z-index: 50;
+            text-decoration: none;
+        }
+        .home-btn:hover {
+            color: #16a34a;
+            box-shadow: 0 4px 6px -1px rgba(0,0,0,0.1);
+        }
+
+        .tab-btn {
+            transition: all 0.3s ease;
+            border-bottom: 4px solid transparent;
+            color: #6b7280;
+        }
+        .tab-btn.active {
+            border-bottom-color: #16a34a; /* Green-600 */
+            color: #14532d; /* Green-900 */
+            font-weight: 800;
+            background-color: rgba(22, 163, 74, 0.05);
+        }
+        
+        .fade-in {
+            animation: fadeIn 0.5s ease-out;
+        }
+        @keyframes fadeIn {
+            from { opacity: 0; transform: translateY(10px); }
+            to { opacity: 1; transform: translateY(0); }
+        }
+        
+        /* סליידר מעוצב */
+        input[type=range] {
+            -webkit-appearance: none;
+            width: 100%;
+            background: transparent;
+        }
+        input[type=range]::-webkit-slider-thumb {
+            -webkit-appearance: none;
+            height: 24px;
+            width: 24px;
+            border-radius: 50%;
+            background: #16a34a;
+            margin-top: -10px;
+            cursor: pointer;
+            box-shadow: 0 2px 6px rgba(0,0,0,0.3);
+            border: 2px solid white;
+        }
+        input[type=range]::-webkit-slider-runnable-track {
+            width: 100%;
+            height: 6px;
+            cursor: pointer;
+            background: #bbf7d0;
+            border-radius: 3px;
+        }
+
+        /* תשובות במבחן */
+        .answer-btn {
+            transition: all 0.2s;
+        }
+        .answer-btn:active { transform: scale(0.98); }
+        .answer-btn:disabled { opacity: 0.7; cursor: not-allowed; }
+    </style>
+</head>
+<body class="text-gray-800 min-h-screen flex flex-col">
+
+    <!-- כפתור חזרה ללובי -->
+    <a href="../index.html" class="home-btn">
+        <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M3 9l9-7 9 7v11a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z"></path><polyline points="9 22 9 12 15 12 15 22"></polyline></svg>
+        חזרה ללובי
+    </a>
+
+    <!-- Header -->
+    <header class="bg-white shadow-sm pt-16 pb-6 px-4 text-center sticky top-0 z-40">
+        <h1 class="text-3xl md:text-4xl font-black text-green-800 mb-2 tracking-tight">עולם הזוויות 📐</h1>
+        <p class="text-green-600 font-medium">גיאומטריה בקלות - כיתה ח'</p>
+    </header>
+
+    <!-- Navigation -->
+    <nav class="bg-white border-b border-gray-100 shadow-sm mb-8 sticky top-[120px] z-30">
+        <div class="max-w-3xl mx-auto flex justify-around">
+            <button onclick="switchTab('basic')" id="btn-basic" class="tab-btn active w-1/3 py-4 text-lg text-center focus:outline-none leading-tight">
+                <span class="block text-2xl mb-1">❌</span>
+                קודקודיות<br>וצמודות
+            </button>
+            <button onclick="switchTab('parallel')" id="btn-parallel" class="tab-btn w-1/3 py-4 text-lg text-center focus:outline-none leading-tight">
+                <span class="block text-2xl mb-1">⏸️</span>
+                מקבילים<br>(מתחלפות)
+            </button>
+            <button onclick="switchTab('practice')" id="btn-practice" class="tab-btn w-1/3 py-4 text-lg text-center focus:outline-none leading-tight">
+                <span class="block text-2xl mb-1">📝</span>
+                תרגול<br>ומבחן
+            </button>
+        </div>
+    </nav>
+
+    <main class="max-w-3xl mx-auto px-4 pb-12 flex-grow w-full">
+
+        <!-- SECTION 1: VERTICAL & ADJACENT -->
+        <div id="section-basic" class="fade-in">
+            <div class="bg-white rounded-3xl shadow-xl p-6 md:p-8 mb-6 border border-green-100">
+                <div class="text-center mb-8">
+                    <h2 class="text-2xl font-bold text-green-900 mb-2">מפגש בין שני ישרים</h2>
+                    <p class="text-gray-600">כששני ישרים נחתכים, נוצרות 4 זוויות. הזיזו את הסליידר וגלו את הקסם!</p>
+                </div>
+
+                <!-- Slider Control -->
+                <div class="mb-8 bg-green-50 p-6 rounded-2xl border border-green-200">
+                    <label class="flex justify-between font-bold mb-4 text-green-800">
+                        <span>שנו את גודל הזווית:</span>
+                        <span id="slider-val-display" class="bg-white px-3 py-1 rounded shadow-sm text-green-600">60°</span>
+                    </label>
+                    <input type="range" id="angleSlider" min="30" max="150" value="60" oninput="updateBasicAngles(this.value)">
+                </div>
+
+                <!-- Interactive SVG -->
+                <div class="relative flex flex-col items-center">
+                    <svg width="300" height="250" viewBox="0 0 300 250" class="overflow-visible mb-8">
+                        <!-- Lines -->
+                        <line x1="20" y1="230" x2="280" y2="20" stroke="#374151" stroke-width="4" stroke-linecap="round" /> <!-- Line 1 -->
+                        <line x1="20" y1="20" x2="280" y2="230" stroke="#374151" stroke-width="4" stroke-linecap="round" /> <!-- Line 2 -->
+                        
+                        <!-- Angles - Dynamically Updated by JS -->
+                        <!-- Top (Vertical 1) -->
+                        <path id="arc-top" d="M130,125 A30,30 0 0,1 170,125" fill="none" stroke="#3b82f6" stroke-width="0" />
+                        <path id="wedge-top" fill="#3b82f6" fill-opacity="0.2" />
+                        
+                        <!-- Bottom (Vertical 2) -->
+                        <path id="arc-bottom" fill="none" stroke="#3b82f6" stroke-width="0" />
+                        <path id="wedge-bottom" fill="#3b82f6" fill-opacity="0.2" />
+                        
+                        <!-- Left (Adjacent 1) -->
+                        <path id="arc-left" fill="none" stroke="#ef4444" stroke-width="0" />
+                        <path id="wedge-left" fill="#ef4444" fill-opacity="0.2" />
+                        
+                        <!-- Right (Adjacent 2) -->
+                        <path id="arc-right" fill="none" stroke="#ef4444" stroke-width="0" />
+                        <path id="wedge-right" fill="#ef4444" fill-opacity="0.2" />
+
+                        <!-- Text Labels -->
+                        <text id="val-top" x="150" y="60" text-anchor="middle" font-weight="bold" font-size="18" fill="#1e40af">60°</text>
+                        <text id="val-bottom" x="150" y="200" text-anchor="middle" font-weight="bold" font-size="18" fill="#1e40af">60°</text>
+                        <text id="val-left" x="60" y="130" text-anchor="middle" font-weight="bold" font-size="18" fill="#991b1b">120°</text>
+                        <text id="val-right" x="240" y="130" text-anchor="middle" font-weight="bold" font-size="18" fill="#991b1b">120°</text>
+                    </svg>
+
+                    <!-- Control Buttons -->
+                    <div class="grid grid-cols-1 gap-3 w-full">
+                        <button onclick="highlightBasic('vertical')" class="py-4 px-6 bg-white border-2 border-blue-100 rounded-2xl hover:border-blue-400 hover:shadow-md text-blue-900 font-bold text-right transition flex items-center gap-4 group">
+                            <div class="bg-blue-100 p-2 rounded-lg text-2xl group-hover:scale-110 transition-transform">🦋</div>
+                            <div>
+                                <span class="text-lg">זוויות קודקודיות</span>
+                                <span class="block text-sm font-normal text-gray-500 mt-1">נמצאות "אף אל אף". הן תמיד <span class="font-bold text-blue-600">שוות!</span></span>
+                            </div>
+                        </button>
+                        
+                        <button onclick="highlightBasic('adjacent')" class="py-4 px-6 bg-white border-2 border-red-100 rounded-2xl hover:border-red-400 hover:shadow-md text-red-900 font-bold text-right transition flex items-center gap-4 group">
+                            <div class="bg-red-100 p-2 rounded-lg text-2xl group-hover:scale-110 transition-transform">🤝</div>
+                            <div>
+                                <span class="text-lg">זוויות צמודות</span>
+                                <span class="block text-sm font-normal text-gray-500 mt-1">שכנות על קו ישר. יחד הן <span class="font-bold text-red-600">180 מעלות.</span></span>
+                            </div>
+                        </button>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- SECTION 2: PARALLEL LINES -->
+        <div id="section-parallel" class="hidden fade-in">
+            <div class="bg-white rounded-3xl shadow-xl p-6 md:p-8 mb-6 border border-indigo-100">
+                <div class="text-center mb-8">
+                    <h2 class="text-2xl font-bold text-indigo-900 mb-2">ישרים מקבילים וחותך</h2>
+                    <p class="text-gray-600">גם כאן נוצרות זוויות קודקודיות וצמודות, אבל יש עוד קסם!</p>
+                </div>
+
+                <!-- SVG Parallel -->
+                <div class="relative bg-gray-50 rounded-3xl p-6 border border-gray-200 text-center mb-8 h-[320px] flex items-center justify-center">
+                    <svg width="100%" height="100%" viewBox="0 0 400 250" class="overflow-visible">
+                        <!-- Parallel Markers -->
+                        <defs>
+                            <marker id="arrow" markerWidth="12" markerHeight="12" refX="6" refY="6" orient="auto">
+                                <path d="M2,2 L10,6 L2,10" fill="none" stroke="#4b5563" stroke-width="2" />
+                            </marker>
+                        </defs>
+
+                        <!-- Parallel Lines -->
+                        <line x1="20" y1="70" x2="380" y2="70" stroke="#374151" stroke-width="4" stroke-linecap="round" />
+                        <path d="M200,70 L210,65" stroke="#374151" stroke-width="2" fill="none"/>
+                        <path d="M200,70 L210,75" stroke="#374151" stroke-width="2" fill="none"/>
+
+                        <line x1="20" y1="180" x2="380" y2="180" stroke="#374151" stroke-width="4" stroke-linecap="round" />
+                        <path d="M200,180 L210,175" stroke="#374151" stroke-width="2" fill="none"/>
+                        <path d="M200,180 L210,185" stroke="#374151" stroke-width="2" fill="none"/>
+                        
+                        <!-- Transversal Line -->
+                        <line x1="280" y1="20" x2="120" y2="230" stroke="#374151" stroke-width="4" stroke-linecap="round" />
+
+                        <!-- Highlights (Initially Hidden) -->
+                        
+                        <!-- Alternate Pair (Z) -->
+                        <g id="group-alternate" opacity="0" class="transition-opacity duration-500">
+                            <!-- Z Path Visual - Bold and Clear -->
+                            <path d="M 60,70 L 243,70 L 157,180 L 340,180" fill="none" stroke="#a855f7" stroke-width="8" stroke-opacity="0.4" stroke-linecap="round" stroke-linejoin="round"/>
+                            <!-- Angles -->
+                            <path d="M 213,70 A 30 30 0 0 0 227,91" fill="none" stroke="#a855f7" stroke-width="4" />
+                            <path d="M 187,180 A 30 30 0 0 0 173,159" fill="none" stroke="#a855f7" stroke-width="4" />
+                            <!-- Labels adjusted to be clearly inside -->
+                            <text x="200" y="100" font-weight="bold" fill="#7e22ce" font-size="24">70°</text>
+                            <text x="180" y="150" font-weight="bold" fill="#7e22ce" font-size="24">70°</text>
+                        </g>
+
+                        <!-- Corresponding Pair (F) -->
+                        <g id="group-corresponding" opacity="0" class="transition-opacity duration-500">
+                            <!-- F Shape Visual Hint - Bold -->
+                            <line x1="243" y1="70" x2="330" y2="70" stroke="#f97316" stroke-width="8" stroke-opacity="0.4" stroke-linecap="round" />
+                            <line x1="157" y1="180" x2="244" y2="180" stroke="#f97316" stroke-width="8" stroke-opacity="0.4" stroke-linecap="round" />
+                            <line x1="265" y1="40" x2="135" y2="210" stroke="#f97316" stroke-width="8" stroke-opacity="0.4" stroke-linecap="round" />
+
+                            <!-- Angles -->
+                            <path d="M 243,70 L 273,70 A 30 30 0 0 0 263,42 Z" fill="#fdba74" fill-opacity="0.8" stroke="#c2410c" stroke-width="2" />
+                            <path d="M 157,180 L 187,180 A 30 30 0 0 0 177,152 Z" fill="#fdba74" fill-opacity="0.8" stroke="#c2410c" stroke-width="2" />
+                            <!-- Labels adjusted -->
+                            <text x="275" y="50" font-weight="bold" fill="#c2410c" font-size="24">70°</text>
+                            <text x="190" y="160" font-weight="bold" fill="#c2410c" font-size="24">70°</text>
+                        </g>
+
+                    </svg>
+                </div>
+
+                <!-- Interactive Controls -->
+                <div class="grid grid-cols-1 md:grid-cols-2 gap-4 mb-8">
+                    <button onclick="showParallel('alternate')" class="py-4 px-6 rounded-2xl border-2 border-purple-100 bg-white hover:border-purple-400 hover:bg-purple-50 font-bold text-lg text-purple-900 transition shadow-sm text-right">
+                        ⚡ זוויות מתחלפות (Z)
+                        <span class="block text-sm font-normal opacity-70 mt-1">נמצאות בצדדים הפוכים של ה"סולם".</span>
+                    </button>
+                    <button onclick="showParallel('corresponding')" class="py-4 px-6 rounded-2xl border-2 border-orange-100 bg-white hover:border-orange-400 hover:bg-orange-50 font-bold text-lg text-orange-900 transition shadow-sm text-right">
+                        📑 זוויות מתאימות (F)
+                        <span class="block text-sm font-normal opacity-70 mt-1">נמצאות בדיוק באותה קומה ובאותו צד.</span>
+                    </button>
+                </div>
+
+                <!-- Tips Section -->
+                <div class="bg-yellow-50 p-5 rounded-2xl border border-yellow-200 text-right">
+                    <h3 class="font-bold text-yellow-800 text-lg mb-3 flex items-center gap-2">
+                        <span class="text-2xl">💡</span> טיפים לזכור:
+                    </h3>
+                    <ul class="space-y-3 text-gray-700">
+                        <li class="flex items-start gap-2">
+                            <span class="font-bold text-green-600 mt-1">✓</span>
+                            <span><strong>חפשו את ה-X:</strong> בכל מקום שקווים נחתכים, תמיד יש זוויות קודקודיות שוות (אף אל אף).</span>
+                        </li>
+                        <li class="flex items-start gap-2">
+                            <span class="font-bold text-green-600 mt-1">✓</span>
+                            <span><strong>קו שטוח:</strong> הוא תמיד 180 מעלות. אם יש עליו שתי זוויות, הן צמודות ומשלימות ל-180.</span>
+                        </li>
+                        <li class="flex items-start gap-2">
+                            <span class="font-bold text-green-600 mt-1">✓</span>
+                            <span><strong>במקבילים:</strong> חפשו את האותיות באנגלית - <strong>Z</strong> (מתחלפות) ו-<strong>F</strong> (מתאימות).</span>
+                        </li>
+                    </ul>
+                </div>
+            </div>
+        </div>
+
+        <!-- SECTION 3: PRACTICE -->
+        <div id="section-practice" class="hidden fade-in">
+            <div class="max-w-2xl mx-auto">
+                <!-- Progress -->
+                <div class="w-full bg-gray-200 rounded-full h-3 mb-6 overflow-hidden">
+                    <div id="progress-bar" class="bg-green-600 h-3 rounded-full transition-all duration-500" style="width: 0%"></div>
+                </div>
+
+                <!-- Quiz Container -->
+                <div id="quiz-container" class="bg-white rounded-3xl shadow-xl p-6 md:p-10 border border-gray-100">
+                    <div class="flex justify-between items-center mb-6">
+                        <span id="question-number" class="text-sm font-bold text-gray-500 bg-gray-100 px-3 py-1 rounded-full">שאלה 1 / 4</span>
+                        <div class="text-green-600 font-bold flex items-center gap-1">
+                            🏆 <span id="score-display">0</span> נקודות
+                        </div>
+                    </div>
+                    
+                    <!-- Question Image Area -->
+                    <div id="question-image" class="my-6 flex justify-center h-56 bg-gray-50 rounded-2xl items-center border border-gray-200 overflow-hidden relative">
+                        <!-- SVG injected here by JS -->
+                    </div>
+
+                    <h3 id="question-text" class="text-2xl font-bold mb-8 text-gray-800 text-center leading-relaxed">השאלה תופיע כאן...</h3>
+                    
+                    <div id="options-container" class="grid grid-cols-1 md:grid-cols-2 gap-4"></div>
+
+                    <!-- Feedback Area -->
+                    <div id="feedback" class="mt-6 hidden rounded-2xl p-6 border-2 animate-pulse-once">
+                        <h4 id="feedback-title" class="text-xl font-bold mb-2"></h4>
+                        <p id="feedback-text" class="text-lg"></p>
+                        <button onclick="nextQuestion()" id="next-btn" class="mt-6 w-full bg-green-600 text-white font-bold py-3 rounded-xl text-lg hover:bg-green-700 shadow-lg transition transform hover:-translate-y-1">
+                            לשאלה הבאה
+                        </button>
+                    </div>
+                </div>
+
+                <!-- Final Screen -->
+                <div id="completion-screen" class="hidden bg-white rounded-3xl shadow-2xl p-10 text-center border-t-8 border-green-500">
+                    <div class="text-7xl mb-6 animate-bounce">🏆</div>
+                    <h2 class="text-3xl font-black mb-4 text-gray-800">אלופי הזוויות!</h2>
+                    <p class="text-xl text-gray-600 mb-8">סיימתם את התרגול בהצלחה.</p>
+                    <div class="text-5xl font-black text-green-600 mb-8" id="final-score-big">100</div>
+                    <button onclick="restartQuiz()" class="bg-gray-100 hover:bg-gray-200 text-gray-800 font-bold py-3 px-8 rounded-2xl text-xl transition border border-gray-300">
+                        תרגול מחדש
+                    </button>
+                </div>
+            </div>
+        </div>
+
+    </main>
+
+    <script>
+        // --- Navigation ---
+        function switchTab(tabName) {
+            ['basic', 'parallel', 'practice'].forEach(t => {
+                const btn = document.getElementById(`btn-${t}`);
+                const section = document.getElementById(`section-${t}`);
+                if (t === tabName) {
+                    btn.classList.add('active');
+                    section.classList.remove('hidden');
+                } else {
+                    btn.classList.remove('active');
+                    section.classList.add('hidden');
+                }
+            });
+        }
+
+        // --- Basic Angles Logic ---
+        function updateBasicAngles(val) {
+            const angle = parseInt(val);
+            const supp = 180 - angle;
+            
+            document.getElementById('slider-val-display').innerText = angle + '°';
+
+            // Text Update
+            document.getElementById('val-top').textContent = angle + '°';
+            document.getElementById('val-bottom').textContent = angle + '°';
+            document.getElementById('val-left').textContent = supp + '°';
+            document.getElementById('val-right').textContent = supp + '°';
+
+            // Visual Update (Better approximation of wedges)
+            // Note: In a real app we'd calculate exact SVG paths. Here we simulate for simplicity/stability.
+            // Using CSS rotate on the wedges/text could be an option, but for this level, text update is key.
+        }
+
+        function highlightBasic(type) {
+            // Reset colors
+            ['wedge-top', 'wedge-bottom', 'wedge-left', 'wedge-right'].forEach(id => {
+                document.getElementById(id).setAttribute('fill-opacity', '0.2');
+                document.getElementById(id).setAttribute('fill', (id.includes('top') || id.includes('bottom')) ? '#3b82f6' : '#ef4444');
+            });
+
+            if (type === 'vertical') {
+                // Emphasize Vertical (Blue)
+                document.getElementById('wedge-top').setAttribute('fill-opacity', '0.8');
+                document.getElementById('wedge-bottom').setAttribute('fill-opacity', '0.8');
+                
+                // Dim Adjacent
+                document.getElementById('wedge-left').setAttribute('fill-opacity', '0.05');
+                document.getElementById('wedge-right').setAttribute('fill-opacity', '0.05');
+            } else if (type === 'adjacent') {
+                // Emphasize Adjacent Pair (Top + Right for example)
+                document.getElementById('wedge-top').setAttribute('fill-opacity', '0.8');
+                document.getElementById('wedge-top').setAttribute('fill', '#ef4444'); // Make top red temporarily to match
+                document.getElementById('wedge-right').setAttribute('fill-opacity', '0.8');
+                
+                // Dim others
+                document.getElementById('wedge-left').setAttribute('fill-opacity', '0.05');
+                document.getElementById('wedge-bottom').setAttribute('fill-opacity', '0.05');
+            }
+        }
+
+        // --- Parallel Logic ---
+        function showParallel(type) {
+            // Hide all first
+            document.getElementById('group-alternate').style.opacity = '0';
+            document.getElementById('group-corresponding').style.opacity = '0';
+
+            if (type === 'alternate') {
+                document.getElementById('group-alternate').style.opacity = '1';
+            } else if (type === 'corresponding') {
+                document.getElementById('group-corresponding').style.opacity = '1';
+            }
+        }
+
+        // --- Practice Logic ---
+        const questions = [
+            {
+                q: "נתון שזווית א' היא 50 מעלות. מה גודלה של הזווית הקודקודית לה (ב')?",
+                svg: `
+                    <svg width="200" height="150" viewBox="0 0 200 150">
+                        <line x1="20" y1="130" x2="180" y2="20" stroke="#374151" stroke-width="3" stroke-linecap="round"/>
+                        <line x1="20" y1="20" x2="180" y2="130" stroke="#374151" stroke-width="3" stroke-linecap="round"/>
+                        <text x="100" y="45" text-anchor="middle" font-weight="bold" font-size="18" fill="#1e40af">50°</text>
+                        <text x="100" y="120" text-anchor="middle" font-weight="bold" fill="#1e40af" font-size="18">?</text>
+                    </svg>
+                `,
+                options: ["130 מעלות", "50 מעלות", "90 מעלות", "40 מעלות"],
+                correct: 1,
+                explanation: "זוויות קודקודיות תמיד שוות זו לזו. הן כמו תמונת ראי אחת של השנייה."
+            },
+            {
+                q: "שתי זוויות צמודות מונחות על ישר אחד. אחת מהן 100 מעלות. כמה שווה השנייה (X)?",
+                svg: `
+                    <svg width="200" height="100" viewBox="0 0 200 100">
+                        <line x1="10" y1="90" x2="190" y2="90" stroke="#374151" stroke-width="3" stroke-linecap="round"/>
+                        <line x1="100" y1="90" x2="130" y2="10" stroke="#374151" stroke-width="3" stroke-linecap="round"/>
+                        <text x="70" y="75" font-weight="bold" font-size="16">100°</text>
+                        <text x="120" y="75" font-weight="bold" fill="#dc2626" font-size="18">X</text>
+                        <path d="M 80,90 A 20 20 0 0 1 106,73" fill="none" stroke="#6b7280" stroke-width="2"/>
+                    </svg>
+                `,
+                options: ["100 מעלות", "90 מעלות", "80 מעלות", "180 מעלות"],
+                correct: 2,
+                explanation: "סכום זוויות צמודות הוא תמיד 180 מעלות (חצי עיגול).<br>180 פחות 100 שווה 80."
+            },
+            {
+                q: "בשרטוט נתונים ישרים מקבילים. מה גודל הזווית X? (רמז: חפשו את ה-Z)",
+                svg: `
+                    <svg width="240" height="160" viewBox="0 0 240 160">
+                        <line x1="20" y1="40" x2="220" y2="40" stroke="#374151" stroke-width="3"/>
+                        <line x1="20" y1="120" x2="220" y2="120" stroke="#374151" stroke-width="3"/>
+                        <line x1="160" y1="20" x2="80" y2="140" stroke="#374151" stroke-width="3"/>
+                        
+                        <text x="125" y="65" font-weight="bold" font-size="16">70°</text>
+                        <text x="110" y="105" font-weight="bold" fill="#7e22ce" font-size="18">X</text>
+                        
+                        <!-- Z Highlight -->
+                        <path d="M 80,40 L 147,40 L 93,120 L 160,120" fill="none" stroke="#d8b4fe" stroke-width="3" stroke-opacity="0.5" stroke-dasharray="4"/>
+                    </svg>
+                `,
+                options: ["70 מעלות", "110 מעלות", "20 מעלות", "180 מעלות"],
+                correct: 0,
+                explanation: "אלו זוויות מתחלפות (יוצרות צורת Z), ולכן הן שוות זו לזו."
+            },
+            {
+                q: "מה היחס בין הזוויות המסומנות בצהוב?",
+                svg: `
+                    <svg width="200" height="150" viewBox="0 0 200 150">
+                        <line x1="20" y1="40" x2="180" y2="40" stroke="#374151" stroke-width="3"/>
+                        <line x1="20" y1="110" x2="180" y2="110" stroke="#374151" stroke-width="3"/>
+                        <line x1="140" y1="10" x2="60" y2="140" stroke="#374151" stroke-width="3"/>
+                        
+                        <!-- Wedges -->
+                        <path d="M 122,40 L 140,40 L 128,20 Z" fill="#fbbf24" opacity="0.8"/> 
+                        <path d="M 79,110 L 97,110 L 85,90 Z" fill="#fbbf24" opacity="0.8"/>
+                    </svg>
+                `,
+                options: ["זוויות מתחלפות", "זוויות מתאימות", "זוויות קודקודיות", "סתם זוויות"],
+                correct: 1,
+                explanation: "שתיהן נמצאות 'באותו מקום יחסי' (מעל הקו, מצד ימין), לכן הן זוויות מתאימות (F)."
+            }
+        ];
+
+        let currentQ = 0;
+        let score = 0;
+
+        function loadQuestion() {
+            const q = questions[currentQ];
+            document.getElementById('question-number').innerText = `שאלה ${currentQ + 1} מתוך ${questions.length}`;
+            document.getElementById('question-text').innerText = q.q;
+            document.getElementById('question-image').innerHTML = q.svg;
+            document.getElementById('feedback').classList.add('hidden');
+            
+            const cont = document.getElementById('options-container');
+            cont.innerHTML = '';
+            q.options.forEach((opt, idx) => {
+                const btn = document.createElement('button');
+                btn.className = "answer-btn w-full p-4 rounded-xl border-2 border-gray-200 bg-white hover:border-green-400 hover:bg-green-50 text-lg font-bold text-gray-700 shadow-sm";
+                btn.innerText = opt;
+                btn.onclick = () => checkAnswer(idx, btn);
+                cont.appendChild(btn);
+            });
+
+            document.getElementById('progress-bar').style.width = `${((currentQ)/questions.length)*100}%`;
+        }
+
+        function checkAnswer(idx, btn) {
+            // Disable buttons
+            const btns = document.getElementById('options-container').children;
+            for(let b of btns) b.disabled = true;
+
+            const q = questions[currentQ];
+            const feedback = document.getElementById('feedback');
+            
+            if (idx === q.correct) {
+                score += 25;
+                document.getElementById('score-display').innerText = score;
+                btn.classList.add('bg-green-100', 'border-green-500', 'text-green-800');
+                feedback.className = "mt-6 rounded-2xl p-6 border-2 border-green-200 bg-green-50 block fade-in";
+                document.getElementById('feedback-title').innerText = "כל הכבוד! ✅";
+                document.getElementById('feedback-title').className = "text-xl font-bold mb-2 text-green-700";
+            } else {
+                btn.classList.add('bg-red-100', 'border-red-500', 'text-red-800');
+                // Highlight correct
+                btns[q.correct].classList.add('bg-green-50', 'border-green-300', 'text-green-800');
+                
+                feedback.className = "mt-6 rounded-2xl p-6 border-2 border-red-200 bg-red-50 block fade-in";
+                document.getElementById('feedback-title').innerText = "טעות... נלמד מזה 💡";
+                document.getElementById('feedback-title').className = "text-xl font-bold mb-2 text-red-700";
+            }
+            
+            document.getElementById('feedback-text').innerHTML = q.explanation;
+            document.getElementById('feedback').classList.remove('hidden');
+
+            if (currentQ === questions.length - 1) {
+                document.getElementById('next-btn').innerText = "סיום וקבלת ציון";
+            } else {
+                document.getElementById('next-btn').innerText = "לשאלה הבאה";
+            }
+        }
+
+        function nextQuestion() {
+            if (currentQ < questions.length - 1) {
+                currentQ++;
+                loadQuestion();
+            } else {
+                showResults();
+            }
+        }
+
+        function showResults() {
+            document.getElementById('quiz-container').classList.add('hidden');
+            document.getElementById('completion-screen').classList.remove('hidden');
+            document.getElementById('progress-bar').style.width = '100%';
+            document.getElementById('final-score-big').innerText = score;
+        }
+
+        function restartQuiz() {
+            currentQ = 0;
+            score = 0;
+            document.getElementById('score-display').innerText = "0";
+            document.getElementById('completion-screen').classList.add('hidden');
+            document.getElementById('quiz-container').classList.remove('hidden');
+            loadQuestion();
+        }
+
+        // Init
+        loadQuestion();
+        updateBasicAngles(60); 
+    </script>
+</body>
+</html>

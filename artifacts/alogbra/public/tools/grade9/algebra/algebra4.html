@@ -1,0 +1,524 @@
+<!DOCTYPE html>
+<html lang="he" dir="rtl">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>פירוק הטרינום</title>
+    
+    <!-- Tailwind CSS -->
+    <script src="https://cdn.tailwindcss.com"></script>
+    
+    <!-- React & ReactDOM -->
+    <script crossorigin src="https://unpkg.com/react@18/umd/react.development.js"></script>
+    <script crossorigin src="https://unpkg.com/react-dom@18/umd/react-dom.development.js"></script>
+    
+    <!-- Babel (for JSX) -->
+    <script src="https://unpkg.com/@babel/standalone/babel.min.js"></script>
+    
+    <style>
+        @keyframes fadeIn { from { opacity: 0; } to { opacity: 1; } }
+        @keyframes fadeInUp { from { opacity: 0; transform: translateY(20px); } to { opacity: 1; transform: translateY(0); } }
+        @keyframes scaleUp { from { transform: scale(0.9); opacity: 0; } to { transform: scale(1); opacity: 1; } }
+        @keyframes popIn { 0% { transform: scale(0); } 80% { transform: scale(1.1); } 100% { transform: scale(1); } }
+        @keyframes slideInRight { from { transform: translateX(50px); opacity: 0; } to { transform: translateX(0); opacity: 1; } }
+
+        .animate-fade-in { animation: fadeIn 0.5s ease-out; }
+        .animate-fade-in-up { animation: fadeInUp 0.5s ease-out; }
+        .animate-scale-up { animation: scaleUp 0.3s ease-out; }
+        .animate-pop-in { animation: popIn 0.4s cubic-bezier(0.175, 0.885, 0.32, 1.275); }
+        .animate-slide-in { animation: slideInRight 0.4s ease-out; }
+        
+        .math-font { font-family: 'Courier New', Courier, monospace; letter-spacing: 0.05em; font-weight: bold; }
+    </style>
+</head>
+<body class="bg-purple-50 text-gray-800 font-sans">
+    <div id="root"></div>
+
+    <script type="text/babel">
+        const { useState } = React;
+
+        // --- Icons ---
+        const IconBase = ({ children, className, ...props }) => (
+            <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className={className} {...props}>{children}</svg>
+        );
+
+        const Puzzle = (props) => <IconBase {...props}><path d="M19.439 15.424c-1.298 0-2.67 1.055-2.67 2.373 0 1.318 1.372 2.373 2.67 2.373 1.299 0 2.352-1.055 2.352-2.373 0-1.318-1.053-2.373-2.352-2.373zm-8.439-11.424c0-1.298 1.055-2.67 2.373-2.67 1.318 0 2.373 1.372 2.373 2.67 0 1.299-1.055 2.352-2.373 2.352-1.318 0-2.373-1.053-2.373-2.352zm-8.439 11.424c-1.298 0-2.67 1.055-2.67 2.373 0 1.318 1.372 2.373 2.67 2.373 1.299 0 2.352-1.055 2.352-2.373 0-1.318-1.053-2.373-2.352-2.373zm11.424-8.439c0 1.298-1.055 2.67-2.373 2.67-1.318 0-2.373-1.372-2.373-2.67 0-1.299 1.055-2.352 2.373-2.352 1.318 0 2.373 1.053 2.373 2.352zm6.208 8.878c-.732-2.193-2.686-3.8-5.068-4.085.253-.948.406-1.956.406-3.003 0-5.799-4.701-10.5-10.5-10.5-2.903 0-5.54 1.176-7.448 3.084 2.193.732 3.8 2.686 4.085 5.068.948-.253 1.956-.406 3.003-.406 5.799 0 10.5 4.701 10.5 10.5 0 2.903-1.176 5.54-3.084 7.448 2.203.735 3.82 2.699 4.106 5.093 2.636-1.996 4.331-5.115 4.331-8.627-.001-1.631-.365-3.179-1.008-4.572zm-12.793 6.915c-5.799 0-10.5-4.701-10.5-10.5 0-2.903 1.176-5.54 3.084-7.448-2.203-.735-3.82-2.699-4.106-5.093-2.636 1.996-4.331 5.115-4.331 8.627 0 6.075 4.925 11 11 11 1.631 0 3.179-.365 4.572-1.008.732 2.193 2.686 3.8 5.068 4.085-.253.948-.406 1.956-.406 3.003-.386 0-.766-.025-1.14-.075-1.028-.868-2.186-1.591-3.241-1.591z"/></IconBase>;
+        const Brain = (props) => <IconBase {...props}><path d="M9.5 2A2.5 2.5 0 0 1 12 4.5v15a2.5 2.5 0 0 1-4.96.44 2.5 2.5 0 0 1-2.96-3.08 3 3 0 0 1-.34-5.58 2.5 2.5 0 0 1 1.32-4.24 2.5 2.5 0 0 1 1.98-3A2.5 2.5 0 0 1 9.5 2Z"/><path d="M14.5 2A2.5 2.5 0 0 0 12 4.5v15a2.5 2.5 0 0 0 4.96.44 2.5 2.5 0 0 0 2.96-3.08 3 3 0 0 0 .34-5.58 2.5 2.5 0 0 0-1.32-4.24 2.5 2.5 0 0 0-1.98-3A2.5 2.5 0 0 0 14.5 2Z"/></IconBase>;
+        const CheckCircle = (props) => <IconBase {...props}><path d="M22 11.08V12a10 10 0 1 1-5.93-9.14"/><polyline points="22 4 12 14.01 9 11.01"/></IconBase>;
+        const XCircle = (props) => <IconBase {...props}><circle cx="12" cy="12" r="10"/><line x1="15" y1="9" x2="9" y2="15"/><line x1="9" y1="9" x2="15" y2="15"/></IconBase>;
+        const ArrowLeft = (props) => <IconBase {...props}><line x1="19" y1="12" x2="5" y2="12"></line><polyline points="12 19 5 12 12 5"></polyline></IconBase>;
+        const ArrowRight = (props) => <IconBase {...props}><line x1="5" y1="12" x2="19" y2="12"/><polyline points="12 5 19 12 12 19"/></IconBase>;
+        const Search = (props) => <IconBase {...props}><circle cx="11" cy="11" r="8"></circle><line x1="21" y1="21" x2="16.65" y2="16.65"></line></IconBase>;
+
+        // --- Data: Questions ---
+        const questions = [
+            {
+                id: 1,
+                question: 'אילו שני מספרים מקיימים: מכפלה 12 וסכום 7?',
+                mathExp: 'x² + 7x + 12',
+                options: [
+                    '3 ו-4',
+                    '2 ו-6',
+                    '1 ו-12',
+                    '5 ו-2'
+                ],
+                correctIndex: 0,
+                explanation: 'אנחנו מחפשים זוג מספרים. נבדוק כפל: 3 כפול 4 שווה 12. נבדוק חיבור: 3 ועוד 4 שווה 7. זה הזוג המתאים! הפירוק יהיה (x+3)(x+4).'
+            },
+            {
+                id: 2,
+                question: 'פרקו את הטרינום הבא:',
+                mathExp: 'x² + 9x + 20',
+                options: [
+                    '(x + 2)(x + 10)',
+                    '(x + 1)(x + 20)',
+                    '(x + 4)(x + 5)',
+                    '(x + 3)(x + 6)'
+                ],
+                correctIndex: 2,
+                explanation: 'מחפשים מספרים שהמכפלה שלהם 20 והסכום 9. האפשרויות למכפלה 20 הן: (1,20), (2,10), (4,5). הזוג היחיד שהסכום שלו הוא 9 הוא 4 ו-5.'
+            },
+            {
+                id: 3,
+                question: 'שימו לב למינוס! (סכום שלילי, מכפלה חיובית)',
+                mathExp: 'x² - 8x + 15',
+                options: [
+                    '(x - 3)(x - 5)',
+                    '(x + 3)(x + 5)',
+                    '(x - 1)(x - 15)',
+                    '(x + 1)(x - 16)'
+                ],
+                correctIndex: 0,
+                explanation: 'המכפלה חיובית (15) ולכן הסימנים זהים. הסכום שלילי (-8) ולכן שניהם שליליים. המספרים הם -3 ו- -5.'
+            },
+            {
+                id: 4,
+                question: 'רמה גבוהה: מכפלה שלילית (סימנים שונים)',
+                mathExp: 'x² + 2x - 15',
+                options: [
+                    '(x + 3)(x - 5)',
+                    '(x - 3)(x + 5)',
+                    '(x + 1)(x - 15)',
+                    '(x + 2)(x - 7.5)'
+                ],
+                correctIndex: 1,
+                explanation: 'המכפלה שלילית (-15), אז הסימנים הפוכים. הסכום חיובי (2), אז המספר הגדול יותר הוא החיובי. 5 ו- -3 מתאימים (5 כפול -3 זה -15, ו-5 פחות 3 זה 2).'
+            },
+            {
+                id: 5,
+                question: 'אתגר: סכום ומכפלה שליליים',
+                mathExp: 'x² - x - 20',
+                options: [
+                    '(x - 5)(x + 4)',
+                    '(x + 5)(x - 4)',
+                    '(x - 10)(x + 2)',
+                    '(x - 20)(x + 1)'
+                ],
+                correctIndex: 0,
+                explanation: 'המכפלה -20 (סימנים הפוכים). הסכום -1 (המספר השלילי "חזק" יותר). נבדוק 4 ו- -5. סכומם -1 ומכפלתם -20.'
+            }
+        ];
+
+        // --- Data: Learning Steps ---
+        const learnSteps = [
+            {
+                title: "מה זה טרינום?",
+                subTitle: "x² + bx + c",
+                description: "טרינום הוא ביטוי עם שלושה איברים. המטרה שלנו היא למצוא שני מספרים סודיים שיהפכו אותו למכפלה של שני סוגריים.",
+                highlight: "שימו לב: השיטה הזו עובדת בקלות רק כאשר המקדם של ה-x בריבוע הוא 1 (כלומר אין מספר לפניו).",
+                visual: {
+                    type: "intro",
+                    equation: "x² + 7x + 12"
+                }
+            },
+            {
+                title: "חוקי המשחק הבלשי",
+                subTitle: "מכפלה וסכום",
+                // Updated description to be general as requested
+                description: "אנחנו מחפשים שני מספרים מיוחדים: שמחברים אותם יוצא b, ושמכפילים אותם יוצא c.",
+                // The example equation
+                equation: "x² + 7x + 12",
+                // Specific application to the example
+                list: [
+                    "בדוגמה הזו: נחפש מספרים שהסכום שלהם 7 (b)",
+                    "והמכפלה שלהם היא 12 (c)"
+                ],
+                highlight: "מצאנו! המספרים הם 3 ו-4 (כי 3+4=7 וגם 3•4=12).",
+                visual: {
+                    type: "logic",
+                    targetProd: 12,
+                    targetSum: 7,
+                    pairs: [
+                        { n1: 1, n2: 12, sum: 13, prod: 12, isCorrect: false },
+                        { n1: 2, n2: 6, sum: 8, prod: 12, isCorrect: false },
+                        { n1: 3, n2: 4, sum: 7, prod: 12, isCorrect: true }
+                    ]
+                }
+            },
+            {
+                title: "משחקי סימנים - הכל חיובי",
+                subTitle: "x² + 5x + 6",
+                description: "כאשר הכל בפלוס, החיים קלים. שני המספרים חיוביים.",
+                visual: {
+                    type: "equation",
+                    prod: 6,
+                    sum: 5,
+                    res: "(x + 2)(x + 3)",
+                    note: "2 • 3 = 6, 2 + 3 = 5"
+                }
+            },
+            {
+                title: "משחקי סימנים - אמצע שלילי",
+                subTitle: "x² - 5x + 6",
+                description: "המכפלה חיובית (6), אבל הסכום שלילי (-5). איך זה ייתכן? רק אם שני המספרים שליליים! (כי מינוס כפול מינוס זה פלוס).",
+                visual: {
+                    type: "equation",
+                    prod: 6,
+                    sum: -5,
+                    res: "(x - 2)(x - 3)",
+                    note: "(-2) • (-3) = 6, (-2) + (-3) = -5"
+                }
+            },
+            {
+                title: "משחקי סימנים - מכפלה שלילית",
+                subTitle: "x² + 2x - 8",
+                description: "אם המכפלה שלילית (-8), חייב להיות מספר אחד חיובי ואחד שלילי. כאן צריך לבדוק מי 'מנצח' בחיבור.",
+                visual: {
+                    type: "equation",
+                    prod: -8,
+                    sum: 2,
+                    res: "(x + 4)(x - 2)",
+                    note: "4 • (-2) = -8, 4 + (-2) = 2"
+                }
+            }
+        ];
+
+        // --- Main App Component ---
+        function TrinomialApp() {
+            const [activeTab, setActiveTab] = useState('learn');
+
+            return (
+                <div className="min-h-screen pb-10" dir="rtl">
+                    {/* Header */}
+                    <header className="bg-purple-600 text-white p-4 shadow-lg sticky top-0 z-20">
+                        <div className="max-w-3xl mx-auto flex justify-between items-center">
+                            <h1 className="text-xl md:text-2xl font-bold flex items-center gap-2">
+                                <Puzzle className="w-6 h-6 text-purple-200"/>
+                                פירוק הטרינום
+                            </h1>
+                            <span className="text-sm bg-purple-700 px-3 py-1 rounded-full font-medium">כיתה ט'</span>
+                        </div>
+                    </header>
+
+                    {/* Navigation */}
+                    <nav className="bg-white shadow-sm border-b sticky top-16 z-10">
+                        <div className="max-w-3xl mx-auto flex">
+                            <TabButton 
+                                active={activeTab === 'learn'} 
+                                onClick={() => setActiveTab('learn')} 
+                                icon={<Brain className="w-5 h-5"/>} 
+                                label="הסברים ודוגמאות" 
+                            />
+                            <TabButton 
+                                active={activeTab === 'practice'} 
+                                onClick={() => setActiveTab('practice')} 
+                                icon={<CheckCircle className="w-5 h-5"/>} 
+                                label="תרגול" 
+                            />
+                        </div>
+                    </nav>
+
+                    {/* Main Content */}
+                    <main className="max-w-3xl mx-auto p-4">
+                        {activeTab === 'learn' && <LearnSection />}
+                        {activeTab === 'practice' && <PracticeSection />}
+                    </main>
+                </div>
+            );
+        }
+
+        function TabButton({ active, onClick, icon, label }) {
+            return (
+                <button
+                    onClick={onClick}
+                    className={`flex-1 py-4 text-center font-medium transition-colors flex flex-col items-center justify-center gap-1 ${
+                        active ? 'text-purple-600 border-b-2 border-purple-600 bg-purple-50' : 'text-gray-500 hover:bg-gray-50'
+                    }`}
+                >
+                    {icon}
+                    <span>{label}</span>
+                </button>
+            );
+        }
+
+        // --- Section 1: Learn ---
+        function LearnSection() {
+            const [currentStep, setCurrentStep] = useState(0);
+            const stepData = learnSteps[currentStep];
+
+            const nextStep = () => setCurrentStep(prev => Math.min(prev + 1, learnSteps.length - 1));
+            const prevStep = () => setCurrentStep(prev => Math.max(prev - 1, 0));
+
+            return (
+                <div className="space-y-6 animate-fade-in">
+                    {/* Progress Bar */}
+                    <div className="flex justify-center gap-2 mb-4">
+                        {learnSteps.map((_, i) => (
+                            <div 
+                                key={i} 
+                                className={`h-2 rounded-full transition-all duration-300 ${i === currentStep ? 'w-8 bg-purple-600' : 'w-2 bg-gray-300'}`}
+                            />
+                        ))}
+                    </div>
+
+                    <div className="bg-white rounded-2xl shadow-xl border border-purple-100 overflow-hidden">
+                        <div className="bg-purple-50 p-6 border-b border-purple-100">
+                            <h2 className="text-lg font-bold text-purple-500 mb-1">{stepData.title}</h2>
+                            <h3 className="text-3xl font-bold text-purple-900 math-font" dir="ltr">{stepData.subTitle}</h3>
+                            <p className="text-gray-700 mt-4 text-lg leading-relaxed">
+                                {stepData.description}
+                            </p>
+                            {/* Added Equation Display for Step 2 */}
+                            {stepData.equation && (
+                                <div className="mt-4 text-center">
+                                    <span className="inline-block bg-white px-4 py-2 rounded-lg border border-purple-200 text-2xl font-bold text-purple-800 math-font" dir="ltr">
+                                        {stepData.equation}
+                                    </span>
+                                </div>
+                            )}
+                            {stepData.highlight && (
+                                <div className="mt-4 p-3 bg-yellow-50 border-r-4 border-yellow-400 text-yellow-800 text-sm font-bold">
+                                    {stepData.highlight}
+                                </div>
+                            )}
+                            {stepData.list && (
+                                <ul className="mt-4 space-y-2 list-disc list-inside text-gray-700 font-medium">
+                                    {stepData.list.map((item, i) => <li key={i}>{item}</li>)}
+                                </ul>
+                            )}
+                        </div>
+
+                        <div className="p-6 bg-white min-h-[250px] flex flex-col justify-center items-center">
+                            
+                            {/* Visual Type: Intro (Step 1) - Redesigned */}
+                            {stepData.visual.type === "intro" && (
+                                <div className="text-center animate-pop-in w-full">
+                                    {/* Redesigned Intro Visual */}
+                                    <div className="mb-8">
+                                        <div className="text-4xl md:text-5xl font-bold text-gray-800 math-font mb-4" dir="ltr">
+                                            {stepData.visual.equation}
+                                        </div>
+                                        <div className="text-2xl text-purple-500 font-bold">=</div>
+                                        <div className="text-3xl md:text-4xl font-bold text-purple-700 math-font mt-4" dir="ltr">
+                                            (x + <span className="text-blue-500">?</span>)(x + <span className="text-green-500">?</span>)
+                                        </div>
+                                    </div>
+                                    
+                                    <div className="flex gap-4 justify-center">
+                                        <div className="p-4 bg-blue-100 rounded-xl border-2 border-blue-300">
+                                            <span className="block text-sm text-blue-700 font-bold mb-1">מספר ראשון</span>
+                                            <span className="text-3xl text-blue-600 font-bold">?</span>
+                                        </div>
+                                        <div className="p-4 bg-green-100 rounded-xl border-2 border-green-300">
+                                            <span className="block text-sm text-green-700 font-bold mb-1">מספר שני</span>
+                                            <span className="text-3xl text-green-600 font-bold">?</span>
+                                        </div>
+                                    </div>
+                                </div>
+                            )}
+
+                            {/* Visual Type: Logic Table */}
+                            {stepData.visual.type === "logic" && (
+                                <div className="w-full max-w-md animate-slide-in">
+                                    <div className="grid grid-cols-3 gap-2 text-center font-bold mb-2 text-gray-500 text-sm">
+                                        <div>זוג מספרים</div>
+                                        <div>בדיקת כפל ({stepData.visual.targetProd})</div>
+                                        <div>בדיקת חיבור ({stepData.visual.targetSum})</div>
+                                    </div>
+                                    <div className="space-y-2">
+                                        {stepData.visual.pairs.map((pair, idx) => (
+                                            <div 
+                                                key={idx} 
+                                                className={`grid grid-cols-3 gap-2 p-3 rounded-lg border-2 items-center transition-all duration-500 ${
+                                                    pair.isCorrect ? 'border-green-500 bg-green-50 scale-105 shadow-md' : 'border-gray-100 bg-gray-50 opacity-60'
+                                                }`}
+                                                style={{animationDelay: `${idx * 500}ms`}}
+                                            >
+                                                <div className="font-bold text-lg" dir="ltr">{pair.n1}, {pair.n2}</div>
+                                                <div className={`${pair.prod === stepData.visual.targetProd ? 'text-green-600' : 'text-red-400'}`}>
+                                                    {pair.prod} {pair.prod === stepData.visual.targetProd ? '✓' : '✗'}
+                                                </div>
+                                                <div className={`${pair.sum === stepData.visual.targetSum ? 'text-green-600 font-bold' : 'text-red-400'}`}>
+                                                    {pair.sum} {pair.sum === stepData.visual.targetSum ? '✓' : '✗'}
+                                                </div>
+                                            </div>
+                                        ))}
+                                    </div>
+                                </div>
+                            )}
+
+                            {/* Visual Type: Equation */}
+                            {stepData.visual.type === "equation" && (
+                                <div className="text-center w-full animate-fade-in-up">
+                                    <div className="flex flex-wrap justify-center gap-4 mb-6">
+                                        <div className="bg-blue-50 px-4 py-2 rounded-lg border border-blue-200">
+                                            <span className="block text-xs text-blue-500 font-bold uppercase">מכפלה (c)</span>
+                                            <span className="text-2xl font-bold text-blue-700" dir="ltr">{stepData.visual.prod}</span>
+                                        </div>
+                                        <div className="bg-pink-50 px-4 py-2 rounded-lg border border-pink-200">
+                                            <span className="block text-xs text-pink-500 font-bold uppercase">סכום (b)</span>
+                                            <span className="text-2xl font-bold text-pink-700" dir="ltr">{stepData.visual.sum}</span>
+                                        </div>
+                                    </div>
+                                    
+                                    <div className="bg-white p-6 rounded-2xl shadow-lg border-2 border-purple-200 inline-block">
+                                        <div className="text-3xl md:text-4xl font-bold text-purple-800 math-font mb-2" dir="ltr">
+                                            {stepData.visual.res}
+                                        </div>
+                                        <div className="text-sm text-gray-500 bg-gray-50 px-3 py-1 rounded-full inline-block font-mono" dir="ltr">
+                                            {stepData.visual.note}
+                                        </div>
+                                    </div>
+                                </div>
+                            )}
+                        </div>
+
+                        {/* Navigation Buttons */}
+                        <div className="p-4 bg-gray-50 border-t border-gray-100 flex justify-between">
+                            <button 
+                                onClick={prevStep} 
+                                disabled={currentStep === 0}
+                                className="flex items-center gap-2 px-4 py-2 rounded-lg font-bold text-gray-600 hover:bg-gray-200 disabled:opacity-30 disabled:cursor-not-allowed transition"
+                            >
+                                <ArrowRight className="w-4 h-4"/> הקודם
+                            </button>
+                            <button 
+                                onClick={nextStep} 
+                                disabled={currentStep === learnSteps.length - 1}
+                                className="flex items-center gap-2 px-6 py-2 rounded-lg font-bold bg-purple-600 text-white hover:bg-purple-700 shadow-md disabled:opacity-30 disabled:cursor-not-allowed transition"
+                            >
+                                הבא <ArrowLeft className="w-4 h-4"/>
+                            </button>
+                        </div>
+                    </div>
+                </div>
+            );
+        }
+
+        // --- Section 2: Practice ---
+        function PracticeSection() {
+            const [currentQ, setCurrentQ] = useState(0);
+            const [selected, setSelected] = useState(null);
+            const [checked, setChecked] = useState(false);
+            const [score, setScore] = useState(0);
+
+            const q = questions[currentQ];
+            const isCorrect = selected === q.correctIndex;
+
+            const handleSelect = (idx) => {
+                if (checked) return;
+                setSelected(idx);
+            };
+
+            const handleCheck = () => {
+                if (selected === null) return;
+                setChecked(true);
+                if (selected === q.correctIndex) setScore(s => s + 1);
+            };
+
+            const handleNext = () => {
+                if (currentQ < questions.length - 1) {
+                    setCurrentQ(c => c + 1);
+                    setSelected(null);
+                    setChecked(false);
+                } else {
+                    alert(`סיימת את התרגול! הציון שלך: ${score + (selected === q.correctIndex ? 0 : 0)} מתוך ${questions.length}`);
+                    setCurrentQ(0);
+                    setSelected(null);
+                    setChecked(false);
+                    setScore(0);
+                }
+            };
+
+            return (
+                <div className="animate-fade-in space-y-4">
+                    <div className="flex justify-between items-center text-sm font-bold text-gray-500">
+                        <span>שאלה {currentQ + 1} מתוך {questions.length}</span>
+                        <span className="text-purple-600 bg-purple-50 px-3 py-1 rounded-full">נקודות: {score}</span>
+                    </div>
+
+                    <div className="bg-white rounded-2xl shadow-lg border border-gray-200 overflow-hidden">
+                        <div className="bg-gray-50 p-8 text-center border-b border-gray-100">
+                            <h3 className="text-lg font-bold text-gray-800 mb-4">{q.question}</h3>
+                            <div className="text-4xl font-bold text-purple-700 math-font inline-block px-6 py-3 bg-white rounded-xl shadow-sm border border-purple-100" dir="ltr">
+                                {q.mathExp}
+                            </div>
+                        </div>
+
+                        <div className="p-6 grid gap-3">
+                            {q.options.map((opt, idx) => {
+                                let style = "border-2 bg-white hover:bg-purple-50 hover:border-purple-300";
+                                if (selected === idx) style = "border-2 border-purple-600 bg-purple-50";
+                                if (checked) {
+                                    if (idx === q.correctIndex) style = "border-2 border-green-500 bg-green-50 text-green-700";
+                                    else if (idx === selected) style = "border-2 border-red-500 bg-red-50 text-red-700 opacity-60";
+                                    else style = "opacity-40 border-gray-100 grayscale";
+                                }
+
+                                return (
+                                    <button
+                                        key={idx}
+                                        onClick={() => handleSelect(idx)}
+                                        className={`w-full p-4 rounded-xl text-xl math-font transition-all duration-200 flex justify-between items-center ${style}`}
+                                    >
+                                        <span dir="ltr" className="w-full text-center">{opt}</span>
+                                        {checked && idx === q.correctIndex && <CheckCircle className="shrink-0 text-green-600"/>}
+                                        {checked && idx === selected && idx !== q.correctIndex && <XCircle className="shrink-0 text-red-600"/>}
+                                    </button>
+                                );
+                            })}
+                        </div>
+
+                        {checked && (
+                            <div className={`p-6 border-t ${isCorrect ? 'bg-green-50' : 'bg-red-50'} animate-fade-in`}>
+                                <div className="flex gap-4">
+                                    <div className={`p-3 rounded-full h-fit shrink-0 ${isCorrect ? 'bg-green-200 text-green-700' : 'bg-red-200 text-red-700'}`}>
+                                        {isCorrect ? <CheckCircle className="w-6 h-6"/> : <XCircle className="w-6 h-6"/>}
+                                    </div>
+                                    <div>
+                                        <h4 className={`font-bold text-xl mb-2 ${isCorrect ? 'text-green-800' : 'text-red-800'}`}>
+                                            {isCorrect ? 'נכון מאוד!' : 'לא בדיוק...'}
+                                        </h4>
+                                        <p className="text-gray-800 text-lg leading-relaxed">{q.explanation}</p>
+                                    </div>
+                                </div>
+                                <div className="mt-6 flex justify-center">
+                                    <button onClick={handleNext} className="bg-purple-600 text-white px-10 py-3 rounded-full font-bold shadow-lg hover:bg-purple-700 transition flex items-center gap-2 transform hover:scale-105 active:scale-95">
+                                        {currentQ < questions.length - 1 ? 'לשאלה הבאה' : 'סיים תרגול'}
+                                        <ArrowLeft className="w-5 h-5"/>
+                                    </button>
+                                </div>
+                            </div>
+                        )}
+
+                        {!checked && (
+                            <div className="p-6 pt-0">
+                                <button
+                                    onClick={handleCheck}
+                                    disabled={selected === null}
+                                    className="w-full bg-purple-600 text-white py-4 rounded-xl font-bold text-xl shadow-md hover:bg-purple-700 disabled:opacity-50 disabled:cursor-not-allowed transition transform active:scale-95"
+                                >
+                                    בדיקה
+                                </button>
+                            </div>
+                        )}
+                    </div>
+                </div>
+            );
+        }
+
+        const root = ReactDOM.createRoot(document.getElementById('root'));
+        root.render(<TrinomialApp />);
+    </script>
+</body>
+</html>

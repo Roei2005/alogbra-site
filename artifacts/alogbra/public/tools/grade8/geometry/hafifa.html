@@ -1,0 +1,538 @@
+<!DOCTYPE html>
+<html lang="he" dir="rtl">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>לומדים חפיפת משולשים - כיתה ח'</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link href="https://fonts.googleapis.com/css2?family=Rubik:wght@400;500;700&display=swap" rel="stylesheet">
+    <style>
+        body {
+            font-family: 'Rubik', sans-serif;
+            background-color: #fdf2f8; /* Light Pink/Purple background */
+            touch-action: manipulation;
+        }
+        .tab-active {
+            border-bottom: 4px solid #db2777; /* Pink-600 */
+            color: #9d174d;
+            font-weight: bold;
+        }
+        .fade-in {
+            animation: fadeIn 0.6s ease-out;
+        }
+        @keyframes fadeIn {
+            from { opacity: 0; transform: translateY(10px); }
+            to { opacity: 1; transform: translateY(0); }
+        }
+        
+        /* Graphics */
+        .geo-line { stroke-width: 3; stroke-linecap: round; transition: all 0.4s ease; }
+        .geo-text { font-family: sans-serif; font-weight: bold; font-size: 16px; fill: #1e3a8a; }
+        
+        /* Highlight classes for theorems */
+        .highlight-side { stroke: #db2777; stroke-width: 4; }
+        
+        /* Marks styling */
+        .mark-line { 
+            stroke: #db2777; 
+            stroke-width: 3; 
+            opacity: 0; 
+            transition: opacity 0.3s;
+        }
+        .visible-mark { opacity: 1; }
+
+        .angle-arc {
+            fill: none;
+            stroke: #10b981; /* Green */
+            stroke-width: 0; /* Hidden by default */
+            stroke-linecap: round;
+            transition: all 0.3s;
+        }
+        .highlight-angle { 
+            stroke-width: 4; 
+            fill: rgba(16, 185, 129, 0.3); 
+        }
+        
+        /* Animation for the "Overlap" demo */
+        .triangle-mover {
+            transition: transform 1.5s cubic-bezier(0.4, 0, 0.2, 1);
+            transform-origin: center;
+        }
+        
+        .answer-btn {
+            transition: all 0.2s;
+        }
+        .answer-btn:active { transform: scale(0.98); }
+
+        /* Symbol styling */
+        .congruence-symbol {
+            font-family: serif;
+            font-size: 1.5em;
+            vertical-align: middle;
+        }
+    </style>
+</head>
+<body class="text-gray-800 pb-12">
+
+    <!-- Header -->
+    <header class="bg-pink-600 text-white p-4 shadow-lg sticky top-0 z-20">
+        <div class="max-w-4xl mx-auto flex items-center justify-between">
+            <h1 class="text-2xl md:text-3xl font-bold">חפיפת משולשים 📐</h1>
+            <span class="text-pink-200 text-sm md:text-lg">כיתה ח'</span>
+        </div>
+    </header>
+
+    <!-- Navigation -->
+    <nav class="bg-white shadow-md mb-6 sticky top-[70px] z-10">
+        <div class="max-w-4xl mx-auto flex justify-around p-2">
+            <button onclick="switchTab('intro')" id="btn-intro" class="tab-active w-1/3 py-3 text-lg md:text-xl text-center focus:outline-none">מה זה חפיפה?</button>
+            <button onclick="switchTab('theorems')" id="btn-theorems" class="w-1/3 py-3 text-lg md:text-xl text-center focus:outline-none text-gray-500 hover:text-pink-600">משפטי החפיפה</button>
+            <button onclick="switchTab('practice')" id="btn-practice" class="w-1/3 py-3 text-lg md:text-xl text-center focus:outline-none text-gray-500 hover:text-pink-600">תרגול</button>
+        </div>
+    </nav>
+
+    <main class="max-w-4xl mx-auto px-4 min-h-[60vh]">
+
+        <!-- SECTION 1: INTRO (What is Congruence?) -->
+        <div id="section-intro" class="fade-in">
+            <div class="bg-white rounded-2xl shadow-lg p-6 mb-6 border-t-4 border-pink-500">
+                <h2 class="text-2xl font-bold mb-4 text-pink-800">מהם משולשים חופפים?</h2>
+                <p class="text-xl leading-relaxed mb-6">
+                    משולשים חופפים הם משולשים שהם בדיוק, אבל <strong>בדיוק</strong> אותו הדבר. <br>
+                    אם נגזור משולש אחד ונניח אותו על השני - הם יכסו אחד את השני בצורה מושלמת.
+                    <br><br>
+                    הצלעות שלהם שוות באורכן, והזוויות שלהם שוות בגודלן.
+                </p>
+
+                <!-- Magic Animation Container -->
+                <div class="bg-gray-50 rounded-xl p-4 border-2 border-dashed border-gray-300 text-center">
+                    <h3 class="text-lg font-bold mb-2 text-gray-600">לחצו על הכפתור כדי לראות את הקסם:</h3>
+                    <button onclick="animateOverlap()" class="bg-pink-600 text-white px-6 py-2 rounded-full font-bold text-lg hover:bg-pink-700 shadow mb-4 transition">
+                        בצע חפיפה! ✨
+                    </button>
+
+                    <svg width="100%" height="250" viewBox="0 0 400 200" class="mx-auto overflow-visible">
+                        <!-- Static Triangle ABC -->
+                        <g id="triangle-1">
+                            <path d="M50 150 L100 50 L150 150 Z" fill="rgba(59, 130, 246, 0.2)" stroke="#2563eb" stroke-width="3"/>
+                            <text x="95" y="40" class="geo-text">A</text>
+                            <text x="30" y="160" class="geo-text">B</text>
+                            <text x="160" y="160" class="geo-text">C</text>
+                        </g>
+
+                        <!-- Movable Triangle DEF -->
+                        <g id="triangle-2" class="triangle-mover">
+                            <!-- Starting position shifted to the right -->
+                            <path d="M250 150 L300 50 L350 150 Z" fill="rgba(219, 39, 119, 0.4)" stroke="#db2777" stroke-width="3"/>
+                            <text x="295" y="40" class="geo-text">D</text>
+                            <text x="230" y="160" class="geo-text">E</text>
+                            <text x="360" y="160" class="geo-text">F</text>
+                        </g>
+                    </svg>
+                    <p id="overlap-text" class="mt-2 text-lg font-bold text-green-600 opacity-0 transition">הם מכסים זה את זה בדיוק! ✅</p>
+                </div>
+
+                <!-- Importance of Order -->
+                <div class="mt-8 bg-blue-50 p-6 rounded-xl border border-blue-200">
+                    <h3 class="text-xl font-bold text-blue-800 mb-3">⚠️ זהירות: סדר האותיות קריטי!</h3>
+                    <p class="text-lg mb-4">
+                        כשאנחנו כותבים שמשולשים חופפים, אנחנו משתמשים בסימן החפיפה: <span class="congruence-symbol">≅</span>
+                    </p>
+                    <p class="text-lg">
+                        הכתיבה <strong dir="ltr">ΔABC ≅ ΔDEF</strong> אומרת ש:
+                    </p>
+                    <ul class="list-disc list-inside mt-2 text-lg space-y-2 font-medium">
+                        <li>קודקוד <span class="text-red-600">A</span> מתאים לקודקוד <span class="text-red-600">D</span></li>
+                        <li>קודקוד <span class="text-green-600">B</span> מתאים לקודקוד <span class="text-green-600">E</span></li>
+                        <li>קודקוד <span class="text-blue-600">C</span> מתאים לקודקוד <span class="text-blue-600">F</span></li>
+                    </ul>
+                    <p class="mt-4 text-sm text-gray-600 bg-white p-2 rounded inline-block">
+                        טיפ: אי אפשר לכתוב סתם סדר אקראי. הסדר חייב להיות לפי ההתאמה!
+                    </p>
+                </div>
+            </div>
+        </div>
+
+        <!-- SECTION 2: THEOREMS -->
+        <div id="section-theorems" class="hidden fade-in">
+            <div class="bg-white rounded-2xl shadow-lg p-6 mb-6">
+                <h2 class="text-2xl font-bold mb-2 text-center text-gray-800">שלושת משפטי החפיפה</h2>
+                <p class="text-center text-gray-600 mb-6">לחצו על כפתור כדי לראות אילו צלעות וזוויות צריכות להיות שוות:</p>
+
+                <!-- Control Buttons -->
+                <div class="flex flex-col md:flex-row gap-3 justify-center mb-8">
+                    <button onclick="showTheorem('sss')" class="py-3 px-6 rounded-xl border-2 border-purple-200 hover:bg-purple-50 focus:bg-purple-100 focus:border-purple-500 font-bold text-lg text-purple-800 transition">
+                        משפט 1: צ.צ.צ (S.S.S)
+                    </button>
+                    <button onclick="showTheorem('sas')" class="py-3 px-6 rounded-xl border-2 border-orange-200 hover:bg-orange-50 focus:bg-orange-100 focus:border-orange-500 font-bold text-lg text-orange-800 transition">
+                        משפט 2: צ.ז.צ (S.A.S)
+                    </button>
+                    <button onclick="showTheorem('asa')" class="py-3 px-6 rounded-xl border-2 border-teal-200 hover:bg-teal-50 focus:bg-teal-100 focus:border-teal-500 font-bold text-lg text-teal-800 transition">
+                        משפט 3: ז.צ.ז (A.S.A)
+                    </button>
+                </div>
+
+                <!-- Interactive SVG -->
+                <div class="relative bg-gray-50 rounded-2xl p-4 border border-gray-200">
+                    <svg width="100%" height="250" viewBox="0 0 500 220" class="mx-auto">
+                        <!-- Triangle ABC -->
+                        <g transform="translate(20, 10)">
+                            <!-- Angle Arcs -->
+                            <path id="ang-a" d="M90 70 Q100 80 110 70" class="angle-arc"/> <!-- Top -->
+                            <path id="ang-b" d="M68 135 Q75 135 72 125" class="angle-arc"/> <!-- Bottom Left -->
+                            <path id="ang-c" d="M132 135 Q125 135 128 125" class="angle-arc"/> <!-- Bottom Right -->
+
+                            <!-- Sides -->
+                            <path id="side-ab" d="M100 50 L50 150" stroke="#374151" fill="none" class="geo-line"/>
+                            <path id="side-ac" d="M100 50 L150 150" stroke="#374151" fill="none" class="geo-line"/>
+                            <path id="side-bc" d="M50 150 L150 150" stroke="#374151" fill="none" class="geo-line"/>
+                            
+                            <!-- Tick Marks (Hidden by default) -->
+                            <!-- AB tick (single) -->
+                            <path id="tick-ab" d="M70 100 L80 96" class="mark-line"/>
+                            <!-- AC tick (double) -->
+                            <g id="tick-ac" class="mark-line">
+                                <path d="M120 96 L130 100" />
+                                <path d="M122 92 L132 96" />
+                            </g>
+                            <!-- BC tick (triple) -->
+                            <g id="tick-bc" class="mark-line">
+                                <path d="M96 145 L96 155" />
+                                <path d="M100 145 L100 155" />
+                                <path d="M104 145 L104 155" />
+                            </g>
+                            
+                            <!-- Labels -->
+                            <text x="95" y="40" class="geo-text">A</text>
+                            <text x="35" y="165" class="geo-text">B</text>
+                            <text x="155" y="165" class="geo-text">C</text>
+                        </g>
+
+                        <!-- Symbol -->
+                        <text x="240" y="120" font-size="30" font-family="serif" fill="#666">≅</text>
+
+                        <!-- Triangle DEF -->
+                        <g transform="translate(280, 10)">
+                            <!-- Angle Arcs -->
+                            <path id="ang-d" d="M90 70 Q100 80 110 70" class="angle-arc"/>
+                            <path id="ang-e" d="M68 135 Q75 135 72 125" class="angle-arc"/>
+                            <path id="ang-f" d="M132 135 Q125 135 128 125" class="angle-arc"/>
+
+                            <!-- Sides -->
+                            <path id="side-de" d="M100 50 L50 150" stroke="#374151" fill="none" class="geo-line"/>
+                            <path id="side-df" d="M100 50 L150 150" stroke="#374151" fill="none" class="geo-line"/>
+                            <path id="side-ef" d="M50 150 L150 150" stroke="#374151" fill="none" class="geo-line"/>
+                            
+                            <!-- Tick Marks -->
+                            <!-- DE tick (single) -->
+                            <path id="tick-de" d="M70 100 L80 96" class="mark-line"/>
+                            <!-- DF tick (double) -->
+                            <g id="tick-df" class="mark-line">
+                                <path d="M120 96 L130 100" />
+                                <path d="M122 92 L132 96" />
+                            </g>
+                            <!-- EF tick (triple) -->
+                            <g id="tick-ef" class="mark-line">
+                                <path d="M96 145 L96 155" />
+                                <path d="M100 145 L100 155" />
+                                <path d="M104 145 L104 155" />
+                            </g>
+                            
+                            <!-- Labels -->
+                            <text x="95" y="40" class="geo-text">D</text>
+                            <text x="35" y="165" class="geo-text">E</text>
+                            <text x="155" y="165" class="geo-text">F</text>
+                        </g>
+                    </svg>
+
+                    <!-- Explanation Text Area -->
+                    <div id="theorem-explanation" class="mt-4 p-4 bg-white rounded-xl border-r-4 border-gray-300 text-lg">
+                        <p class="font-bold text-gray-800">בחר משפט כדי לראות הסבר.</p>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- SECTION 3: PRACTICE -->
+        <div id="section-practice" class="hidden fade-in">
+            <div class="max-w-2xl mx-auto">
+                <div class="w-full bg-gray-200 rounded-full h-4 mb-6">
+                    <div id="progress-bar" class="bg-pink-600 h-4 rounded-full transition-all duration-500" style="width: 0%"></div>
+                </div>
+
+                <div id="quiz-container" class="bg-white rounded-2xl shadow-xl p-6 md:p-8 min-h-[400px]">
+                    <span id="question-number" class="text-sm font-bold text-gray-500 uppercase tracking-wide">שאלה 1 מתוך 5</span>
+                    <h3 id="question-text" class="text-2xl font-bold mt-2 mb-8 text-gray-800">השאלה תופיע כאן...</h3>
+                    
+                    <div id="options-container" class="grid gap-4"></div>
+
+                    <div id="feedback" class="mt-6 hidden rounded-lg p-4 border-2">
+                        <h4 id="feedback-title" class="text-xl font-bold mb-1"></h4>
+                        <p id="feedback-text" class="text-lg"></p>
+                        <button onclick="nextQuestion()" id="next-btn" class="mt-4 w-full bg-pink-600 text-white font-bold py-3 rounded-lg text-lg">לשאלה הבאה</button>
+                    </div>
+                </div>
+
+                <div id="completion-screen" class="hidden bg-white rounded-2xl shadow-xl p-8 text-center">
+                    <div class="text-6xl mb-4">🏆</div>
+                    <h2 class="text-3xl font-bold mb-4 text-pink-800">כל הכבוד!</h2>
+                    <p class="text-xl mb-6">סיימת את התרגול בנושא חפיפת משולשים.</p>
+                    <p id="final-score" class="text-2xl font-bold text-pink-600 mb-8"></p>
+                    <button onclick="restartQuiz()" class="bg-blue-500 hover:bg-blue-600 text-white font-bold py-3 px-8 rounded-full text-xl transition">תרגול מחדש</button>
+                </div>
+            </div>
+        </div>
+
+    </main>
+
+    <footer class="text-center mt-12 mb-6 text-gray-500 text-sm">
+        נוצר עבור כיתה ח' - למידה אינטראקטיבית
+    </footer>
+
+    <script>
+        // --- Navigation ---
+        function switchTab(tabName) {
+            ['intro', 'theorems', 'practice'].forEach(t => {
+                const btn = document.getElementById(`btn-${t}`);
+                const section = document.getElementById(`section-${t}`);
+                if (t === tabName) {
+                    btn.classList.add('tab-active', 'text-pink-900');
+                    btn.classList.remove('text-gray-500');
+                    section.classList.remove('hidden');
+                } else {
+                    btn.classList.remove('tab-active', 'text-pink-900');
+                    btn.classList.add('text-gray-500');
+                    section.classList.add('hidden');
+                }
+            });
+        }
+
+        // --- Intro Animation ---
+        function animateOverlap() {
+            const t2 = document.getElementById('triangle-2');
+            const text = document.getElementById('overlap-text');
+            
+            // Calculate translation to match (Triangle 1 starts at x=0 inside SVG group, Triangle 2 at x=200)
+            // We need to move Triangle 2 -200px to left.
+            t2.style.transform = "translateX(-200px)";
+            
+            setTimeout(() => {
+                text.style.opacity = "1";
+            }, 1500);
+
+            // Reset after a while for replayability
+            setTimeout(() => {
+                t2.style.transform = "translateX(0)";
+                text.style.opacity = "0";
+            }, 5000);
+        }
+
+        // --- Theorems Logic ---
+        function showTheorem(type) {
+            // Reset Styles
+            const elements = ['side-ab','side-ac','side-bc','side-de','side-df','side-ef', 'ang-a','ang-b','ang-c','ang-d','ang-e','ang-f'];
+            elements.forEach(id => {
+                const el = document.getElementById(id);
+                el.classList.remove('highlight-side', 'highlight-angle');
+                el.style.stroke = id.startsWith('side') ? '#374151' : null; // Reset stroke for sides, keep angles hidden
+            });
+            
+            // Hide all marks
+            document.querySelectorAll('.mark-line').forEach(el => el.classList.remove('visible-mark'));
+
+            const textBox = document.getElementById('theorem-explanation');
+
+            if (type === 'sss') {
+                // Highlight Sides
+                ['side-ab','side-bc','side-ac','side-de','side-ef','side-df'].forEach(id => {
+                    document.getElementById(id).classList.add('highlight-side');
+                });
+                // Show Ticks
+                ['tick-ab', 'tick-de', 'tick-ac', 'tick-df', 'tick-bc', 'tick-ef'].forEach(id => {
+                    document.getElementById(id).classList.add('visible-mark');
+                });
+                
+                textBox.innerHTML = `
+                    <h3 class="font-bold text-purple-800 text-xl">משפט צלע-צלע-צלע (צ.צ.צ)</h3>
+                    <p>אם שלוש הצלעות במשולש אחד שוות בהתאמה לשלוש הצלעות במשולש השני, המשולשים חופפים.</p>
+                    <p class="mt-2 text-sm text-gray-600">שימו לב: כל זוג צלעות שוות מסומן באותו מספר קווים.</p>
+                `;
+                textBox.className = "mt-4 p-4 bg-purple-50 rounded-xl border-r-4 border-purple-500 text-lg fade-in";
+            }
+            else if (type === 'sas') {
+                // Side - Angle - Side
+                ['side-ab','side-de','side-bc','side-ef'].forEach(id => document.getElementById(id).classList.add('highlight-side'));
+                ['ang-b','ang-e'].forEach(id => document.getElementById(id).classList.add('highlight-angle'));
+                
+                // Show Ticks for selected sides only
+                ['tick-ab', 'tick-de', 'tick-bc', 'tick-ef'].forEach(id => {
+                    document.getElementById(id).classList.add('visible-mark');
+                });
+
+                textBox.innerHTML = `
+                    <h3 class="font-bold text-orange-800 text-xl">משפט צלע-זווית-צלע (צ.ז.צ)</h3>
+                    <p>אם שתי צלעות והזווית <strong>הכלואה ביניהן</strong> במשולש אחד שוות לשתי צלעות והזווית הכלואה ביניהן במשולש השני, המשולשים חופפים.</p>
+                    <p class="mt-2 text-sm text-gray-600">הזווית הירוקה נמצאת בדיוק במפגש בין שתי הצלעות המסומנות.</p>
+                `;
+                textBox.className = "mt-4 p-4 bg-orange-50 rounded-xl border-r-4 border-orange-500 text-lg fade-in";
+            }
+            else if (type === 'asa') {
+                // Angle - Side - Angle
+                ['side-bc','side-ef'].forEach(id => document.getElementById(id).classList.add('highlight-side'));
+                ['ang-b','ang-e','ang-c','ang-f'].forEach(id => document.getElementById(id).classList.add('highlight-angle'));
+                
+                // Show Ticks for selected side
+                ['tick-bc', 'tick-ef'].forEach(id => {
+                    document.getElementById(id).classList.add('visible-mark');
+                });
+
+                textBox.innerHTML = `
+                    <h3 class="font-bold text-teal-800 text-xl">משפט זווית-צלע-זווית (ז.צ.ז)</h3>
+                    <p>אם שתי זוויות והצלע <strong>הכלואה ביניהן</strong> במשולש אחד שוות לשתי זוויות והצלע הכלואה ביניהן במשולש השני, המשולשים חופפים.</p>
+                `;
+                textBox.className = "mt-4 p-4 bg-teal-50 rounded-xl border-r-4 border-teal-500 text-lg fade-in";
+            }
+        }
+
+        // --- Quiz Logic ---
+        const questions = [
+            {
+                q: "מה אומר המשפט: ΔABC ≅ ΔDEF ?",
+                options: [
+                    "שהמשולשים דומים אך לא שווים",
+                    "שקודקוד A מתאים ל-F",
+                    "שהמשולשים זהים בדיוק ומכסים זה את זה",
+                    "שהשטח שלהם שווה אבל הצלעות לא"
+                ],
+                correct: 2,
+                explanation: "חפיפה (≅) משמעותה שהמשולשים זהים לחלוטין בכל הצלעות ובכל הזוויות."
+            },
+            {
+                q: "נתון: AB=DE, AC=DF והזווית A שווה לזווית D. לפי איזה משפט נחפוף?",
+                options: [
+                    "צ.צ.צ (S.S.S)",
+                    "צ.ז.צ (S.A.S)",
+                    "ז.צ.ז (A.S.A)",
+                    "אי אפשר לחפוף"
+                ],
+                correct: 1,
+                explanation: "יש לנו שתי צלעות (AB, AC) והזווית שביניהן (A). זהו בדיוק משפט צלע-זווית-צלע."
+            },
+            {
+                q: "נתון: ΔKRM ≅ ΔPST. לאיזו צלע שווה הצלע KM?",
+                options: [
+                    "לצלע PT",
+                    "לצלע ST",
+                    "לצלע PS",
+                    "לא ניתן לדעת"
+                ],
+                correct: 0,
+                explanation: "סדר האותיות קובע! K היא האות הראשונה ו-M השלישית. לכן הצלע מתאימה ל-P (ראשונה) ו-T (שלישית). התשובה היא PT."
+            },
+            {
+                q: "במשפט ז.צ.ז (זווית-צלע-זווית), איפה הצלע חייבת להיות?",
+                options: [
+                    "מול הזווית הגדולה",
+                    "בכל מקום במשולש",
+                    "כלואה בין שתי הזוויות",
+                    "מחוץ למשולש"
+                ],
+                correct: 2,
+                explanation: "המשפט מחייב שהצלע תהיה 'כלואה', כלומר מחברת בין שני הקודקודים של הזוויות הנתונות."
+            },
+            {
+                q: "האם המשולשים חופפים אם כל שלוש הזוויות שלהם שוות? (ז.ז.ז)",
+                options: [
+                    "כן, תמיד",
+                    "לא בהכרח, הם יכולים להיות בגדלים שונים",
+                    "רק במשולש שווה שוקיים",
+                    "כן, זה משפט חפיפה רביעי"
+                ],
+                correct: 1,
+                explanation: "זהירות! זווית-זווית-זווית (ז.ז.ז) אינו משפט חפיפה. משולש אחד יכול להיות ענק והשני פצפון, גם אם הזוויות זהות."
+            }
+        ];
+
+        let currentQ = 0;
+        let score = 0;
+
+        function loadQuestion() {
+            const q = questions[currentQ];
+            document.getElementById('question-number').innerText = `שאלה ${currentQ + 1} מתוך ${questions.length}`;
+            document.getElementById('question-text').innerText = q.q;
+            document.getElementById('feedback').classList.add('hidden');
+            
+            // Options
+            const cont = document.getElementById('options-container');
+            cont.innerHTML = '';
+            q.options.forEach((opt, idx) => {
+                const btn = document.createElement('button');
+                btn.className = "answer-btn w-full text-right p-4 rounded-xl border-2 border-gray-200 bg-white hover:border-pink-400 text-lg font-medium";
+                btn.innerText = opt;
+                btn.onclick = () => checkAnswer(idx, btn);
+                cont.appendChild(btn);
+            });
+
+            // Progress
+            document.getElementById('progress-bar').style.width = `${((currentQ)/questions.length)*100}%`;
+        }
+
+        function checkAnswer(idx, btn) {
+            // Disable buttons
+            const btns = document.getElementById('options-container').children;
+            for(let b of btns) b.disabled = true;
+
+            const q = questions[currentQ];
+            const feedback = document.getElementById('feedback');
+            
+            if (idx === q.correct) {
+                score++;
+                btn.classList.add('bg-green-100', 'border-green-500', 'text-green-800');
+                feedback.className = "mt-6 rounded-lg p-4 border-2 border-green-200 bg-green-50 block fade-in";
+                document.getElementById('feedback-title').innerText = "תשובה נכונה! ✅";
+                document.getElementById('feedback-title').className = "text-xl font-bold mb-1 text-green-700";
+            } else {
+                btn.classList.add('bg-red-100', 'border-red-500', 'text-red-800');
+                btns[q.correct].classList.add('bg-green-100', 'border-green-500', 'text-green-800');
+                feedback.className = "mt-6 rounded-lg p-4 border-2 border-red-200 bg-red-50 block fade-in";
+                document.getElementById('feedback-title').innerText = "לא בדיוק... 💡";
+                document.getElementById('feedback-title').className = "text-xl font-bold mb-1 text-red-700";
+            }
+            
+            document.getElementById('feedback-text').innerText = q.explanation;
+            document.getElementById('feedback').classList.remove('hidden');
+
+            if (currentQ === questions.length - 1) {
+                document.getElementById('next-btn').innerText = "סיום וקבלת ציון";
+            }
+        }
+
+        function nextQuestion() {
+            if (currentQ < questions.length - 1) {
+                currentQ++;
+                loadQuestion();
+            } else {
+                showResults();
+            }
+        }
+
+        function showResults() {
+            document.getElementById('quiz-container').classList.add('hidden');
+            document.getElementById('completion-screen').classList.remove('hidden');
+            document.getElementById('progress-bar').style.width = '100%';
+            document.getElementById('final-score').innerText = `ציון: ${score} מתוך 5`;
+        }
+
+        function restartQuiz() {
+            currentQ = 0;
+            score = 0;
+            document.getElementById('completion-screen').classList.add('hidden');
+            document.getElementById('quiz-container').classList.remove('hidden');
+            loadQuestion();
+        }
+
+        // Init
+        loadQuestion();
+    </script>
+</body>
+</html>

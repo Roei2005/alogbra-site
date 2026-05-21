@@ -1,0 +1,499 @@
+<!DOCTYPE html>
+<html lang="he" dir="rtl">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>נוסחאות הכפל המקוצר</title>
+    
+    <!-- Tailwind CSS -->
+    <script src="https://cdn.tailwindcss.com"></script>
+    
+    <!-- React & ReactDOM -->
+    <script crossorigin src="https://unpkg.com/react@18/umd/react.development.js"></script>
+    <script crossorigin src="https://unpkg.com/react-dom@18/umd/react-dom.development.js"></script>
+    
+    <!-- Babel (for JSX) -->
+    <script src="https://unpkg.com/@babel/standalone/babel.min.js"></script>
+    
+    <style>
+        @keyframes fadeIn { from { opacity: 0; } to { opacity: 1; } }
+        @keyframes fadeInUp { from { opacity: 0; transform: translateY(20px); } to { opacity: 1; transform: translateY(0); } }
+        @keyframes bounceIn { 0% { opacity: 0; transform: scale(0.3); } 50% { opacity: 1; transform: scale(1.05); } 70% { transform: scale(0.9); } 100% { transform: scale(1); } }
+        @keyframes scaleUp { from { transform: scale(0.8); opacity: 0; } to { transform: scale(1); opacity: 1; } }
+
+        .animate-fade-in { animation: fadeIn 0.5s ease-out; }
+        .animate-fade-in-up { animation: fadeInUp 0.5s ease-out; }
+        .animate-bounce-in { animation: bounceIn 0.5s cubic-bezier(0.215, 0.61, 0.355, 1); }
+        .animate-scale-up { animation: scaleUp 0.3s ease-out; }
+        
+        .math-text { font-family: 'Courier New', Courier, monospace; letter-spacing: 0.05em; }
+    </style>
+</head>
+<body class="bg-blue-50 text-gray-800 font-sans">
+    <div id="root"></div>
+
+    <script type="text/babel">
+        const { useState } = React;
+
+        // --- Icons ---
+        const IconBase = ({ children, className, ...props }) => (
+            <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className={className} {...props}>{children}</svg>
+        );
+
+        const BookOpen = (props) => <IconBase {...props}><path d="M2 3h6a4 4 0 0 1 4 4v14a3 3 0 0 0-3-3H2z"/><path d="M22 3h-6a4 4 0 0 0-4 4v14a3 3 0 0 1 3-3h7z"/></IconBase>;
+        const Search = (props) => <IconBase {...props}><circle cx="11" cy="11" r="8"/><line x1="21" y1="21" x2="16.65" y2="16.65"/></IconBase>;
+        const CheckCircle = (props) => <IconBase {...props}><path d="M22 11.08V12a10 10 0 1 1-5.93-9.14"/><polyline points="22 4 12 14.01 9 11.01"/></IconBase>;
+        const XCircle = (props) => <IconBase {...props}><circle cx="12" cy="12" r="10"/><line x1="15" y1="9" x2="9" y2="15"/><line x1="9" y1="9" x2="15" y2="15"/></IconBase>;
+        const ArrowRight = (props) => <IconBase {...props}><line x1="5" y1="12" x2="19" y2="12"/><polyline points="12 5 19 12 12 19"/></IconBase>;
+        const ArrowDown = (props) => <IconBase {...props}><line x1="12" y1="5" x2="12" y2="19"/><polyline points="19 12 12 19 5 12"/></IconBase>;
+        const RefreshCw = (props) => <IconBase {...props}><path d="M3 12a9 9 0 0 1 9-9 9.75 9.75 0 0 1 6.74 2.74L21 8"/><path d="M21 3v5h-5"/><path d="M21 12a9 9 0 0 1-9 9 9.75 9.75 0 0 1-6.74-2.74L3 16"/><path d="M8 16H3v5"/></IconBase>;
+
+        // --- Data: Questions ---
+        const questions = [
+            {
+                id: 1,
+                question: 'פתחו את הסוגריים לפי הנוסחה הראשונה:',
+                mathExp: '(x + 3)² = ?',
+                options: [
+                    'x² + 6x + 9',
+                    'x² + 9',
+                    'x² + 3x + 9',
+                    'x² + 6x + 6'
+                ],
+                correctIndex: 0,
+                explanation: 'לפי הנוסחה (a+b)², אנו מעלים את הראשון בריבוע (x²), מוסיפים 2 כפול הראשון כפול השני (2•x•3 = 6x), ומוסיפים את השני בריבוע (3²=9).'
+            },
+            {
+                id: 2,
+                question: 'שימו לב למינוס! פתחו את הסוגריים:',
+                mathExp: '(x - 5)² = ?',
+                options: [
+                    'x² - 5x + 25',
+                    'x² - 10x + 25',
+                    'x² - 25',
+                    'x² + 10x - 25'
+                ],
+                correctIndex: 1,
+                explanation: 'כאן משתמשים בנוסחת ההפרש בריבוע. האיבר האמצעי הוא במינוס: 2 כפול x כפול 5 נותן 10x, ולכן נקבל מינוס 10x. התוצאה: x² - 10x + 25.'
+            },
+            {
+                id: 3,
+                question: 'הפרש ריבועים (פלוס ומינוס):',
+                mathExp: '(x + 4)(x - 4) = ?',
+                options: [
+                    'x² + 16',
+                    'x² - 8x + 16',
+                    'x² - 16',
+                    'x² - 4'
+                ],
+                correctIndex: 2,
+                explanation: 'כאשר יש סוגריים זהים שאחד בפלוס ואחד במינוס, האיבר האמצעי מתבטל. נשארים רק עם הראשון בריבוע פחות השני בריבוע: x² - 16.'
+            },
+            {
+                id: 4,
+                question: 'הדרך ההפוכה! נסו לזהות את הכפל המקוצר:',
+                mathExp: 'x² + 12x + 36',
+                options: [
+                    '(x + 6)(x - 6)',
+                    '(x + 12)²',
+                    '(x + 6)²',
+                    '(x + 36)²'
+                ],
+                correctIndex: 2,
+                explanation: 'בודקים שורשים: השורש של x² הוא x. השורש של 36 הוא 6. בודקים באמצע: האם 2 כפול 6 כפול x זה 12x? כן! לכן התשובה היא (x+6)².'
+            },
+            {
+                id: 5,
+                question: 'אתגר עם מקדם:',
+                mathExp: '(2x + 1)² = ?',
+                options: [
+                    '4x² + 1',
+                    '2x² + 4x + 1',
+                    '4x² + 2x + 1',
+                    '4x² + 4x + 1'
+                ],
+                correctIndex: 3,
+                explanation: 'מעלים את כל ה-2x בריבוע ומקבלים 4x². באמצע: 2 כפול 2x כפול 1 שווה 4x. בסוף: 1 בריבוע זה 1.'
+            }
+        ];
+
+        // --- Data: Learning Examples ---
+        const formulas = [
+            {
+                title: "סכום בריבוע (+)",
+                subTitle: "(a + b)²",
+                formulaVisual: "a² + 2ab + b²",
+                desc: "כשיש לנו סכום של שני איברים בסוגריים בריבוע, אנחנו מקבלים שלושה איברים בתוצאה.",
+                steps: [
+                    { text: "מעלים את הראשון בריבוע", visual: "(x + 3)²  →  x²" },
+                    { text: "כופלים: 2 כפול הראשון כפול השני", visual: "2 • x • 3  =  6x" },
+                    { text: "מעלים את השני בריבוע", visual: "3²  =  9" },
+                    { text: "מחברים הכל ביחד", visual: "x² + 6x + 9" }
+                ]
+            },
+            {
+                title: "הפרש בריבוע (-)",
+                subTitle: "(a - b)²",
+                formulaVisual: "a² - 2ab + b²",
+                desc: "דומה מאוד לנוסחה הראשונה, אבל האיבר האמצעי מקבל סימן מינוס.",
+                steps: [
+                    { text: "מעלים את הראשון בריבוע", visual: "(x - 5)²  →  x²" },
+                    { text: "כופלים: 2 כפול הראשון כפול השני (במינוס)", visual: "-2 • x • 5  =  -10x" },
+                    { text: "מעלים את השני בריבוע (תמיד פלוס!)", visual: "(-5)²  =  25" },
+                    { text: "התוצאה הסופית", visual: "x² - 10x + 25" }
+                ]
+            },
+            {
+                title: "הפרש ריבועים",
+                subTitle: "(a + b)(a - b)",
+                formulaVisual: "a² - b²",
+                desc: "נוסחת הקסם! כשיש אותם איברים, פעם בפלוס ופעם במינוס, האמצע נעלם.",
+                steps: [
+                    { text: "התרגיל שלנו", visual: "(x + 4)(x - 4)" },
+                    { text: "x כפול x", visual: "x²" },
+                    { text: "האמצע מתבטל (4x וגם -4x)", visual: "4x - 4x = 0" },
+                    { text: "נשאר רק החלק האחרון (במינוס)", visual: "-16" },
+                    { text: "התוצאה", visual: "x² - 16" }
+                ]
+            }
+        ];
+
+        // --- Main App Component ---
+        function ShortMultiplicationApp() {
+            const [activeTab, setActiveTab] = useState('learn');
+
+            return (
+                <div className="min-h-screen pb-10" dir="rtl">
+                    {/* Header */}
+                    <header className="bg-blue-600 text-white p-4 shadow-lg sticky top-0 z-20">
+                        <div className="max-w-3xl mx-auto flex justify-between items-center">
+                            <h1 className="text-xl md:text-2xl font-bold">נוסחאות הכפל המקוצר</h1>
+                            <span className="text-sm bg-blue-700 px-3 py-1 rounded-full">כיתה ט'</span>
+                        </div>
+                    </header>
+
+                    {/* Navigation */}
+                    <nav className="bg-white shadow-sm border-b sticky top-16 z-10">
+                        <div className="max-w-3xl mx-auto flex">
+                            <TabButton 
+                                active={activeTab === 'learn'} 
+                                onClick={() => setActiveTab('learn')} 
+                                icon={<BookOpen className="w-5 h-5"/>} 
+                                label="הנוסחאות" 
+                            />
+                            <TabButton 
+                                active={activeTab === 'reverse'} 
+                                onClick={() => setActiveTab('reverse')} 
+                                icon={<Search className="w-5 h-5"/>} 
+                                label="הדרך ההפוכה" 
+                            />
+                            <TabButton 
+                                active={activeTab === 'practice'} 
+                                onClick={() => setActiveTab('practice')} 
+                                icon={<CheckCircle className="w-5 h-5"/>} 
+                                label="תרגול" 
+                            />
+                        </div>
+                    </nav>
+
+                    {/* Main Content */}
+                    <main className="max-w-3xl mx-auto p-4">
+                        {activeTab === 'learn' && <LearnSection />}
+                        {activeTab === 'reverse' && <ReverseSection />}
+                        {activeTab === 'practice' && <PracticeSection />}
+                    </main>
+                </div>
+            );
+        }
+
+        function TabButton({ active, onClick, icon, label }) {
+            return (
+                <button
+                    onClick={onClick}
+                    className={`flex-1 py-4 text-center font-medium transition-colors flex flex-col items-center justify-center gap-1 ${
+                        active ? 'text-blue-600 border-b-2 border-blue-600 bg-blue-50' : 'text-gray-500 hover:bg-gray-50'
+                    }`}
+                >
+                    {icon}
+                    <span>{label}</span>
+                </button>
+            );
+        }
+
+        // --- Section 1: Learn Formulas ---
+        function LearnSection() {
+            const [activeFormula, setActiveFormula] = useState(0);
+            const current = formulas[activeFormula];
+
+            return (
+                <div className="space-y-6 animate-fade-in">
+                    {/* Tabs for formulas */}
+                    <div className="flex flex-wrap gap-2 justify-center mb-4">
+                        {formulas.map((f, i) => (
+                            <button
+                                key={i}
+                                onClick={() => setActiveFormula(i)}
+                                className={`px-4 py-2 rounded-full font-bold transition-all ${
+                                    activeFormula === i
+                                    ? 'bg-blue-600 text-white shadow-md scale-105'
+                                    : 'bg-white text-gray-600 border border-gray-200 hover:bg-gray-100'
+                                }`}
+                            >
+                                {f.title}
+                            </button>
+                        ))}
+                    </div>
+
+                    <div className="bg-white rounded-2xl shadow-xl overflow-hidden border border-blue-100">
+                        <div className="bg-blue-50 p-6 text-center border-b border-blue-100">
+                            <h2 className="text-2xl font-bold text-blue-900 mb-2">{current.title}</h2>
+                            <div className="text-3xl md:text-5xl font-bold text-blue-600 font-mono my-4" dir="ltr">
+                                {current.subTitle} = {current.formulaVisual}
+                            </div>
+                            <p className="text-gray-600 text-lg">{current.desc}</p>
+                        </div>
+
+                        <div className="p-6 space-y-4">
+                            <h3 className="font-bold text-gray-500 mb-4 text-lg">דוגמה שלב אחרי שלב:</h3>
+                            {current.steps.map((step, idx) => {
+                                const isLast = idx === current.steps.length - 1;
+                                return (
+                                    <div 
+                                        key={idx} 
+                                        className={`flex items-center gap-4 rounded-xl animate-fade-in-up transition-all ${
+                                            isLast 
+                                            ? 'bg-yellow-50 p-6 border-2 border-yellow-400 shadow-md transform scale-[1.01]' 
+                                            : 'bg-gray-50 p-4 border border-gray-100'
+                                        }`}
+                                        style={{animationDelay: `${idx * 150}ms`}}
+                                    >
+                                        <div className={`w-8 h-8 flex items-center justify-center rounded-full font-bold shrink-0 ${
+                                            isLast ? 'bg-yellow-200 text-yellow-800' : 'bg-blue-100 text-blue-700'
+                                        }`}>
+                                            {idx + 1}
+                                        </div>
+                                        <div className="flex-1">
+                                            <p className={`text-sm font-bold mb-1 ${isLast ? 'text-yellow-800' : 'text-gray-500'}`}>
+                                                {step.text}
+                                            </p>
+                                            <p className={`font-mono ${isLast ? 'text-2xl md:text-3xl font-bold text-gray-900' : 'text-xl md:text-2xl text-gray-800'}`} dir="ltr">
+                                                {step.visual}
+                                            </p>
+                                        </div>
+                                        {isLast && <div className="text-yellow-500"><CheckCircle className="w-8 h-8"/></div>}
+                                    </div>
+                                );
+                            })}
+                        </div>
+                    </div>
+                </div>
+            );
+        }
+
+        // --- Section 2: Reverse (Factorizing) ---
+        function ReverseSection() {
+            const [step, setStep] = useState(0);
+            
+            // Example: x² + 10x + 25
+            const example = {
+                exp: "x² + 10x + 25",
+                term1: "x²",
+                term3: "25",
+                root1: "x",
+                root3: "5",
+                middleCheck: "2 • x • 5",
+                middleResult: "10x",
+                final: "(x + 5)²"
+            };
+
+            const reset = () => setStep(0);
+            const next = () => setStep(s => Math.min(s + 1, 4));
+
+            return (
+                <div className="space-y-6 animate-fade-in">
+                    <div className="bg-white p-6 rounded-2xl shadow-lg border-t-4 border-purple-500">
+                        <h2 className="text-2xl font-bold text-purple-700 mb-4">איך חוזרים אחורה? (פירוק לגורמים)</h2>
+                        <p className="text-lg text-gray-700 mb-6">
+                            לפעמים נקבל ביטוי ארוך ("התוצאה") ונצטרך למצוא ממה הוא נוצר (הסוגריים).
+                            <br/>
+                            כדי לעשות את זה נכון, חייבים לעבוד כמו בלשים ולבצע <strong>בדיקה משולשת</strong>.
+                        </p>
+
+                        <div className="bg-purple-50 rounded-xl p-6 text-center mb-6">
+                            <p className="text-gray-500 mb-2 font-bold">הביטוי שלנו:</p>
+                            <div className="text-3xl md:text-5xl font-mono font-bold text-purple-800 mb-8" dir="ltr">
+                                {example.exp}
+                            </div>
+
+                            <div className="grid grid-cols-1 gap-4">
+                                {/* Step 1: Root of first */}
+                                <div className={`transition-all duration-500 ${step >= 1 ? 'opacity-100 transform translate-y-0' : 'opacity-20 transform translate-y-4'}`}>
+                                    <div className="bg-white p-4 rounded-lg border-2 border-purple-200 shadow-sm">
+                                        <span className="block text-purple-600 font-bold mb-1">בדיקה 1: שורש לאיבר הראשון</span>
+                                        <div dir="ltr" className="text-xl">√{example.term1} = <span className="font-bold text-2xl">{example.root1}</span></div>
+                                    </div>
+                                </div>
+
+                                {/* Step 2: Root of last */}
+                                <div className={`transition-all duration-500 ${step >= 2 ? 'opacity-100 transform translate-y-0' : 'opacity-20 transform translate-y-4'}`}>
+                                    <div className="bg-white p-4 rounded-lg border-2 border-purple-200 shadow-sm">
+                                        <span className="block text-purple-600 font-bold mb-1">בדיקה 2: שורש לאיבר האחרון (המספר)</span>
+                                        <div dir="ltr" className="text-xl">√{example.term3} = <span className="font-bold text-2xl">{example.root3}</span></div>
+                                    </div>
+                                </div>
+
+                                {/* Step 3: Middle Check */}
+                                <div className={`transition-all duration-500 ${step >= 3 ? 'opacity-100 transform translate-y-0' : 'opacity-20 transform translate-y-4'}`}>
+                                    <div className="bg-yellow-50 p-4 rounded-lg border-2 border-yellow-400 shadow-md relative overflow-hidden">
+                                        <span className="block text-yellow-800 font-bold mb-1 text-lg">בדיקה 3 (החשובה ביותר!)</span>
+                                        <p className="text-sm text-yellow-700 mb-2">האם 2 כפול השורשים נותן את האמצע?</p>
+                                        <div dir="ltr" className="text-2xl font-bold text-yellow-900">
+                                            2 • {example.root1} • {example.root3} = {example.middleResult}
+                                        </div>
+                                        {step >= 3 && <div className="mt-2 text-green-600 font-bold text-lg flex justify-center items-center gap-2"><CheckCircle/> זה תואם לאמצע!</div>}
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                        
+                        {/* Final Result */}
+                        {step === 4 && (
+                            <div className="bg-green-100 border-2 border-green-400 p-4 rounded-xl text-center animate-bounce-in mb-6">
+                                <span className="block text-green-800 font-bold mb-2">המסקנה הסופית:</span>
+                                <div dir="ltr" className="text-4xl font-mono font-bold text-green-900">
+                                    {example.final}
+                                </div>
+                            </div>
+                        )}
+
+                        <div className="flex justify-center mt-4">
+                            <button 
+                                onClick={step === 4 ? reset : next}
+                                className="bg-purple-600 text-white px-8 py-3 rounded-full font-bold shadow-lg hover:bg-purple-700 transition flex items-center gap-2"
+                            >
+                                {step === 0 ? "התחל בדיקה" : step === 4 ? "בדוק שוב" : "השלב הבא"}
+                                {step === 4 ? <RefreshCw className="w-5 h-5"/> : <ArrowDown className="w-5 h-5"/>}
+                            </button>
+                        </div>
+                    </div>
+                </div>
+            );
+        }
+
+        // --- Section 3: Practice ---
+        function PracticeSection() {
+            const [currentQ, setCurrentQ] = useState(0);
+            const [selected, setSelected] = useState(null);
+            const [checked, setChecked] = useState(false);
+            const [score, setScore] = useState(0);
+
+            const q = questions[currentQ];
+            const isCorrect = selected === q.correctIndex;
+
+            const handleSelect = (idx) => {
+                if (checked) return;
+                setSelected(idx);
+            };
+
+            const handleCheck = () => {
+                if (selected === null) return;
+                setChecked(true);
+                if (selected === q.correctIndex) setScore(s => s + 1);
+            };
+
+            const handleNext = () => {
+                if (currentQ < questions.length - 1) {
+                    setCurrentQ(c => c + 1);
+                    setSelected(null);
+                    setChecked(false);
+                } else {
+                    alert(`סיימת את התרגול! הציון שלך: ${score + (selected === q.correctIndex ? 0 : 0)} מתוך ${questions.length}`);
+                    setCurrentQ(0);
+                    setSelected(null);
+                    setChecked(false);
+                    setScore(0);
+                }
+            };
+
+            return (
+                <div className="animate-fade-in space-y-4">
+                    <div className="flex justify-between items-center text-sm font-bold text-gray-500">
+                        <span>שאלה {currentQ + 1} מתוך {questions.length}</span>
+                        <span className="text-blue-600">נקודות: {score}</span>
+                    </div>
+
+                    <div className="bg-white rounded-2xl shadow-lg border border-gray-200 overflow-hidden">
+                        <div className="bg-gray-50 p-6 text-center border-b border-gray-100">
+                            <h3 className="text-lg font-bold text-gray-800 mb-2">{q.question}</h3>
+                            <div className="text-3xl font-mono font-bold text-blue-700 bg-white inline-block px-4 py-2 rounded-lg shadow-sm border border-blue-100" dir="ltr">
+                                {q.mathExp}
+                            </div>
+                        </div>
+
+                        <div className="p-6 grid gap-3">
+                            {q.options.map((opt, idx) => {
+                                let style = "border-2 bg-white hover:bg-blue-50 hover:border-blue-300";
+                                if (selected === idx) style = "border-2 border-blue-600 bg-blue-50";
+                                if (checked) {
+                                    if (idx === q.correctIndex) style = "border-2 border-green-500 bg-green-50 text-green-700";
+                                    else if (idx === selected) style = "border-2 border-red-500 bg-red-50 text-red-700 opacity-60";
+                                    else style = "opacity-50 border-gray-100";
+                                }
+
+                                return (
+                                    <button
+                                        key={idx}
+                                        onClick={() => handleSelect(idx)}
+                                        className={`w-full p-4 rounded-xl text-lg font-mono transition-all duration-200 flex justify-between items-center ${style}`}
+                                    >
+                                        <span dir="ltr" className="w-full text-center">{opt}</span>
+                                        {checked && idx === q.correctIndex && <CheckCircle className="shrink-0 text-green-600"/>}
+                                        {checked && idx === selected && idx !== q.correctIndex && <XCircle className="shrink-0 text-red-600"/>}
+                                    </button>
+                                );
+                            })}
+                        </div>
+
+                        {checked && (
+                            <div className={`p-6 border-t ${isCorrect ? 'bg-green-50' : 'bg-red-50'} animate-fade-in`}>
+                                <div className="flex gap-3">
+                                    <div className={`p-2 rounded-full h-fit ${isCorrect ? 'bg-green-200 text-green-700' : 'bg-red-200 text-red-700'}`}>
+                                        {isCorrect ? <CheckCircle/> : <XCircle/>}
+                                    </div>
+                                    <div>
+                                        <h4 className={`font-bold text-lg ${isCorrect ? 'text-green-800' : 'text-red-800'}`}>
+                                            {isCorrect ? 'מעולה!' : 'לא נורא, הנה ההסבר:'}
+                                        </h4>
+                                        <p className="text-gray-700 mt-1">{q.explanation}</p>
+                                    </div>
+                                </div>
+                                <div className="mt-4 flex justify-center">
+                                    <button onClick={handleNext} className="bg-blue-600 text-white px-8 py-3 rounded-full font-bold shadow-md hover:bg-blue-700 transition flex items-center gap-2">
+                                        {currentQ < questions.length - 1 ? 'לשאלה הבאה' : 'סיים תרגול'}
+                                        <ArrowRight/>
+                                    </button>
+                                </div>
+                            </div>
+                        )}
+
+                        {!checked && (
+                            <div className="p-6 pt-0">
+                                <button
+                                    onClick={handleCheck}
+                                    disabled={selected === null}
+                                    className="w-full bg-blue-600 text-white py-4 rounded-xl font-bold text-xl shadow hover:bg-blue-700 disabled:opacity-50 disabled:cursor-not-allowed transition"
+                                >
+                                    בדיקה
+                                </button>
+                            </div>
+                        )}
+                    </div>
+                </div>
+            );
+        }
+
+        const root = ReactDOM.createRoot(document.getElementById('root'));
+        root.render(<ShortMultiplicationApp />);
+    </script>
+</body>
+</html>

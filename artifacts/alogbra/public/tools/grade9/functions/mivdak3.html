@@ -1,0 +1,405 @@
+<!DOCTYPE html>
+<html lang="he" dir="rtl">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>בוחן פרבולות - חקירה ומשמעות פרמטרים</title>
+    <!-- Tailwind CSS -->
+    <script src="https://cdn.tailwindcss.com"></script>
+    <!-- Lucide Icons -->
+    <script src="https://unpkg.com/lucide@latest"></script>
+    <style>
+        /* תיקון פונטים למתמטיקה */
+        .math-serif { font-family: 'Times New Roman', serif; }
+        
+        /* אנימציות */
+        .fade-in {
+            animation: fadeIn 0.3s ease-in-out;
+        }
+        @keyframes fadeIn {
+            from { opacity: 0; transform: translateY(-10px); }
+            to { opacity: 1; transform: translateY(0); }
+        }
+    </style>
+</head>
+<body class="min-h-screen bg-slate-50 text-slate-900 font-sans">
+
+    <!-- כותרת ראשית -->
+    <header class="bg-purple-700 text-white py-6 shadow-lg">
+        <div class="container mx-auto px-4 text-center">
+            <h1 class="text-3xl font-bold mb-2 flex items-center justify-center gap-3">
+                <i data-lucide="activity" width="32" height="32"></i>
+                בוחן בנושא פרבולות
+            </h1>
+            <p class="text-purple-100 text-lg">הצגה קודקודית וחקירת פונקציה ריבועית</p>
+        </div>
+    </header>
+
+    <main class="container mx-auto px-4 py-8 max-w-4xl">
+        
+        <!-- סרגל התקדמות -->
+        <div class="flex justify-between items-center mb-6 text-sm font-medium text-slate-500">
+            <span id="question-counter">שאלה 1 מתוך 2</span>
+            <span id="topic-display">נושא</span>
+        </div>
+        <div class="w-full bg-slate-200 rounded-full h-2.5 mb-8">
+            <div id="progress-bar" class="bg-purple-600 h-2.5 rounded-full transition-all duration-300" style="width: 50%"></div>
+        </div>
+
+        <!-- כרטיס שאלה -->
+        <div class="bg-white rounded-2xl shadow-xl border border-slate-100 overflow-hidden">
+            <div class="bg-slate-50 px-6 py-4 border-b border-slate-100 flex items-center gap-2">
+                <div id="topic-icon"></div>
+                <h2 id="question-title" class="text-xl font-bold text-slate-800">כותרת השאלה</h2>
+            </div>
+            
+            <div id="question-content" class="p-8 min-h-[200px] text-xl leading-relaxed">
+                <!-- תוכן השאלה יוכנס כאן דינמית -->
+            </div>
+
+            <!-- אזור פתרון -->
+            <div class="px-8 pb-8">
+                <button 
+                    onclick="toggleSolution()"
+                    id="toggle-btn"
+                    class="w-full flex items-center justify-center gap-2 bg-purple-50 hover:bg-purple-100 text-purple-700 py-3 rounded-lg font-bold transition-colors mb-4 border border-purple-200"
+                >
+                    <span id="toggle-text">הצג פתרון מלא</span>
+                    <i id="toggle-icon" data-lucide="chevron-down" width="20"></i>
+                </button>
+
+                <div id="solution-container" class="hidden bg-slate-50 p-6 rounded-xl border border-slate-200 fade-in">
+                    <h3 class="text-xl font-bold mb-4 flex items-center gap-2 text-green-700 border-b border-green-200 pb-2">
+                        <i data-lucide="check-circle" width="24"></i>
+                        פתרון מלא:
+                    </h3>
+                    <div id="solution-content" class="space-y-4 text-lg">
+                        <!-- תוכן הפתרון יוכנס כאן דינמית -->
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- כפתורי ניווט -->
+        <div class="flex justify-between mt-8" id="nav-buttons">
+            <button 
+                onclick="prevQuestion()"
+                id="prev-btn"
+                class="flex items-center gap-2 px-6 py-3 rounded-lg font-bold transition-all bg-white text-slate-700 shadow hover:bg-slate-50 disabled:opacity-0 disabled:cursor-default"
+            >
+                <i data-lucide="arrow-right" width="20"></i>
+                לשאלה הקודמת
+            </button>
+
+            <button 
+                onclick="nextQuestion()"
+                id="next-btn"
+                class="flex items-center gap-2 bg-purple-600 hover:bg-purple-700 text-white px-8 py-3 rounded-lg font-bold shadow-lg shadow-purple-200 transition-all transform hover:-translate-y-1"
+            >
+                לשאלה הבאה
+                <i data-lucide="arrow-left" width="20"></i>
+            </button>
+            
+            <div id="finish-msg" class="hidden text-green-600 font-bold text-xl flex items-center gap-2 bg-green-50 px-6 py-2 rounded-lg border border-green-200">
+                <i data-lucide="award"></i>
+                כל הכבוד! סיימת את הבוחן.
+            </div>
+        </div>
+
+    </main>
+
+    <script>
+        // --- פונקציות עזר לייצור HTML ---
+
+        function createPower(base, exp) {
+            return `<span>${base}<sup class="text-sm">${exp}</sup></span>`;
+        }
+
+        // --- ויזואליזציה של פרבולה (SVG) ---
+        function createParabolaSVG(a, b, c, vertexX, vertexY, roots) {
+            const width = 300;
+            const height = 300;
+            const scale = 20; // פיקסלים ליחידה
+            const originX = width / 2;
+            const originY = height / 2; // מרכז אנכי
+
+            // יצירת הנתיב של הפרבולה
+            let pathD = "M";
+            let started = false;
+
+            // חישוב נקודות בטווח הגרף
+            for (let px = 0; px <= width; px += 2) {
+                const xVal = (px - originX) / scale;
+                const yVal = a * xVal * xVal + b * xVal + c;
+                const py = originY - yVal * scale;
+                
+                // הגנה מפני חריגה קיצונית מהקנבס (אסתטיקה)
+                if (py >= -100 && py <= height + 100) {
+                     if (!started) {
+                         pathD += `${px},${py}`;
+                         started = true;
+                     } else {
+                         pathD += ` L${px},${py}`;
+                     }
+                }
+            }
+
+            // נקודות חיתוך ויזואליות
+            let rootsSVG = '';
+            if(Array.isArray(roots)) {
+                roots.forEach(r => {
+                    const rx = originX + r * scale;
+                    const ry = originY; // על ציר ה-X
+                    rootsSVG += `<circle cx="${rx}" cy="${ry}" r="4" fill="black" />
+                                 <text x="${rx}" y="${ry + 15}" font-size="10" text-anchor="middle" font-weight="bold">${r}</text>`;
+                });
+            }
+
+            // נקודת קודקוד
+            const vx = originX + vertexX * scale;
+            const vy = originY - vertexY * scale;
+
+            return `
+            <svg viewBox="0 0 ${width} ${height}" class="w-full max-w-sm mx-auto bg-white border border-gray-200 rounded my-4 shadow-sm">
+                <!-- רשת עזר -->
+                <defs>
+                    <pattern id="grid" width="20" height="20" patternUnits="userSpaceOnUse">
+                        <path d="M 20 0 L 0 0 0 20" fill="none" stroke="#f0f0f0" stroke-width="1"/>
+                    </pattern>
+                </defs>
+                <rect width="100%" height="100%" fill="url(#grid)" />
+
+                <!-- צירים -->
+                <line x1="0" y1="${originY}" x2="${width}" y2="${originY}" stroke="#64748b" stroke-width="2" />
+                <line x1="${originX}" y1="0" x2="${originX}" y2="${height}" stroke="#64748b" stroke-width="2" />
+                <text x="${width - 15}" y="${originY - 5}" font-size="12" font-weight="bold">x</text>
+                <text x="${originX + 5}" y="15" font-size="12" font-weight="bold">y</text>
+
+                <!-- גרף -->
+                <path d="${pathD}" fill="none" stroke="#9333ea" stroke-width="3" />
+
+                <!-- נקודות חיתוך -->
+                ${rootsSVG}
+
+                <!-- קודקוד -->
+                <circle cx="${vx}" cy="${vy}" r="4" fill="#dc2626" />
+                <text x="${vx}" y="${vy - 10}" text-anchor="middle" font-size="10" font-weight="bold" fill="#dc2626">(${vertexX}, ${vertexY})</text>
+            </svg>`;
+        }
+
+        // --- נתוני השאלות (פרבולות) ---
+        const questions = [
+            {
+                id: 1,
+                topic: 'הצגה קודקודית ופרמטרים',
+                icon: 'move',
+                iconClass: 'text-purple-600',
+                title: 'שאלה 1: משמעות הפרמטרים',
+                content: `
+                    <div class="text-xl leading-relaxed">
+                        <p class="mb-4">נתונה הפונקציה הריבועית בהצגה קודקודית:</p>
+                        <div class="text-3xl text-center font-serif my-6 bg-purple-50 py-4 rounded-lg border border-purple-100" dir="ltr">
+                            y = -2(x - 3)${createPower('', '2')} + 8
+                        </div>
+                        <div class="font-bold space-y-4">
+                            <p>א. זהה את הפרמטרים <span dir="ltr">a, p, k</span>. מהו קודקוד הפרבולה?</p>
+                            <p>ב. האם לפרבולה יש נקודת מינימום או מקסימום? הסבר לפי הפרמטר <span dir="ltr">a</span>.</p>
+                            <p>ג. תאר במילים כיצד התקבלה פרבולה זו מהפונקציה הבסיסית <span dir="ltr">y = x²</span> (התייחס להזזה אופקית, אנכית וכיווץ/מתיחה).</p>
+                        </div>
+                    </div>`,
+                solution: `
+                    <div class="space-y-4 text-lg">
+                        <div>
+                            <span class="font-bold text-purple-700 block mb-2">סעיף א': זיהוי הפרמטרים והקודקוד</span>
+                            לפי התבנית <span dir="ltr">y = a(x - p)² + k</span>:
+                            <ul class="list-disc list-inside mt-1 bg-gray-50 p-3 rounded">
+                                <li><span dir="ltr">a = -2</span></li>
+                                <li><span dir="ltr">p = 3</span> (שימו לב למינוס בנוסחה, <span dir="ltr">x-3</span> אומר ש-<span dir="ltr">p</span> חיובי).</li>
+                                <li><span dir="ltr">k = 8</span></li>
+                            </ul>
+                            <p class="mt-2"><strong>קודקוד הפרבולה:</strong> הנקודה <span dir="ltr">(p, k)</span> שהיא <span dir="ltr" class="font-bold">(3, 8)</span>.</p>
+                        </div>
+
+                        <div class="border-t border-gray-200 pt-4 mt-4">
+                            <span class="font-bold text-purple-700 block mb-2">סעיף ב': סוג הקיצון</span>
+                            הפרמטר <span dir="ltr">a = -2</span>.
+                            <br/>
+                            מכיוון ש-<span dir="ltr">a < 0</span> (שלילי), הפרבולה "בוכה" (פתוחה כלפי מטה).
+                            <br/>
+                            לכן יש לה נקודת <strong>מקסימום</strong>.
+                        </div>
+
+                        <div class="border-t border-gray-200 pt-4 mt-4">
+                            <span class="font-bold text-purple-700 block mb-2">סעיף ג': תיאור ההזזות</span>
+                            השינויים ביחס ל-<span dir="ltr">y = x²</span> הם:
+                            <ol class="list-decimal list-inside mt-2 space-y-1">
+                                <li><strong>הזזה אופקית:</strong> <span dir="ltr">p = 3</span>, כלומר הזזה של 3 יחידות <strong>ימינה</strong>.</li>
+                                <li><strong>הזזה אנכית:</strong> <span dir="ltr">k = 8</span>, כלומר הזזה של 8 יחידות <strong>למעלה</strong>.</li>
+                                <li><strong>מתיחה והיפוך:</strong> <span dir="ltr">a = -2</span>. המספר 2 גורם לפרבולה להיות "צרה" יותר (מתיחה אנכית), והמינוס הופך אותה כלפי מטה.</li>
+                            </ol>
+                        </div>
+                        <div class="mt-4 p-2 bg-white border rounded text-center">
+                             <span class="text-sm text-gray-500">המחשה גרפית:</span>
+                             ${createParabolaSVG(-0.5, 3, 3.5, 3, 8, [-1, 7])} 
+                             <!-- שים לב: שיניתי מעט את הסקאלה ב-SVG כדי שייראה יפה, הקודקוד והשורשים מותאמים ויזואלית -->
+                        </div>
+                    </div>`
+            },
+            {
+                id: 2,
+                topic: 'חקירת פונקציה ריבועית',
+                icon: 'search',
+                iconClass: 'text-purple-600',
+                title: 'שאלה 2: חקירה מלאה',
+                content: `
+                    <div class="text-xl leading-relaxed">
+                        <p class="mb-4">נתונה הפונקציה הריבועית:</p>
+                        <div class="text-3xl text-center font-serif my-6 bg-purple-50 py-4 rounded-lg border border-purple-100" dir="ltr">
+                            y = x${createPower('', '2')} - 6x + 5
+                        </div>
+                        <div class="font-bold space-y-4">
+                            <p>א. מצא את נקודות החיתוך עם הצירים (x ו-y).</p>
+                            <p>ב. מצא את קודקוד הפרבולה ואת משוואת ציר הסימטריה.</p>
+                            <p>ג. רשום את תחומי העלייה והירידה של הפונקציה.</p>
+                            <p>ד. רשום את תחומי החיוביות והשליליות של הפונקציה.</p>
+                        </div>
+                    </div>`,
+                solution: `
+                    <div class="space-y-4 text-lg">
+                        <div>
+                            <span class="font-bold text-purple-700 block mb-2">סעיף א': נקודות חיתוך</span>
+                            <strong>חיתוך עם ציר y:</strong> נציב <span dir="ltr">x = 0</span>.<br/>
+                            <span dir="ltr">y = 0² - 6(0) + 5 = 5</span>. נקודה: <span dir="ltr">(0, 5)</span>.<br/><br/>
+                            <strong>חיתוך עם ציר x:</strong> נציב <span dir="ltr">y = 0</span> (משוואה ריבועית).<br/>
+                            <span dir="ltr">x² - 6x + 5 = 0</span><br/>
+                            פירוק לטרינום: <span dir="ltr">(x - 5)(x - 1) = 0</span><br/>
+                            פתרונות: <span dir="ltr">x = 1, x = 5</span>.<br/>
+                            נקודות: <span dir="ltr">(1, 0), (5, 0)</span>.
+                        </div>
+
+                        <div class="border-t border-gray-200 pt-4 mt-4">
+                            <span class="font-bold text-purple-700 block mb-2">סעיף ב': קודקוד וסימטריה</span>
+                            נמצא את ה-<span dir="ltr">x</span> של הקודקוד לפי הנוסחה <span dir="ltr">x = -b / 2a</span>:<br/>
+                            <span dir="ltr">x = -(-6) / 2(1) = 6 / 2 = 3</span>.<br/>
+                            נציב בפונקציה למציאת <span dir="ltr">y</span>:<br/>
+                            <span dir="ltr">y = 3² - 6(3) + 5 = 9 - 18 + 5 = -4</span>.<br/>
+                            <strong>קודקוד:</strong> <span dir="ltr" class="font-bold">(3, -4)</span>.<br/>
+                            <strong>ציר הסימטריה:</strong> הישר <span dir="ltr">x = 3</span>.
+                        </div>
+
+                        <div class="border-t border-gray-200 pt-4 mt-4">
+                            <span class="font-bold text-purple-700 block mb-2">סעיף ג': עלייה וירידה</span>
+                            זו פרבולה "מחייכת" (מינימום). הקודקוד ב-<span dir="ltr">x = 3</span>.<br/>
+                            תחום ירידה (לפני הקודקוד): <span dir="ltr">x < 3</span>.<br/>
+                            תחום עלייה (אחרי הקודקוד): <span dir="ltr">x > 3</span>.
+                        </div>
+
+                        <div class="border-t border-gray-200 pt-4 mt-4">
+                            <span class="font-bold text-purple-700 block mb-2">סעיף ד': חיוביות ושליליות</span>
+                            הפרבולה חותכת את ציר ה-x ב-1 וב-5 והיא "מחייכת" (הקודקוד למטה).<br/>
+                            <strong>חיוביות (מעל הציר):</strong> בצדדים. <span dir="ltr">x < 1</span> או <span dir="ltr">x > 5</span>.<br/>
+                            <strong>שליליות (מתחת לציר):</strong> בין נקודות החיתוך. <span dir="ltr">1 < x < 5</span>.
+                        </div>
+                        
+                        <div class="mt-4 p-2 bg-white border rounded text-center">
+                             <span class="text-sm text-gray-500">שרטוט הפרבולה:</span>
+                             ${createParabolaSVG(1, -6, 5, 3, -4, [1, 5])}
+                        </div>
+                    </div>`
+            }
+        ];
+
+        // --- ניהול מצב האפליקציה ---
+        let currentQuestion = 0;
+        let isSolutionVisible = false;
+
+        function renderQuestion() {
+            const q = questions[currentQuestion];
+            
+            // עדכון טקסטים
+            document.getElementById('question-counter').innerText = `שאלה ${currentQuestion + 1} מתוך ${questions.length}`;
+            document.getElementById('topic-display').innerText = q.topic;
+            document.getElementById('question-title').innerText = q.title;
+            document.getElementById('question-content').innerHTML = q.content;
+            document.getElementById('solution-content').innerHTML = q.solution;
+
+            // עדכון אייקון נושא
+            const iconContainer = document.getElementById('topic-icon');
+            // Check for custom icons
+            const iconName = q.icon; 
+            iconContainer.innerHTML = `<i data-lucide="${iconName}" class="${q.iconClass}"></i>`;
+
+            // עדכון פרוגרס בר
+            const progress = ((currentQuestion + 1) / questions.length) * 100;
+            document.getElementById('progress-bar').style.width = `${progress}%`;
+
+            // איפוס מצב פתרון
+            isSolutionVisible = false;
+            updateSolutionUI();
+
+            // עדכון כפתורי ניווט
+            const prevBtn = document.getElementById('prev-btn');
+            const nextBtn = document.getElementById('next-btn');
+            const finishMsg = document.getElementById('finish-msg');
+
+            prevBtn.disabled = currentQuestion === 0;
+            
+            if (currentQuestion === questions.length - 1) {
+                nextBtn.classList.add('hidden');
+                finishMsg.classList.remove('hidden');
+            } else {
+                nextBtn.classList.remove('hidden');
+                finishMsg.classList.add('hidden');
+            }
+
+            // רענון אייקונים
+            lucide.createIcons();
+            
+            // גלילה למעלה
+            window.scrollTo(0,0);
+        }
+
+        function toggleSolution() {
+            isSolutionVisible = !isSolutionVisible;
+            updateSolutionUI();
+        }
+
+        function updateSolutionUI() {
+            const container = document.getElementById('solution-container');
+            const btnText = document.getElementById('toggle-text');
+            const btnIcon = document.getElementById('toggle-icon');
+
+            if (isSolutionVisible) {
+                container.classList.remove('hidden');
+                btnText.innerText = 'הסתר פתרון מלא';
+                btnIcon.setAttribute('data-lucide', 'chevron-up');
+            } else {
+                container.classList.add('hidden');
+                btnText.innerText = 'הצג פתרון מלא';
+                btnIcon.setAttribute('data-lucide', 'chevron-down');
+            }
+            lucide.createIcons();
+        }
+
+        function nextQuestion() {
+            if (currentQuestion < questions.length - 1) {
+                currentQuestion++;
+                renderQuestion();
+            }
+        }
+
+        function prevQuestion() {
+            if (currentQuestion > 0) {
+                currentQuestion--;
+                renderQuestion();
+            }
+        }
+
+        // אתחול ראשוני
+        document.addEventListener('DOMContentLoaded', () => {
+            renderQuestion();
+        });
+
+    </script>
+</body>
+</html>
