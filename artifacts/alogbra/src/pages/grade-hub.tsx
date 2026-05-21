@@ -1,5 +1,5 @@
 import { useParams, Link } from "wouter";
-import { getGrade } from "@/data/tools";
+import { getGradeWithLibrary as getGrade } from "@/data/tools";
 import { Navbar, Footer } from "@/components/layout";
 import { ArrowRight, Lock } from "lucide-react";
 import { useState } from "react";

@@ -1,3 +1,5 @@
+import { htmlLibrary } from "./html-library";
+
 export interface Tool {
   id: string;
   title: string;
@@ -131,4 +133,85 @@ export const grades: Grade[] = [
 
 export function getGrade(id: number): Grade | undefined {
   return grades.find((g) => g.id === id);
+}
+
+export function getGradeWithLibrary(id: number): Grade | undefined {
+  const base = grades.find((g) => g.id === id);
+  if (!base) return undefined;
+
+  const libraryTools = htmlLibrary.filter((t) => t.grade === id);
+  if (libraryTools.length === 0) return base;
+
+  // Group library tools by category
+  const byCategory: Record<string, typeof libraryTools> = {};
+  for (const t of libraryTools) {
+    if (!byCategory[t.category]) byCategory[t.category] = [];
+    byCategory[t.category].push(t);
+  }
+
+  const categoryColorMap: Record<string, Grade["categories"][0]["color"]> = {
+    algebra: "orange",
+    geometry: "green",
+    kavit: "blue",
+    functions: "indigo",
+    statistics: "purple",
+    other: "purple",
+  };
+
+  const categoryTitleMap: Record<string, string> = {
+    algebra: "אלגברה",
+    geometry: "גאומטריה",
+    kavit: "פונקציה קווית",
+    functions: "פונקציות",
+    statistics: "סטטיסטיקה",
+    other: "כלים נוספים",
+  };
+
+  const categoryEmojiMap: Record<string, string> = {
+    algebra: "🧮",
+    geometry: "📐",
+    kavit: "📈",
+    functions: "📈",
+    statistics: "📊",
+    other: "📄",
+  };
+
+  // Start with existing categories, add library tools to matching ones
+  const updatedCategories = base.categories.map((cat) => {
+    const catKey = cat.id.replace(/\d+$/, ""); // strip trailing grade number
+    const matchingKey = Object.keys(byCategory).find((k) => catKey.includes(k));
+    if (!matchingKey) return cat;
+    const newTools: Tool[] = byCategory[matchingKey].map((t) => ({
+      id: t.id,
+      title: t.title,
+      description: t.description,
+      file: `__html__${t.id}`,
+      emoji: t.emoji ?? "📄",
+      premium: t.premium,
+      isQuiz: t.isQuiz,
+    }));
+    delete byCategory[matchingKey];
+    return { ...cat, tools: [...cat.tools, ...newTools] };
+  });
+
+  // Create new categories for unmatched library categories
+  const newCategories: Grade["categories"] = Object.entries(byCategory).map(
+    ([key, tools]) => ({
+      id: `lib-${key}-${id}`,
+      title: categoryTitleMap[key] ?? key,
+      emoji: categoryEmojiMap[key] ?? "📄",
+      color: categoryColorMap[key] ?? "purple",
+      tools: tools.map((t) => ({
+        id: t.id,
+        title: t.title,
+        description: t.description,
+        file: `__html__${t.id}`,
+        emoji: t.emoji ?? "📄",
+        premium: t.premium,
+        isQuiz: t.isQuiz,
+      })),
+    })
+  );
+
+  return { ...base, categories: [...updatedCategories, ...newCategories] };
 }
