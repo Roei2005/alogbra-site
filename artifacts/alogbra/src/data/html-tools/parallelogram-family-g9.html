@@ -1,0 +1,1258 @@
+<!DOCTYPE html>
+<html lang="he" dir="rtl">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>משפחת המקביליות: המהדורה המושלמת</title>
+    <script src="https://unpkg.com/react@18/umd/react.development.js"></script>
+    <script src="https://unpkg.com/react-dom@18/umd/react-dom.development.js"></script>
+    <script src="https://unpkg.com/@babel/standalone/babel.min.js"></script>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link href="https://fonts.googleapis.com/css2?family=Rubik:wght@300;400;700;900&display=swap" rel="stylesheet">
+    <link href="https://fonts.googleapis.com/css2?family=Noto+Sans+Math&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <style>
+        body { font-family: 'Rubik', sans-serif; background-color: #0f172a; color: white; overflow-x: hidden; }
+        .math-font { font-family: 'Noto Sans Math', 'Times New Roman', serif; direction: ltr; display: block; line-height: 1.6; }
+        .shape-path { transition: d 1.5s cubic-bezier(0.34, 1.56, 0.64, 1), fill 1s ease, stroke 1s ease; }
+        .highlight-pulse { animation: highlightPulse 1.5s infinite; }
+        @keyframes highlightPulse {
+            0% { stroke-opacity: 1; stroke-width: 4; }
+            50% { stroke-opacity: 0.5; stroke-width: 6; }
+            100% { stroke-opacity: 1; stroke-width: 4; }
+        }
+        .draw-stroke { stroke-dasharray: 1000; stroke-dashoffset: 1000; animation: draw 2s forwards; }
+        @keyframes draw { to { stroke-dashoffset: 0; } }
+        
+        .boss-glow { animation: gold-pulse 3s infinite; }
+        @keyframes gold-pulse {
+            0% { box-shadow: 0 0 0 0 rgba(234, 179, 8, 0.4); }
+            70% { box-shadow: 0 0 0 20px rgba(234, 179, 8, 0); }
+            100% { box-shadow: 0 0 0 0 rgba(234, 179, 8, 0); }
+        }
+        .genetic-pulse { animation: geneticPulse 3s infinite; }
+        @keyframes geneticPulse {
+            0% { border-color: rgba(34, 197, 94, 0.5); box-shadow: 0 0 0 rgba(34, 197, 94, 0.2); }
+            50% { border-color: rgba(34, 197, 94, 1); box-shadow: 0 0 20px rgba(34, 197, 94, 0.4); }
+            100% { border-color: rgba(34, 197, 94, 0.5); box-shadow: 0 0 0 rgba(34, 197, 94, 0.2); }
+        }
+        
+        /* Bonus Alert Animation */
+        .bonus-alert { animation: popIn 0.5s cubic-bezier(0.175, 0.885, 0.32, 1.275) forwards, fadeOut 0.5s ease-in 2.5s forwards; }
+        @keyframes popIn { 0% { transform: scale(0) rotate(-10deg); opacity: 0; } 100% { transform: scale(1) rotate(0deg); opacity: 1; } }
+        @keyframes fadeOut { to { opacity: 0; transform: scale(1.5); } }
+
+        button { touch-action: manipulation; }
+        .custom-scrollbar::-webkit-scrollbar { width: 8px; }
+        .custom-scrollbar::-webkit-scrollbar-track { background: #1e293b; border-radius: 4px; }
+        .custom-scrollbar::-webkit-scrollbar-thumb { background: #475569; border-radius: 4px; }
+        .custom-scrollbar::-webkit-scrollbar-thumb:hover { background: #64748b; }
+        
+        .story-text { animation: fadeInUp 0.8s ease-out; }
+        @keyframes fadeInUp { from { opacity: 0; transform: translateY(20px); } to { opacity: 1; transform: translateY(0); } }
+    </style>
+</head>
+<body>
+    <div id="root"></div>
+
+    <script type="text/babel">
+        const { useState, useEffect, useRef, useMemo } = React;
+
+        // --- HELPER FOR GEOMETRY ---
+        const getAngleArc = (center, p1, p2, radius) => {
+            const angle1 = Math.atan2(p1[1] - center[1], p1[0] - center[0]);
+            const angle2 = Math.atan2(p2[1] - center[1], p2[0] - center[0]);
+            let startAngle = angle1;
+            let endAngle = angle2;
+            let diff = endAngle - startAngle;
+            while (diff <= -Math.PI) diff += 2*Math.PI;
+            while (diff > Math.PI) diff -= 2*Math.PI;
+            if (diff < 0) { [startAngle, endAngle] = [endAngle, startAngle]; }
+            const largeArcFlag = Math.abs(diff) > Math.PI ? 1 : 0;
+            const startX = center[0] + radius * Math.cos(startAngle);
+            const startY = center[1] + radius * Math.sin(startAngle);
+            const endX = center[0] + radius * Math.cos(endAngle);
+            const endY = center[1] + radius * Math.sin(endAngle);
+            return { d: `M ${startX} ${startY} A ${radius} ${radius} 0 ${largeArcFlag} 1 ${endX} ${endY}` };
+        };
+
+        const getSideTickData = (p1, p2, double) => {
+            const mx = (p1[0] + p2[0]) / 2;
+            const my = (p1[1] + p2[1]) / 2;
+            const angle = Math.atan2(p2[1] - p1[1], p2[0] - p1[0]) * (180 / Math.PI);
+            return { x: mx, y: my, rot: angle + 90, double };
+        };
+
+        // --- DATA ---
+        const SHAPES = {
+            parallelogram: {
+                id: 'parallelogram',
+                name: 'מקבילית',
+                level: 1,
+                color: 'blue',
+                coords: { A: [80, 60], B: [280, 60], C: [220, 260], D: [20, 260] },
+                desc: 'המקור. הבסיס לכל המשפחה.',
+                features: [
+                    { id: 'sides_par', icon: 'equals', text: 'צלעות נגדיות שוות ומקבילות', math: 'AB = DC\nAB || DC\nAD = BC\nAD || BC' },
+                    { id: 'angles_opp', icon: 'angle-left', text: 'זוויות נגדיות שוות', math: '∢A = ∢C\n∢B = ∢D' },
+                    { id: 'angles_180', icon: 'arrows-alt-h', text: 'זוויות סמוכות משלימות ל-180°', math: '∢A + ∢B = 180°\n∢C + ∢D = 180°' },
+                    { id: 'diagonals_bisect', icon: 'x-ray', text: 'אלכסונים חוצים (אך לא שווים!)', math: 'AO = OC\nBO = OD' },
+                    { 
+                        id: 'area_perimeter', 
+                        icon: 'ruler-combined', 
+                        text: 'שטח והיקף', 
+                        math: 'P = 2(a + b)\nS = a • h',
+                        tip: 'במקבילית, השטח הוא צלע כפול הגובה שיורד אליה. אל תתבלבלו עם הצלע השנייה! ההיקף הוא סכום כל הצלעות.'
+                    }
+                ],
+                inheritance: 'האמא של כולם. מורישה את תכונת המקבילות והחצייה לכל הצאצאים.'
+            },
+            rectangle: {
+                id: 'rectangle',
+                name: 'מלבן',
+                level: 2,
+                color: 'purple',
+                coords: { A: [40, 60], B: [280, 60], C: [280, 260], D: [40, 260] },
+                desc: 'השדרוג הזוויתי. יישרנו את המקבילית.',
+                features: [
+                    { id: 'angles_90', icon: 'expand', text: 'כל הזוויות ישרות (90°)', math: '∢A = 90°\n∢B = 90°\n∢C = 90°\n∢D = 90°' },
+                    { id: 'angles_180', icon: 'arrows-alt-h', text: 'זוויות סמוכות משלימות ל-180°', math: '90° + 90° = 180°' },
+                    { id: 'diagonals_equal', icon: 'ruler-horizontal', text: 'האלכסונים שווים זה לזה', math: 'AC = BD\nAO = BO = CO = DO' },
+                    { id: 'sides_par', icon: 'check-double', text: 'שומר על תכונות המקבילית', math: 'AB || DC\nAD || BC' },
+                    { 
+                        id: 'area_perimeter', 
+                        icon: 'ruler-combined', 
+                        text: 'שטח והיקף', 
+                        math: 'P = 2(a + b)\nS = a • b',
+                        tip: 'במלבן זה פשוט: שטח הוא אורך כפול רוחב. היקף הוא פעמיים האורך ועוד פעמיים הרוחב.'
+                    }
+                ],
+                inheritance: 'ירש הכל מהמקבילית, וקיבל "בונוס" של זוויות ישרות ואלכסונים שווים.'
+            },
+            rhombus: {
+                id: 'rhombus',
+                name: 'מעויין',
+                level: 2,
+                color: 'orange',
+                coords: { A: [150, 30], B: [250, 160], C: [150, 290], D: [50, 160] },
+                desc: 'השדרוג הצלעתי. כל הצלעות שוות.',
+                features: [
+                    { id: 'sides_all', icon: 'border-all', text: 'כל הצלעות שוות באורכן', math: 'AB = BC\nBC = CD\nCD = DA' },
+                    { id: 'angles_180', icon: 'arrows-alt-h', text: 'זוויות סמוכות משלימות ל-180°', math: '∢A + ∢B = 180°' },
+                    { id: 'diagonals_perp', icon: 'compress-arrows-alt', text: 'אלכסונים מאונכים (אך לא שווים!)', math: 'AC ⊥ BD\n∢O = 90°' },
+                    { id: 'diagonals_angles', icon: 'cut', text: 'האלכסונים חוצים את הזוויות', math: '∢A₁ = ∢A₂\n∢B₁ = ∢B₂' },
+                    { 
+                        id: 'area_perimeter', 
+                        icon: 'ruler-combined', 
+                        text: 'שטח והיקף', 
+                        math: 'P = 4a\nS = frac(AC • BD)(2)',
+                        tip: 'טיפ חשוב: מכיוון שכל הצלעות שוות, אם נתון ההיקף - פשוט חלקו ב-4 כדי למצוא את הצלע! שטח מחשבים כמכפלת האלכסונים חלקי 2.'
+                    }
+                ],
+                inheritance: 'ירש הכל מהמקבילית, וקיבל "בונוס" של צלעות שוות ואלכסונים מאונכים.'
+            },
+            square: {
+                id: 'square',
+                name: 'ריבוע',
+                level: 3,
+                color: 'yellow',
+                coords: { A: [80, 80], B: [240, 80], C: [240, 240], D: [80, 240] },
+                desc: 'הבוס הסופי. השלמות הגיאומטרית.',
+                features: [
+                    { id: 'all_props', icon: 'crown', text: 'משלב מלבן ומעויין', math: 'מלבן + מעויין = ריבוע' },
+                    { id: 'angles_90', icon: 'star', text: 'זוויות ישרות + חוצי זווית (45°)', math: '∢A = 90°\n∢A₁ = 45°' },
+                    { id: 'diagonals_super', icon: 'magic', text: 'אלכסונים: שווים, מאונכים, חוצים', math: 'AC = BD\nAC ⊥ BD\nAO = BO' },
+                    { 
+                        id: 'area_perimeter', 
+                        icon: 'ruler-combined', 
+                        text: 'שטח והיקף', 
+                        math: 'P = 4a\nS = a²\nS = frac(AC • BD)(2)',
+                        tip: 'בריבוע זה הכי קל: צלע כפול עצמה לשטח. להיקף? כמו במעויין, אם יש היקף - חלקו ב-4 למציאת הצלע.'
+                    }
+                ],
+                inheritance: 'הילד המוצלח. ירש גם את הזוויות מהמלבן וגם את הצלעות מהמעויין. שלמות.'
+            }
+        };
+
+        // --- QUESTIONS BANK ---
+        const generateQuestions = () => {
+            // 35 Text Questions (Properties, Logic) - 25 sec
+            // Completely replaced with requested questions + extra logic questions (NO PROOFS)
+            const textPool = [
+                { type: 'prop', q: 'איזו תכונה יש גם למעויין וגם לריבוע, אך אין למלבן?', opts: ['אלכסונים מאונכים', 'אלכסונים שווים', 'זוויות ישרות', 'צלעות נגדיות מקבילות'], correctAns: 'אלכסונים מאונכים', diff: 'text', exp: 'במלבן האלכסונים שווים אך לא מאונכים.' },
+                { type: 'logic', q: 'במה שונה ריבוע ממעויין, למרות שלשניהם כל הצלעות שוות?', opts: ['לריבוע יש זוויות ישרות', 'לריבוע יש צלעות שוות', 'למעויין אין אלכסונים', 'אין הבדל'], correctAns: 'לריבוע יש זוויות ישרות', diff: 'text', exp: 'הריבוע הוא מעויין עם זוויות ישרות.' },
+                { type: 'tf', q: 'כל מעויין הוא מקבילית.', ans: 'נכון', exp: 'המעויין הוא סוג מיוחד של מקבילית (עם צלעות שוות).', diff: 'text' },
+                { type: 'logic', q: 'אני מרובע שבו כל הצלעות שוות, אך לא כל הזוויות ישרות. מי אני?', opts: ['מעויין', 'ריבוע', 'מלבן', 'מקבילית'], correctAns: 'מעויין', diff: 'text', exp: 'צלעות שוות ללא זוויות ישרות זהו המעויין.' },
+                { type: 'logic', q: 'אני מרובע שבו כל הזוויות שוות (ישרות), אך לא כל הצלעות שוות. מי אני?', opts: ['מלבן', 'ריבוע', 'מעויין', 'מקבילית'], correctAns: 'מלבן', diff: 'text', exp: 'זוויות ישרות וצלעות נגדיות שוות (אך לא כל הצלעות) זה מלבן.' },
+                { type: 'logic', q: 'אני מרובע שבו האלכסונים חוצים זה את זה אך אינם שווים ואינם מאונכים. מי אני?', opts: ['מקבילית', 'מלבן', 'מעויין', 'ריבוע'], correctAns: 'מקבילית', diff: 'text', exp: 'במקבילית רגילה אין תכונות מיוחדות לאלכסונים מעבר לחצייה.' },
+                { type: 'logic', q: 'אני מרובע שבו האלכסונים שווים אך אינם מאונכים. מי אני?', opts: ['מלבן', 'ריבוע', 'מעויין', 'מקבילית'], correctAns: 'מלבן', diff: 'text', exp: 'במלבן האלכסונים שווים.' },
+                { type: 'logic', q: 'אני מרובע שבו האלכסונים חוצים את הזוויות. מי אני?', opts: ['מעויין (וריבוע)', 'מלבן', 'מקבילית', 'טרפז'], correctAns: 'מעויין (וריבוע)', diff: 'text', exp: 'זוהי תכונה של משפחת המעויינים.' },
+                { type: 'logic', q: 'איזו צורה מקיימת את כל התכונות של שאר הצורות במשפחה?', opts: ['ריבוע', 'מלבן', 'מעויין', 'מקבילית'], correctAns: 'ריבוע', diff: 'text', exp: 'הריבוע הוא "הילד המושלם" שירש הכל.' },
+                { type: 'tf', q: 'במעויין האלכסונים שווים.', ans: 'לא נכון', exp: 'במעויין הם מאונכים, אך לא שווים (אלא אם הוא ריבוע).', diff: 'text' },
+                { type: 'tf', q: 'במלבן האלכסונים שווים.', ans: 'נכון', exp: 'זוהי התכונה המרכזית של המלבן.', diff: 'text' },
+                { type: 'prop', q: 'באילו צורות האלכסונים שווים זה לזה?', opts: ['מלבן וריבוע', 'מעויין וריבוע', 'מקבילית ומעויין', 'רק ריבוע'], correctAns: 'מלבן וריבוע', diff: 'text', exp: 'שוויון אלכסונים קיים במשפחת המלבנים.' },
+                { type: 'prop', q: 'איך נחשב שטח מקבילית?', opts: ['צלע כפול הגובה אליה', 'צלע כפול גובה חלקי 2', 'מכפלת הצלעות', 'סכום הצלעות'], correctAns: 'צלע כפול הגובה אליה', diff: 'text', exp: 'S = a * h. בלי חלוקה ב-2 (זה למשולש).' },
+                { type: 'prop', q: 'באיזה צורות ניתן לחשב שטח בעזרת מכפלת האלכסונים חלקי 2?', opts: ['מעויין וריבוע', 'מלבן ומקבילית', 'רק מלבן', 'כל מרובע'], correctAns: 'מעויין וריבוע', diff: 'text', exp: 'כי האלכסונים מאונכים.' },
+                { type: 'logic', q: 'אני המרובע היחיד שבו גם כל הצלעות שוות וגם כל הזוויות ישרות. מי אני?', opts: ['ריבוע', 'מלבן', 'מעויין', 'מקבילית'], correctAns: 'ריבוע', diff: 'text', exp: 'הריבוע משלב את שתי התכונות.' },
+                { type: 'tf', q: 'כל ריבוע הוא מלבן.', ans: 'נכון', exp: 'כי יש לו זוויות ישרות.', diff: 'text' },
+                { type: 'tf', q: 'כל ריבוע הוא מעויין.', ans: 'נכון', exp: 'כי יש לו צלעות שוות.', diff: 'text' },
+                { type: 'tf', q: 'כל מלבן הוא ריבוע.', ans: 'לא נכון', exp: 'רק מלבן עם צלעות שוות הוא ריבוע.', diff: 'text' },
+                { type: 'prop', q: 'מה סכום הזוויות הפנימיות בכל מרובע?', opts: ['360 מעלות', '180 מעלות', '90 מעלות', '540 מעלות'], correctAns: '360 מעלות', diff: 'text', exp: 'תמיד 360.' },
+                { type: 'logic', q: 'באיזו צורה האלכסונים גם שווים, גם מאונכים וגם חוצים?', opts: ['ריבוע', 'מלבן', 'מעויין', 'מקבילית'], correctAns: 'ריבוע', diff: 'text', exp: 'הכל מהכל.' },
+                { type: 'prop', q: 'האם במלבן האלכסונים מאונכים זה לזה?', opts: ['לא', 'כן', 'תמיד', 'רק אם הצלעות שוות'], correctAns: 'לא', diff: 'text', exp: 'הם שווים אך לא מאונכים (אלא אם הוא ריבוע).' },
+                { type: 'prop', q: 'האם במקבילית האלכסונים שווים?', opts: ['לא בהכרח', 'כן תמיד', 'רק אם היא מלבן', 'אף פעם'], correctAns: 'לא בהכרח', diff: 'text', exp: 'במקבילית רגילה הם שונים.' },
+                { type: 'prop', q: 'מה נכון לגבי הזוויות הנגדיות במקבילית?', opts: ['הן שוות זו לזו', 'הן משלימות ל-180', 'הן ישרות', 'אין קשר ביניהן'], correctAns: 'הן שוות זו לזו', diff: 'text', exp: 'תכונה בסיסית של מקבילית.' },
+                { type: 'prop', q: 'מה נכון לגבי הזוויות הסמוכות במקבילית?', opts: ['סכומן 180 מעלות', 'הן שוות', 'סכומן 90 מעלות', 'סכומן 360 מעלות'], correctAns: 'סכומן 180 מעלות', diff: 'text', exp: 'כי הן זוויות חד-צדדיות בין מקבילים.' },
+                { type: 'logic', q: 'אם למעויין יש היקף של 20 ס"מ, מה אורך כל צלע?', opts: ['5 ס"מ', '4 ס"מ', '10 ס"מ', '2 ס"מ'], correctAns: '5 ס"מ', diff: 'text', exp: 'כל הצלעות שוות, 20 חלקי 4.' },
+                { type: 'logic', q: 'למי יש אלכסונים מאונכים?', opts: ['מעויין', 'מלבן', 'מקבילית', 'טרפז'], correctAns: 'מעויין', diff: 'text', exp: 'אנכיות אלכסונים היא תכונת המעויין.' },
+                { type: 'tf', q: 'האם כל המעויינים חופפים?', ans: 'לא נכון', exp: 'הם יכולים להיות בגדלים וזוויות שונות.', diff: 'text' },
+                { type: 'tf', q: 'לריבוע יש 4 צלעות שוות.', ans: 'נכון', exp: 'זו ההגדרה.', diff: 'text' },
+                { type: 'prop', q: 'כמה קודקודים יש למקבילית?', opts: ['4', '3', '5', '2'], correctAns: '4', diff: 'text', exp: 'כמו לכל מרובע.' },
+                { type: 'prop', q: 'מהו המרובע המשוכלל?', opts: ['ריבוע', 'מעויין', 'מלבן', 'מקבילית'], correctAns: 'ריבוע', diff: 'text', exp: 'גם צלעות שוות וגם זוויות שוות.' },
+                { type: 'logic', q: 'האם ניתן לחסום מעגל בתוך כל מעויין?', opts: ['כן', 'לא', 'רק בריבוע', 'תלוי בגודל'], correctAns: 'כן', diff: 'text', exp: 'כי סכום הצלעות הנגדיות שווה (תכונה מתקדמת, אך נכונה).' },
+                { type: 'tf', q: 'בריבוע הזווית בין האלכסון לצלע היא 45.', ans: 'נכון', exp: 'חצי מ-90.', diff: 'text' },
+                { type: 'prop', q: 'האם למקבילית יש ציר סימטריה?', opts: ['לא בהכרח', 'כן, האלכסון', 'כן, הגובה', 'תמיד 2'], correctAns: 'לא בהכרח', diff: 'text', exp: 'למקבילית כללית אין צירי סימטריה.' },
+                { type: 'logic', q: 'מה משותף למלבן ולמקבילית?', opts: ['צלעות נגדיות שוות', 'אלכסונים שווים', 'זוויות ישרות', 'צלעות סמוכות שוות'], correctAns: 'צלעות נגדיות שוות', diff: 'text', exp: 'תכונה העוברת בתורשה.' },
+                { type: 'tf', q: 'האם ריבוע הוא סוג של דלתון?', ans: 'נכון', exp: 'כי יש לו שני זוגות של צלעות סמוכות שוות.', diff: 'text' }
+            ];
+
+            // 10 Calculation Questions (Visual, Precise diagrams) - 45 sec
+            const calcPool = [
+                // Rect Pythagoras
+                { type: 'visual_calc', q: 'במלבן, האלכסון הוא 13 ואחת הצלעות 5. מה אורך הצלע השנייה?', shape: 'rectangle', data: { label_AC: '13', show_diagonals: true, label_side: '5', show_sides: true }, opts: ['12', '8', '10', '7'], correctAns: '12', exp: 'פיתגורס: 169 פחות 25 שווה 144. שורש 144 הוא 12.', diff: 'calc' },
+                // Parallelogram Area
+                { type: 'visual_calc', q: 'נתונה מקבילית ששטחה 48 ואורך הבסיס 12. מה אורך הגובה?', shape: 'parallelogram', data: { label_side: '12', show_sides: true }, opts: ['4', '6', '2', '24'], correctAns: '4', exp: 'שטח חלקי בסיס שווה גובה. 48/12 = 4.', diff: 'calc' },
+                // Rhombus Area
+                { type: 'visual_calc', q: 'במעויין, האלכסונים הם 6 ו-8. מה שטח המעויין?', shape: 'rhombus', data: { show_diagonals: true }, opts: ['24', '48', '14', '12'], correctAns: '24', exp: '(6 * 8) / 2 = 24.', diff: 'calc' },
+                // Square Perimeter
+                { type: 'visual_calc', q: 'היקף הריבוע הוא 20. מה אורך הצלע?', shape: 'square', data: { show_sides: true }, opts: ['5', '4', '10', '25'], correctAns: '5', exp: '20 חלקי 4 = 5.', diff: 'calc' },
+                // Rect Perimeter
+                { type: 'visual_calc', q: 'במלבן, צלע אחת 4 וצלע שניה 6. מה ההיקף?', shape: 'rectangle', data: { show_sides: true }, opts: ['20', '10', '24', '12'], correctAns: '20', exp: '2 * (4 + 6) = 20.', diff: 'calc' },
+                // Rhombus Angle
+                { type: 'visual_calc', q: 'במעויין, זווית A היא 60. מה גודל זווית B?', shape: 'rhombus', data: { A_angle: '60°', show_A: true, show_B: true }, opts: ['120°', '60°', '30°', '90°'], correctAns: '120°', exp: 'זוויות סמוכות משלימות ל-180.', diff: 'calc' },
+                // Square Area from Diag
+                { type: 'visual_calc', q: 'בריבוע, האלכסון הוא 10. מה שטח הריבוע?', shape: 'square', data: { show_diagonals: true, label_AC: '10' }, opts: ['50', '100', '25', '20'], correctAns: '50', exp: '(10 * 10) / 2 = 50.', diff: 'calc' },
+                // Parallelogram Angle
+                { type: 'visual_calc', q: 'במקבילית, זווית C היא 110. מה גודל זווית A?', shape: 'parallelogram', data: { C_angle: '110°', show_A: true }, opts: ['110°', '70°', '55°', '90°'], correctAns: '110°', exp: 'זוויות נגדיות שוות.', diff: 'calc' },
+                // Rect Diag
+                { type: 'visual_calc', q: 'במלבן, חצי אלכסון (AO) הוא 7. מה אורך האלכסון BD?', shape: 'rectangle', data: { show_diagonals: true }, opts: ['14', '7', '3.5', '21'], correctAns: '14', exp: 'האלכסונים שווים וחוצים. 7 * 2 = 14.', diff: 'calc' },
+                // Square Side from Area
+                { type: 'visual_calc', q: 'שטח הריבוע הוא 81. מה היקפו?', shape: 'square', data: { show_sides: true }, opts: ['36', '9', '18', '81'], correctAns: '36', exp: 'צלע = 9. היקף = 9 * 4 = 36.', diff: 'calc' }
+            ];
+
+            // 5 Bonus Questions (Visual, Algebra/Logic) - 60 sec
+            const challengePool = [
+                // 1. Algebra Parallelogram Angle
+                { 
+                    type: 'visual_calc', 
+                    q: 'במקבילית, זווית A היא X וזווית B הסמוכה לה היא 2X. חשבו את X.', 
+                    shape: 'parallelogram', 
+                    data: { A_angle: 'X', B_angle: '2X', show_A: true, show_B: true }, 
+                    opts: ['60', '30', '90', '45'], 
+                    correctAns: '60', 
+                    exp: 'סכום זוויות סמוכות 180. X+2X=180 -> 3X=180 -> X=60.', 
+                    diff: 'challenge' 
+                },
+                // 2. Algebra Rhombus Angles (Opposite equal)
+                { 
+                    type: 'visual_calc', 
+                    q: 'במעויין, זווית A היא 70 וזווית C הנגדית היא X. כמה זה X?', 
+                    shape: 'rhombus', 
+                    data: { A_angle: '70°', C_angle: 'X', show_A: true, show_opp: true }, 
+                    opts: ['70', '110', '35', '140'], 
+                    correctAns: '70', 
+                    exp: 'במעויין זוויות נגדיות שוות זו לזו. לכן X=70.', 
+                    diff: 'challenge' 
+                },
+                // 3. Rect Perimeter Algebra
+                { 
+                    type: 'visual_calc', 
+                    q: 'היקף מלבן הוא 30. צלע אחת היא X והשנייה X+5. מהו X?', 
+                    shape: 'rectangle', 
+                    data: { show_sides: true, label_side: 'X' }, // Simplified label, text carries the weight
+                    opts: ['5', '10', '2.5', '7.5'], 
+                    correctAns: '5', 
+                    exp: '2(X + X+5) = 30 -> 4X+10=30 -> 4X=20 -> X=5.', 
+                    diff: 'challenge' 
+                },
+                // 4. Pythagoras Rhombus Half Diags
+                { 
+                    type: 'visual_calc', 
+                    q: 'במעויין, חצאי האלכסונים הם 3 ו-4. מה אורך צלע המעויין?', 
+                    shape: 'rhombus', 
+                    data: { show_diagonals: true }, 
+                    opts: ['5', '7', '12', '25'], 
+                    correctAns: '5', 
+                    exp: 'האלכסונים מאונכים. משפט פיתגורס במשולש ישר זווית (3,4,5).', 
+                    diff: 'challenge' 
+                },
+                // 5. Logic Visual - Rhombus with Right Angle
+                { 
+                    type: 'visual_calc', 
+                    q: 'נתון מעויין שיש לו זווית ישרה (90°). מה ניתן להסיק עליו?', 
+                    shape: 'rhombus', 
+                    data: { A_angle: '90°', show_A: true }, 
+                    opts: ['שהוא ריבוע', 'שהוא רק מלבן', 'זה לא אומר כלום', 'שאין לו אלכסונים'], 
+                    correctAns: 'שהוא ריבוע', 
+                    exp: 'מעויין (צלעות שוות) + זווית ישרה (מלבן) = ריבוע.', 
+                    diff: 'challenge' 
+                }
+            ];
+
+            return { textPool, calcPool, challengePool };
+        };
+
+        const { textPool, calcPool, challengePool } = generateQuestions();
+
+        // --- VISUAL COMPONENTS ---
+
+        const FamilyTreeAnim = () => {
+            const SEQUENCE = [
+                { shape: 'parallelogram', feat: null, text: 'נתחיל מהאמא של כולם: המקבילית', color: 'blue' },
+                { shape: 'parallelogram', feat: 'sides', text: 'במקבילית, כל זוג צלעות נגדיות שוות ומקבילות (בצבעים שונים)', color: 'blue' },
+                { shape: 'parallelogram', feat: 'angles', text: 'והזוויות הנגדיות? גם הן שוות זו לזו (זוגות בצבעים)', color: 'blue' },
+                { shape: 'parallelogram', feat: 'angles180', text: 'והכי חשוב: סכום זוויות סמוכות הוא 180 מעלות', color: 'blue' },
+                { type: 'transition', text: 'המקבילית היא האמא במשפחה, כל הילדים יורשים ממנה את התכונות ומוסיפים עוד משלהם', color: 'gray' },
+                { shape: 'rectangle', feat: null, text: 'המלבן הוא הילד הראשון של המקבילית, וכמו שאמרנו לוקח ממנה את כל התכונות', color: 'purple' },
+                { shape: 'rectangle', feat: 'angles_90', text: 'במלבן כל הזוויות ישרות (90 מעלות)', color: 'purple' },
+                { shape: 'rectangle', feat: 'diagonals', text: 'והאלכסונים? הפכו להיות שווים זה לזה', color: 'purple' },
+                { shape: 'rhombus', feat: null, text: 'נחזור למקבילית ונשווה צלעות... מעויין!', color: 'orange' },
+                { shape: 'rhombus', feat: 'sides_all', text: 'במעויין כל הצלעות שוות באורכן', color: 'orange' },
+                { shape: 'rhombus', feat: 'perp', text: 'האלכסונים מאונכים זה לזה (יוצרים 90°)', color: 'orange' },
+                { shape: 'square', feat: null, text: 'השילוב המושלם: ריבוע!', color: 'yellow' },
+                { shape: 'square', feat: 'all', text: 'גם זוויות ישרות, גם צלעות שוות, הכל!', color: 'yellow' },
+                { shape: 'square', feat: 'split45', text: 'והזוויות הישרות? נחצות ל-45 מעלות על ידי האלכסון', color: 'yellow' },
+                { type: 'tip', text: 'טיפ נוסף - תזכרו שבכל מרובע - סכום הזוויות הוא 360 מעלות', color: 'yellow' },
+                { type: 'final', text: 'עכשיו אתם מוכנים לפתור תרגילים. בהצלחה!', color: 'green' }
+            ];
+
+            const [step, setStep] = useState(0);
+
+            useEffect(() => {
+                const interval = setInterval(() => {
+                    setStep(prev => (prev + 1) % SEQUENCE.length);
+                }, 5000);
+                return () => clearInterval(interval);
+            }, []);
+
+            const current = SEQUENCE[step];
+
+            if (current.type === 'transition' || current.type === 'tip' || current.type === 'final') {
+                return (
+                    <div className={`flex flex-col items-center justify-center h-full bg-slate-900 rounded-3xl p-12 border-2 ${current.type === 'final' ? 'border-green-500' : 'border-slate-600'} animate-in fade-in zoom-in`}>
+                        <h2 className={`text-3xl lg:text-6xl font-black text-center ${current.color === 'yellow' ? 'text-yellow-400' : current.color === 'green' ? 'text-green-400' : 'text-white'} leading-relaxed tracking-wide story-text`}>
+                            {current.text}
+                        </h2>
+                    </div>
+                );
+            }
+
+            const data = SHAPES[current.shape];
+            const { A, B, C, D } = data.coords;
+            const mid = (p1, p2) => [(p1[0]+p2[0])/2, (p1[1]+p2[1])/2];
+            const center = mid(A, C);
+
+            const RenderSides = () => (
+                <g className="draw-stroke">
+                    <line x1={A[0]} y1={A[1]} x2={B[0]} y2={B[1]} stroke={current.shape === 'parallelogram' ? '#60A5FA' : (current.color === 'yellow' ? '#EAB308' : '#4ade80')} strokeWidth="5" />
+                    <line x1={C[0]} y1={C[1]} x2={D[0]} y2={D[1]} stroke={current.shape === 'parallelogram' ? '#60A5FA' : (current.color === 'yellow' ? '#EAB308' : '#4ade80')} strokeWidth="5" />
+                    <line x1={B[0]} y1={B[1]} x2={C[0]} y2={C[1]} stroke={current.shape === 'parallelogram' ? '#34D399' : (current.color === 'yellow' ? '#EAB308' : '#4ade80')} strokeWidth="5" />
+                    <line x1={D[0]} y1={D[1]} x2={A[0]} y2={A[1]} stroke={current.shape === 'parallelogram' ? '#34D399' : (current.color === 'yellow' ? '#EAB308' : '#4ade80')} strokeWidth="5" />
+                </g>
+            );
+
+            const RenderAngles = () => {
+                if (current.shape === 'rectangle' || current.shape === 'square') {
+                    return (
+                        <g className="draw-stroke">
+                            <rect x={A[0]} y={A[1]} width="20" height="20" fill="none" stroke="#22d3ee" strokeWidth="3" />
+                            <rect x={B[0]-20} y={B[1]} width="20" height="20" fill="none" stroke="#22d3ee" strokeWidth="3" />
+                            <rect x={C[0]-20} y={C[1]-20} width="20" height="20" fill="none" stroke="#22d3ee" strokeWidth="3" />
+                            <rect x={D[0]} y={D[1]-20} width="20" height="20" fill="none" stroke="#22d3ee" strokeWidth="3" />
+                        </g>
+                    );
+                }
+                return (
+                    <g className="draw-stroke">
+                        <path d={getAngleArc(A, B, D, 30).d} fill="none" stroke="#F87171" strokeWidth="4" />
+                        <path d={getAngleArc(C, D, B, 30).d} fill="none" stroke="#F87171" strokeWidth="4" />
+                        <path d={getAngleArc(B, C, A, 30).d} fill="none" stroke="#FB923C" strokeWidth="4" />
+                        <path d={getAngleArc(D, A, C, 30).d} fill="none" stroke="#FB923C" strokeWidth="4" />
+                    </g>
+                );
+            };
+
+            const RenderDiagonals = () => (
+                <g className="draw-stroke">
+                    <line x1={A[0]} y1={A[1]} x2={C[0]} y2={C[1]} stroke="#fbbf24" strokeWidth="3" />
+                    <line x1={B[0]} y1={B[1]} x2={D[0]} y2={D[1]} stroke="#fbbf24" strokeWidth="3" />
+                </g>
+            );
+
+            const RenderSplit45 = () => (
+                <g className="fade-in">
+                    <line x1={A[0]} y1={A[1]} x2={C[0]} y2={C[1]} stroke="#fbbf24" strokeWidth="2" strokeDasharray="4" />
+                    <text x={A[0]+35} y={A[1]+15} fill="white" fontSize="14" fontWeight="bold">45°</text>
+                    <text x={A[0]+15} y={A[1]+35} fill="white" fontSize="14" fontWeight="bold">45°</text>
+                </g>
+            );
+
+            return (
+                <div className="flex flex-col lg:flex-row items-center justify-between h-full bg-slate-800 rounded-3xl p-4 lg:p-8 border border-slate-700 overflow-hidden">
+                    <div className="flex-1 w-full h-[300px] lg:h-[400px] flex items-center justify-center relative">
+                        <svg viewBox="-40 -40 380 380" className="w-full h-full max-w-[500px]">
+                            <path d={`M${A[0]},${A[1]} L${B[0]},${B[1]} L${C[0]},${C[1]} L${D[0]},${D[1]} Z`} fill={data.color === 'yellow' ? '#EAB308' : data.color === 'orange' ? '#F97316' : data.color === 'purple' ? '#A855F7' : '#3B82F6'} fillOpacity="0.1" stroke="white" strokeWidth="2" className="shape-path" />
+                            {(current.feat === 'sides' || current.feat === 'sides_all' || current.feat === 'all') && <RenderSides />}
+                            {(current.feat === 'angles' || current.feat === 'angles_90' || current.feat === 'all' || current.feat === 'angles180') && <RenderAngles />}
+                            {(current.feat === 'diagonals' || current.feat === 'perp' || current.feat === 'all') && <RenderDiagonals />}
+                            {(current.feat === 'split45') && <RenderSplit45 />}
+                            {current.feat === 'angles180' && (
+                                <g>
+                                    <text x={A[0]-20} y={A[1]} fill="#F87171" fontSize="14" fontWeight="bold">a</text>
+                                    <text x={B[0]+10} y={B[1]} fill="#FB923C" fontSize="14" fontWeight="bold">b</text>
+                                    <text x={150} y={40} fill="white" fontSize="16" fontWeight="bold" textAnchor="middle">a + b = 180°</text>
+                                </g>
+                            )}
+                            {(current.feat === 'perp' || current.feat === 'all') && (
+                                <path d={`M${center[0]-15},${center[1]} L${center[0]},${center[1]-15} L${center[0]+15},${center[1]} L${center[0]},${center[1]+15} Z`} fill="rgba(255,0,0,0.5)" />
+                            )}
+                        </svg>
+                    </div>
+                    <div className="flex-1 w-full p-4 lg:p-6 text-center lg:text-right flex flex-col justify-center gap-2 lg:gap-4 z-10">
+                        <div className="text-lg lg:text-xl text-gray-400 font-bold uppercase tracking-widest">{data.name}</div>
+                        <h2 className={`text-2xl lg:text-5xl font-black leading-tight transition-all duration-500 transform ${current.feat ? 'scale-105' : ''}`} style={{ color: current.color === 'yellow' ? '#EAB308' : current.color === 'orange' ? '#F97316' : current.color === 'purple' ? '#A855F7' : '#60A5FA' }}>{current.text}</h2>
+                        <div className="w-full h-2 bg-gray-700 rounded-full mt-4 lg:mt-8 overflow-hidden">
+                            <div className="h-full bg-white transition-all duration-[5000ms] ease-linear" style={{ width: '100%', transformOrigin: 'right' }} key={step}></div>
+                        </div>
+                    </div>
+                </div>
+            );
+        };
+
+        const VisualQuestionShape = ({ shapeId, data }) => {
+            if (!shapeId || !SHAPES[shapeId]) return null;
+
+            const coords = SHAPES[shapeId].coords;
+            const { A, B, C, D } = coords;
+            const mid = (p1, p2) => [(p1[0]+p2[0])/2, (p1[1]+p2[1])/2];
+            const center = mid(A, C);
+
+            const getAnglePos = (p, centerP, offset=30) => {
+                const shapeCenter = mid(A, C);
+                const vec = [shapeCenter[0] - p[0], shapeCenter[1] - p[1]];
+                const len = Math.sqrt(vec[0]**2 + vec[1]**2);
+                const norm = [vec[0]/len, vec[1]/len];
+                return { x: p[0] + norm[0]*offset, y: p[1] + norm[1]*offset };
+            };
+
+            const getLabelPos = (p) => {
+                const shapeCenter = mid(A, C);
+                const vec = [p[0] - shapeCenter[0], p[1] - shapeCenter[1]]; // Vector from center to point
+                const len = Math.sqrt(vec[0]**2 + vec[1]**2);
+                const norm = [vec[0]/len, vec[1]/len];
+                const offset = 25; 
+                return { x: p[0] + norm[0]*offset, y: p[1] + norm[1]*offset + 5 };
+            };
+
+            const posA = getLabelPos(A);
+            const posB = getLabelPos(B);
+            const posC = getLabelPos(C);
+            const posD = getLabelPos(D);
+
+            return (
+                <svg viewBox="-25 -25 350 350" className="w-full h-80 lg:h-96 mx-auto my-4 bg-slate-900/50 rounded-xl border border-slate-600">
+                     <path d={`M${A[0]},${A[1]} L${B[0]},${B[1]} L${C[0]},${C[1]} L${D[0]},${D[1]} Z`} fill="none" stroke="white" strokeWidth="2" />
+                    
+                    <text x={posA.x} y={posA.y} fill="white" fontSize="18" fontWeight="bold" textAnchor="middle">A</text>
+                    <text x={posB.x} y={posB.y} fill="white" fontSize="18" fontWeight="bold" textAnchor="middle">B</text>
+                    <text x={posC.x} y={posC.y} fill="white" fontSize="18" fontWeight="bold" textAnchor="middle">C</text>
+                    <text x={posD.x} y={posD.y} fill="white" fontSize="18" fontWeight="bold" textAnchor="middle">D</text>
+                    
+                    {(data.show_diagonals || data.show_center_angle) && <text x={center[0]} y={center[1]-20} fill="yellow" fontSize="18" fontWeight="bold" textAnchor="middle">O</text>}
+
+                    {data.show_A && <text x={getAnglePos(A, A, 40).x} y={getAnglePos(A, A, 40).y+5} textAnchor="middle" fill="#fbbf24" fontSize="20" fontWeight="bold">{data.A_angle || '?'}</text>}
+                    {data.show_B && <text x={getAnglePos(B, B, 40).x} y={getAnglePos(B, B, 40).y+5} textAnchor="middle" fill="#ef4444" fontSize="22" fontWeight="bold">{data.B_angle || '?'}</text>}
+                    {data.show_D && <text x={getAnglePos(D, D, 40).x} y={getAnglePos(D, D, 40).y+5} textAnchor="middle" fill="#ef4444" fontSize="22" fontWeight="bold">{data.D_angle || '?'}</text>}
+                    
+                    {data.show_center_angle && (
+                        <g>
+                            <line x1={A[0]} y1={A[1]} x2={C[0]} y2={C[1]} stroke="gray" strokeDasharray="4" />
+                            <line x1={B[0]} y1={B[1]} x2={D[0]} y2={D[1]} stroke="gray" strokeDasharray="4" />
+                            <text x={center[0]+5} y={center[1]+20} fill="#ef4444" fontSize="24" fontWeight="bold">?</text>
+                            <rect x={center[0]} y={center[1]-15} width="15" height="15" fill="none" stroke="yellow" />
+                        </g>
+                    )}
+
+                    {data.show_half_angle && (
+                         <g>
+                             <line x1={A[0]} y1={A[1]} x2={C[0]} y2={C[1]} stroke="gray" strokeDasharray="4" />
+                             <text x={A[0]+50} y={A[1]+30} fill="#ef4444" fontSize="20" fontWeight="bold">a?</text>
+                        </g>
+                    )}
+
+                    {data.show_diagonals && (
+                        <g>
+                             <line x1={A[0]} y1={A[1]} x2={C[0]} y2={C[1]} stroke="yellow" strokeWidth="2" />
+                             <line x1={B[0]} y1={B[1]} x2={D[0]} y2={D[1]} stroke="gray" strokeWidth="2" />
+                             {data.label_AC && <text x={center[0]} y={center[1]+25} fill="yellow" fontSize="18" fontWeight="bold">AC={data.label_AC}</text>}
+                        </g>
+                    )}
+
+                    {data.show_sides && (
+                        <g>
+                             <text x={(A[0]+B[0])/2} y={(A[1]+B[1])/2 - 15} fill="lime" fontSize="20" fontWeight="bold" textAnchor="middle">{data.label_side || '?'}</text>
+                        </g>
+                    )}
+                </svg>
+            );
+        };
+
+        const ShapeDisplay = ({ shapeId, highlightedFeature, showSummary }) => {
+            const data = SHAPES[shapeId];
+            const { A, B, C, D } = data.coords;
+            const color = data.color === 'yellow' ? '#EAB308' : data.color === 'purple' ? '#A855F7' : data.color === 'orange' ? '#F97316' : '#3B82F6';
+            const mid = (p1, p2) => [(p1[0]+p2[0])/2, (p1[1]+p2[1])/2];
+            const center = mid(A, C);
+            const isRectOrSquare = shapeId === 'rectangle' || shapeId === 'square';
+            const isRhombusOrSquare = shapeId === 'rhombus' || shapeId === 'square';
+
+            const checkFeat = (keys) => {
+                if (showSummary) return true;
+                if (!highlightedFeature) return false;
+                if (highlightedFeature === 'all_props') return true;
+                return keys.some(k => highlightedFeature.includes(k));
+            };
+
+            const showDiagonals = checkFeat(['diagonals']) || 
+                                  (shapeId === 'square' && (highlightedFeature === 'angles_90' || highlightedFeature === 'diagonals_super' || showSummary));
+
+            const showAngles = checkFeat(['angles']);
+            const showSides = checkFeat(['sides']);
+            const show180 = highlightedFeature === 'angles_180';
+            const showArea = highlightedFeature === 'area_perimeter';
+            
+            const currentMath = useMemo(() => {
+                if (showSummary) return null; 
+                const feat = data.features.find(f => f.id === highlightedFeature);
+                return feat ? feat.math : null;
+            }, [highlightedFeature, showSummary, data]);
+
+            const currentTip = useMemo(() => {
+                if (showSummary) return null;
+                const feat = data.features.find(f => f.id === highlightedFeature);
+                return feat ? feat.tip : null;
+            }, [highlightedFeature, showSummary, data]);
+
+            const RenderSideTick = ({p1, p2, double}) => {
+                const { x, y, rot } = getSideTickData(p1, p2);
+                return (
+                    <g transform={`translate(${x},${y}) rotate(${rot})`}>
+                        <line x1="-8" y1="0" x2="8" y2="0" stroke="#fbbf24" strokeWidth="3" strokeLinecap="round" />
+                        {double && <line x1="-8" y1="-5" x2="8" y2="-5" stroke="#fbbf24" strokeWidth="3" strokeLinecap="round" />}
+                    </g>
+                );
+            };
+
+            const renderAngleText = (p, centerP, text) => {
+                 const shapeCenter = mid(A, C);
+                 const vec = [shapeCenter[0] - p[0], shapeCenter[1] - p[1]];
+                 const len = Math.sqrt(vec[0]**2 + vec[1]**2);
+                 const norm = [vec[0]/len, vec[1]/len];
+                 const offset = 40; 
+                 
+                 return <text 
+                    x={p[0] + norm[0]*offset} 
+                    y={p[1] + norm[1]*offset + 5} 
+                    textAnchor="middle" 
+                    fill="white" 
+                    fontSize="14" 
+                    fontWeight="bold" 
+                    className="drop-shadow-md"
+                >{text}</text>;
+            };
+
+            const renderSquare45 = (corner, p1, p2) => {
+                 const angle1 = Math.atan2(p1[1] - corner[1], p1[0] - corner[0]);
+                 const angle2 = Math.atan2(p2[1] - corner[1], p2[0] - corner[0]);
+                 let bisector = (angle1 + angle2) / 2;
+                 if (Math.abs(angle1 - angle2) > Math.PI) bisector += Math.PI;
+                 
+                 const dist = 50;
+                 const tx = corner[0] + Math.cos(bisector) * dist;
+                 const ty = corner[1] + Math.sin(bisector) * dist;
+                 const r = 35;
+                 const startX = corner[0] + r * Math.cos(angle1);
+                 const startY = corner[1] + r * Math.sin(angle1);
+                 const endX = corner[0] + r * Math.cos(bisector);
+                 const endY = corner[1] + r * Math.sin(bisector);
+                 const diagX = corner[0] + 60 * Math.cos(bisector);
+                 const diagY = corner[1] + 60 * Math.sin(bisector);
+
+                 return (
+                    <g>
+                        <line x1={corner[0]} y1={corner[1]} x2={diagX} y2={diagY} stroke="#fbbf24" strokeWidth="2" strokeDasharray="4" />
+                        <path d={`M ${startX} ${startY} A ${r} ${r} 0 0 1 ${endX} ${endY}`} fill="none" stroke="white" strokeWidth="2" />
+                        <text x={tx} y={ty} fill="white" fontSize="12" fontWeight="bold" textAnchor="middle">45°</text>
+                    </g>
+                 );
+            };
+
+            const getLabelPos = (p) => {
+                const shapeCenter = mid(A, C);
+                const vec = [p[0] - shapeCenter[0], p[1] - shapeCenter[1]];
+                const len = Math.sqrt(vec[0]**2 + vec[1]**2);
+                const norm = [vec[0]/len, vec[1]/len];
+                const offset = 30; 
+                return { x: p[0] + norm[0]*offset, y: p[1] + norm[1]*offset + 5 };
+            };
+
+            const posA = getLabelPos(A);
+            const posB = getLabelPos(B);
+            const posC = getLabelPos(C);
+            const posD = getLabelPos(D);
+
+            const RenderHeight = () => {
+                const heightY = D[1]; 
+                return (
+                    <g className="fade-in">
+                        <line x1={A[0]} y1={A[1]} x2={A[0]} y2={heightY} stroke="white" strokeWidth="2" strokeDasharray="6" />
+                        <rect x={A[0]+2} y={heightY-12} width="10" height="10" stroke="white" fill="none" />
+                        <text x={A[0]-15} y={(A[1]+heightY)/2} fill="white" fontSize="16" fontWeight="bold">h</text>
+                        <text x={(D[0]+C[0])/2} y={D[1]+20} fill="white" fontSize="16" fontWeight="bold">a (בסיס)</text>
+                    </g>
+                );
+            }
+
+            return (
+                <div className="flex flex-col gap-4">
+                    <div className={`relative w-full h-[400px] bg-slate-900 rounded-3xl border-4 border-slate-700 flex justify-center items-center overflow-hidden transition-all duration-500 shadow-2xl ${shapeId === 'square' ? 'boss-glow border-yellow-500' : ''}`}>
+                        <svg viewBox="-40 -40 380 380" className="w-full h-full max-w-[500px]">
+                            <path d={`M${A[0]},${A[1]} L${B[0]},${B[1]} L${C[0]},${C[1]} L${D[0]},${D[1]} Z`} fill={color} fillOpacity="0.1" stroke={color} strokeWidth="3" strokeLinejoin="round" className="shape-path" />
+                            
+                            {showArea && shapeId === 'parallelogram' && <RenderHeight />}
+                            
+                            {showDiagonals && (
+                                <g className="highlight-pulse">
+                                    <line x1={A[0]} y1={A[1]} x2={C[0]} y2={C[1]} stroke="#fbbf24" strokeWidth="2" strokeDasharray="5,5" />
+                                    <line x1={B[0]} y1={B[1]} x2={D[0]} y2={D[1]} stroke="#fbbf24" strokeWidth="2" strokeDasharray="5,5" />
+                                    {isRhombusOrSquare && (highlightedFeature?.includes('perp') || highlightedFeature?.includes('super') || showSummary) && (
+                                         <path d={`M${center[0]-15},${center[1]} L${center[0]},${center[1]-15} L${center[0]+15},${center[1]} L${center[0]},${center[1]+15} Z`} fill="rgba(255,0,0,0.4)" stroke="red" strokeWidth="2" />
+                                    )}
+                                </g>
+                            )}
+                            {showAngles && (
+                                <g>
+                                    {isRectOrSquare ? (
+                                        [A,B,C,D].map((p, i) => {
+                                            const dx = i===1||i===2 ? -25 : 0;
+                                            const dy = i===2||i===3 ? -25 : 0;
+                                            return (
+                                                <g key={i}>
+                                                    <rect x={p[0]+dx} y={p[1]+dy} width="25" height="25" fill="none" stroke="#22d3ee" strokeWidth="3" />
+                                                    {shapeId === 'square' && (highlightedFeature === 'angles_90' || highlightedFeature === 'diagonals_super' || showSummary) && (
+                                                        <g>
+                                                            {i===0 && (<>{renderSquare45(A, B, C)} {renderSquare45(A, D, C)}</>)}
+                                                            {i===1 && (<>{renderSquare45(B, A, D)} {renderSquare45(B, C, D)}</>)}
+                                                            {i===2 && (<>{renderSquare45(C, B, A)} {renderSquare45(C, D, A)}</>)}
+                                                            {i===3 && (<>{renderSquare45(D, A, B)} {renderSquare45(D, C, B)}</>)}
+                                                        </g>
+                                                    )}
+                                                </g>
+                                            )
+                                        })
+                                    ) : (
+                                        <>
+                                            <path d={getAngleArc(A, B, D, 30).d} fill="none" stroke="#22d3ee" strokeWidth="3" />
+                                            <path d={getAngleArc(C, D, B, 30).d} fill="none" stroke="#22d3ee" strokeWidth="3" />
+                                            <path d={getAngleArc(B, C, A, 30).d} fill="none" stroke="#f472b6" strokeWidth="3" strokeDasharray="4,2" />
+                                            <path d={getAngleArc(D, A, C, 30).d} fill="none" stroke="#f472b6" strokeWidth="3" strokeDasharray="4,2" />
+                                        </>
+                                    )}
+                                    {show180 && !isRectOrSquare && (
+                                        <g>
+                                            {renderAngleText(A, A, "120°")}
+                                            {renderAngleText(B, B, "60°")}
+                                            {renderAngleText(C, C, "120°")}
+                                            {renderAngleText(D, D, "60°")}
+                                        </g>
+                                    )}
+                                </g>
+                            )}
+                            {showSides && (
+                                <g>
+                                    <line x1={A[0]} y1={A[1]} x2={B[0]} y2={B[1]} stroke="#4ade80" strokeWidth="4" />
+                                    <line x1={C[0]} y1={C[1]} x2={D[0]} y2={D[1]} stroke="#4ade80" strokeWidth="4" />
+                                    <line x1={B[0]} y1={B[1]} x2={C[0]} y2={C[1]} stroke={isRhombusOrSquare ? "#4ade80" : "#a78bfa"} strokeWidth="4" />
+                                    <line x1={D[0]} y1={D[1]} x2={A[0]} y2={A[1]} stroke={isRhombusOrSquare ? "#4ade80" : "#a78bfa"} strokeWidth="4" />
+                                    <RenderSideTick p1={A} p2={B} double={false} />
+                                    <RenderSideTick p1={C} p2={D} double={false} />
+                                    <RenderSideTick p1={B} p2={C} double={!isRhombusOrSquare} />
+                                    <RenderSideTick p1={D} p2={A} double={!isRhombusOrSquare} />
+                                </g>
+                            )}
+                            <g style={{ textShadow: '2px 2px 4px black', pointerEvents: 'none' }}>
+                                <text x={posA.x} y={posA.y} fill="white" fontSize="24" fontWeight="bold" textAnchor="middle">A</text>
+                                <text x={posB.x} y={posB.y} fill="white" fontSize="24" fontWeight="bold" textAnchor="middle">B</text>
+                                <text x={posC.x} y={posC.y} fill="white" fontSize="24" fontWeight="bold" textAnchor="middle">C</text>
+                                <text x={posD.x} y={posD.y} fill="white" fontSize="24" fontWeight="bold" textAnchor="middle">D</text>
+                                {showDiagonals && <text x={center[0]} y={center[1]-15} fill="yellow" fontSize="18" fontWeight="bold" textAnchor="middle">O</text>}
+                            </g>
+                        </svg>
+                        {highlightedFeature && !showSummary && (
+                            <div className="absolute bottom-4 left-0 right-0 mx-auto w-max max-w-[90%] bg-black/80 px-6 py-3 rounded-full text-xl font-bold border border-white/20 animate-in fade-in slide-in-from-bottom-4 text-center z-10 shadow-2xl">
+                                {data.features.find(f => f.id === highlightedFeature)?.text}
+                            </div>
+                        )}
+                        {showSummary && (
+                            <div className="absolute top-4 bg-yellow-600/90 px-6 py-3 rounded-full text-xl font-bold border border-yellow-200 animate-pulse text-center z-10">
+                                סיכום תכונות: {data.name}
+                            </div>
+                        )}
+                    </div>
+                    {!showSummary && currentMath && (
+                        <div className="bg-slate-900 border-2 border-blue-500 rounded-2xl p-4 text-center shadow-lg animate-in slide-in-from-bottom-2">
+                             <div className="text-gray-400 text-sm mb-2 font-bold">כתיב מתמטי:</div>
+                             <div className="math-font text-2xl text-yellow-300 font-bold tracking-wider space-y-2">
+                                {currentMath.split('\n').map((line, i) => {
+                                    if (line.includes('frac(')) {
+                                        const parts = line.match(/frac\((.*?)\)\((.*?)\)/);
+                                        if (parts) {
+                                            return (
+                                                <div key={i} className="flex items-center justify-center gap-3">
+                                                    <span className="mb-1">S = </span>
+                                                    <div className="flex flex-col items-center">
+                                                        <span className="border-b-2 border-yellow-300 px-2 pb-1">{parts[1]}</span>
+                                                        <span className="pt-1">{parts[2]}</span>
+                                                    </div>
+                                                </div>
+                                            );
+                                        }
+                                    }
+                                    return <div key={i}>{line}</div>;
+                                })}
+                             </div>
+                             {currentTip && (
+                                <div className="mt-3 pt-3 border-t border-gray-700 text-green-300 font-medium text-lg leading-snug">
+                                    <i className="fas fa-lightbulb text-yellow-400 ml-2"></i>
+                                    {currentTip}
+                                </div>
+                             )}
+                        </div>
+                    )}
+                </div>
+            );
+        };
+
+        const ComparisonTable = () => {
+             const [revealed, setRevealed] = useState({});
+            
+            const rows = [
+                { id: 'sides_par', label: 'צלעות נגדיות מקבילות' },
+                { id: 'sides_all', label: 'כל הצלעות שוות' },
+                { id: 'angles_opp', label: 'זוויות נגדיות שוות' },
+                { id: 'angles_180', label: 'זוויות סמוכות משלימות ל-180' },
+                { id: 'angles_90', label: 'כל הזוויות 90°' },
+                { id: 'diag_bisect', label: 'אלכסונים חוצים זה את זה' },
+                { id: 'diag_equal', label: 'אלכסונים שווים באורכם' },
+                { id: 'diag_perp', label: 'אלכסונים מאונכים (90°)' },
+                { id: 'diag_angle', label: 'אלכסון חוצה את הזווית' },
+            ];
+            
+            const cols = ['parallelogram', 'rectangle', 'rhombus', 'square'];
+            const labels = { parallelogram: 'מקבילית', rectangle: 'מלבן', rhombus: 'מעויין', square: 'ריבוע' };
+
+            const check = (row, col) => {
+                if (['sides_par', 'angles_opp', 'diag_bisect', 'angles_180'].includes(row)) return true;
+                if (['sides_all', 'diag_perp', 'diag_angle'].includes(row)) return col === 'rhombus' || col === 'square';
+                if (['angles_90', 'diag_equal'].includes(row)) return col === 'rectangle' || col === 'square';
+                return false;
+            };
+
+            const toggle = (r, c) => setRevealed(prev => ({...prev, [`${r}-${c}`]: true}));
+            const revealAll = () => {
+                const all = {};
+                rows.forEach(r => cols.forEach(c => all[`${r.id}-${c}`] = true));
+                setRevealed(all);
+            };
+
+            return (
+                <div className="bg-slate-800 p-8 rounded-3xl shadow-2xl animate-in zoom-in border border-slate-700">
+                    <div className="flex justify-between items-center mb-6">
+                        <h2 className="text-3xl font-bold text-yellow-400">טבלת השוואה מסכמת</h2>
+                        <button onClick={revealAll} className="bg-blue-600 hover:bg-blue-500 px-6 py-2 rounded-xl font-bold transition-all">
+                            חשוף את כל הטבלה
+                        </button>
+                    </div>
+                    <div className="overflow-x-auto">
+                        <table className="w-full text-center border-collapse">
+                            <thead>
+                                <tr>
+                                    <th className="p-4 text-right text-gray-400 text-lg border-b-2 border-slate-600">תכונה</th>
+                                    {cols.map(c => <th key={c} className="p-4 text-white text-xl border-b-2 border-slate-600 bg-slate-700/30">{labels[c]}</th>)}
+                                </tr>
+                            </thead>
+                            <tbody>
+                                {rows.map(row => (
+                                    <tr key={row.id} className="hover:bg-slate-700/30 transition-colors">
+                                        <td className="p-4 text-right text-gray-200 border-b border-gray-700 font-medium">{row.label}</td>
+                                        {cols.map(col => {
+                                            const isTrue = check(row.id, col);
+                                            const isRev = revealed[`${row.id}-${col}`];
+                                            return (
+                                                <td key={col} className="p-2 border-b border-gray-700 cursor-pointer relative" onClick={() => toggle(row.id, col)}>
+                                                    <div className={`w-10 h-10 mx-auto rounded-full flex items-center justify-center text-xl transition-all duration-300 transform ${isRev ? (isTrue ? 'bg-green-500/20 text-green-400 scale-110' : 'bg-red-500/20 text-red-400 scale-90 opacity-50') : 'bg-slate-700 hover:bg-slate-600 hover:scale-110'}`}>
+                                                        {isRev ? (isTrue ? <i className="fas fa-check"></i> : <i className="fas fa-times"></i>) : <span className="text-sm">?</span>}
+                                                    </div>
+                                                </td>
+                                            );
+                                        })}
+                                    </tr>
+                                ))}
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
+            );
+        };
+
+        const QuizMode = ({ onExit }) => {
+            const [questions, setQuestions] = useState([]);
+            const [qIndex, setQIndex] = useState(0);
+            const [score, setScore] = useState(0);
+            const [timer, setTimer] = useState(0);
+            const [gameState, setGameState] = useState('intro');
+            const [selectedAns, setSelectedAns] = useState(null);
+            const [isCorrect, setIsCorrect] = useState(false);
+            const [showBonus, setShowBonus] = useState(false);
+
+            useEffect(() => {
+                if (gameState === 'intro') {
+                    // Logic: 35 Text, 10 Calc, 5 Challenge = 50 total
+                    const shuffledText = [...textPool].sort(() => Math.random() - 0.5).slice(0, 35);
+                    const shuffledCalc = [...calcPool].sort(() => Math.random() - 0.5).slice(0, 10);
+                    const shuffledChallenge = [...challengePool].sort(() => Math.random() - 0.5).slice(0, 5);
+                    
+                    const finalPool = [];
+                    let tIdx = 0, cIdx = 0, chIdx = 0;
+
+                    // Distribute questions: 
+                    // Challenge every 10th question roughly to spread them out? 
+                    // Or just randomize all except challenge?
+                    // User said: "5 challenge questions (bonus questions in between as we did)".
+                    // Let's just mix them all up but ensure challenges are spread if possible, or just pure random.
+                    // Pure random is easiest and fair.
+                    const mixed = [...shuffledText, ...shuffledCalc, ...shuffledChallenge].sort(() => Math.random() - 0.5);
+
+                    const preparedQs = mixed.map((q, i) => {
+                        let opts = [];
+                        let correctIndex = 0;
+                        if (q.type === 'tf') {
+                            opts = ['נכון', 'לא נכון'];
+                            correctIndex = q.ans === 'נכון' ? 0 : 1;
+                        } else {
+                            const allOpts = [...q.opts];
+                            const correctText = q.correctAns;
+                            const shuffledOpts = allOpts.sort(() => Math.random() - 0.5);
+                            correctIndex = shuffledOpts.indexOf(correctText);
+                            opts = shuffledOpts;
+                        }
+                        
+                        let t = 25; // text
+                        if (q.diff === 'calc') t = 45;
+                        if (q.diff === 'challenge') t = 60;
+
+                        return {
+                            ...q,
+                            id: i,
+                            finalOpts: opts,
+                            finalCorrectIndex: correctIndex,
+                            timeLimit: t 
+                        };
+                    });
+                    setQuestions(preparedQs);
+                }
+            }, [gameState]);
+
+            useEffect(() => {
+                let interval;
+                if (gameState === 'playing' && timer > 0) {
+                    interval = setInterval(() => setTimer(prev => prev - 1), 1000);
+                } else if (timer === 0 && gameState === 'playing') {
+                    handleTimeUp();
+                }
+                return () => clearInterval(interval);
+            }, [timer, gameState]);
+
+            // Bonus Alert Trigger
+            useEffect(() => {
+                if (gameState === 'playing' && questions[qIndex]?.diff === 'challenge') {
+                    setShowBonus(true);
+                    const timeout = setTimeout(() => setShowBonus(false), 3000);
+                    return () => clearTimeout(timeout);
+                }
+            }, [qIndex, gameState, questions]);
+
+            const handleTimeUp = () => {
+                setGameState('feedback');
+                setSelectedAns(-1);
+                setIsCorrect(false);
+            };
+
+            const handleAnswer = (idx) => {
+                setGameState('feedback');
+                setSelectedAns(idx);
+                const q = questions[qIndex];
+                const isAnsCorrect = idx === q.finalCorrectIndex;
+                setIsCorrect(isAnsCorrect);
+                if (isAnsCorrect) setScore(prev => prev + 10 + Math.ceil(timer/2));
+            };
+
+            const nextQuestion = () => {
+                if (qIndex < questions.length - 1) {
+                    const nextQ = questions[qIndex + 1];
+                    setQIndex(prev => prev + 1);
+                    setTimer(nextQ.timeLimit);
+                    setGameState('playing');
+                    setSelectedAns(null);
+                    setShowBonus(false);
+                } else {
+                    setGameState('finished');
+                }
+            };
+
+            const startQuiz = () => {
+                if (questions.length > 0) {
+                    setQIndex(0);
+                    setTimer(questions[0].timeLimit);
+                    setGameState('playing');
+                }
+            };
+
+            if (gameState === 'intro') {
+                return (
+                    <div className="flex flex-col items-center justify-center h-full p-8 text-center animate-in fade-in">
+                        <div className="text-8xl mb-6 animate-bounce">🧠</div>
+                        <h2 className="text-5xl font-black text-white mb-4">אתגר המקביליות הגדול</h2>
+                        <p className="text-2xl text-gray-300 mb-8 max-w-2xl">
+                            50 שאלות:<br/>
+                            35 שאלות תכונות (25 שנ')<br/>
+                            10 שאלות חישוב (45 שנ')<br/>
+                            5 שאלות בונוס (60 שנ')<br/>
+                            האם תצליחו להוציא 100?
+                        </p>
+                        <button onClick={startQuiz} className="bg-blue-600 hover:bg-blue-500 text-white text-3xl font-black py-6 px-12 rounded-3xl shadow-[0_0_30px_rgba(37,99,235,0.5)] transition-transform hover:scale-105">
+                            התחל במבחן!
+                        </button>
+                    </div>
+                );
+            }
+
+            if (gameState === 'finished') {
+                return (
+                    <div className="flex flex-col items-center justify-center h-full p-8 text-center animate-in zoom-in">
+                        <div className="text-8xl mb-6">🏆</div>
+                        <h2 className="text-5xl font-black text-yellow-400 mb-4">המבחן הסתיים!</h2>
+                        <p className="text-3xl mb-8">הניקוד הסופי: <span className="font-mono font-bold text-blue-400">{score}</span></p>
+                        <button onClick={onExit} className="bg-slate-700 hover:bg-slate-600 text-white text-2xl font-bold py-4 px-8 rounded-2xl">
+                            חזור לתפריט הראשי
+                        </button>
+                    </div>
+                );
+            }
+
+            if (!questions.length) return <div className="text-white text-center p-10 text-2xl font-bold animate-pulse">טוען שאלות...</div>;
+            const currentQ = questions[qIndex];
+
+            return (
+                <div className="max-w-4xl mx-auto w-full h-full flex flex-col justify-center relative">
+                    
+                    {/* Bonus Alert Overlay */}
+                    {showBonus && (
+                        <div className="absolute inset-0 flex items-center justify-center z-50 pointer-events-none">
+                            <div className="bonus-alert bg-gradient-to-r from-red-600 to-orange-600 text-white text-6xl font-black p-12 rounded-[3rem] border-8 border-yellow-300 shadow-[0_0_100px_rgba(255,0,0,0.8)] transform rotate-[-5deg]">
+                                שאלת בונוס!
+                            </div>
+                        </div>
+                    )}
+
+                    <div className="flex justify-between items-center mb-6 bg-slate-800 p-4 rounded-2xl border border-slate-700">
+                        <span className="text-gray-400 font-bold text-xl">שאלה {qIndex + 1}/{questions.length}</span>
+                        {currentQ.diff === 'challenge' && <span className="bg-red-900 text-red-200 px-3 py-1 rounded-lg text-sm font-bold animate-pulse">בונוס!</span>}
+                        {currentQ.diff === 'calc' && <span className="bg-blue-900 text-blue-200 px-3 py-1 rounded-lg text-sm font-bold">חישוב</span>}
+                        <div className="bg-black/40 px-6 py-2 rounded-xl border border-white/10">
+                            <span className="text-yellow-400 font-mono text-3xl font-bold">{score}</span>
+                        </div>
+                        <div className={`flex items-center gap-2 px-4 py-2 rounded-xl border-2 ${timer < 10 ? 'bg-red-900/50 border-red-500 animate-pulse' : 'bg-blue-900/50 border-blue-500'}`}>
+                            <i className="fas fa-clock"></i>
+                            <span className="font-mono text-3xl font-bold w-12 text-center">{timer}</span>
+                        </div>
+                    </div>
+
+                    <div className="bg-slate-800 rounded-3xl p-8 border border-slate-700 shadow-2xl relative overflow-hidden flex flex-col">
+                        <h3 className="text-2xl md:text-3xl font-bold mb-6 text-center leading-relaxed">
+                            {currentQ.q}
+                        </h3>
+
+                        {currentQ.type.startsWith('visual') && currentQ.shape && (
+                            <div className="mb-6">
+                                <VisualQuestionShape shapeId={currentQ.shape} data={currentQ.data} />
+                            </div>
+                        )}
+
+                        <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mt-auto">
+                            {currentQ.finalOpts.map((opt, idx) => (
+                                <button 
+                                    key={idx} 
+                                    onClick={() => gameState === 'playing' && handleAnswer(idx)}
+                                    disabled={gameState !== 'playing'}
+                                    className={`p-6 rounded-2xl text-xl md:text-2xl font-bold transition-all ${
+                                        gameState !== 'playing' 
+                                            ? (idx === currentQ.finalCorrectIndex 
+                                                ? 'bg-green-600 text-white shadow-[0_0_20px_rgba(34,197,94,0.5)]' 
+                                                : idx === selectedAns 
+                                                    ? 'bg-red-600 opacity-80' 
+                                                    : 'bg-slate-700 opacity-30') 
+                                            : 'bg-slate-700 hover:bg-slate-600 border-2 border-slate-600 hover:border-blue-400'
+                                    }`}
+                                >
+                                    {opt}
+                                </button>
+                            ))}
+                        </div>
+
+                        {gameState === 'feedback' && (
+                            <div className="mt-8 bg-black/60 rounded-2xl p-6 border border-white/20 animate-in fade-in">
+                                <p className="text-xl text-white mb-4">{currentQ.exp}</p>
+                                <button onClick={nextQuestion} className="w-full bg-blue-600 hover:bg-blue-500 text-white font-bold text-2xl py-4 rounded-xl shadow-lg">
+                                    הבא <i className="fas fa-chevron-left mr-2"></i>
+                                </button>
+                            </div>
+                        )}
+                    </div>
+                </div>
+            );
+        };
+
+        // --- MAIN APP ---
+        const App = () => {
+            const [currentShape, setCurrentShape] = useState('parallelogram');
+            const [highlightedFeature, setHighlightedFeature] = useState(null);
+            const [showSummary, setShowSummary] = useState(false);
+            const [view, setView] = useState('explore'); 
+
+            const shape = SHAPES[currentShape];
+
+            const handleUpgrade = (target) => {
+                setCurrentShape(target);
+                setHighlightedFeature(null);
+                setShowSummary(false);
+            };
+
+            const toggleSummary = () => {
+                setShowSummary(!showSummary);
+                setHighlightedFeature(null);
+            };
+
+            const UpgradePanel = () => {
+                if (currentShape === 'parallelogram') {
+                    return (
+                        <div className="flex flex-col sm:flex-row gap-4">
+                            <button onClick={() => handleUpgrade('rectangle')} className="flex-1 bg-gradient-to-br from-purple-900 to-purple-800 p-6 rounded-3xl border-2 border-purple-700 hover:border-purple-400 hover:scale-[1.03] transition-all text-right group shadow-xl relative overflow-hidden">
+                                <div className="relative z-10">
+                                    <div className="text-purple-300 font-bold mb-1 group-hover:text-white text-lg">שדרג למלבן <i className="fas fa-arrow-left mr-2"></i></div>
+                                    <div className="text-sm text-gray-400 group-hover:text-purple-200">מוסיף זוויות ישרות</div>
+                                </div>
+                                <i className="fas fa-expand absolute -bottom-4 -left-4 text-8xl text-purple-500/10 group-hover:text-purple-500/20 transition-all"></i>
+                            </button>
+                            <button onClick={() => handleUpgrade('rhombus')} className="flex-1 bg-gradient-to-br from-orange-900 to-orange-800 p-6 rounded-3xl border-2 border-orange-700 hover:border-orange-400 hover:scale-[1.03] transition-all text-right group shadow-xl relative overflow-hidden">
+                                <div className="relative z-10">
+                                    <div className="text-orange-300 font-bold mb-1 group-hover:text-white text-lg">שדרג למעויין <i className="fas fa-arrow-left mr-2"></i></div>
+                                    <div className="text-sm text-gray-400 group-hover:text-orange-200">מוסיף שוויון צלעות</div>
+                                </div>
+                                <i className="fas fa-border-all absolute -bottom-4 -left-4 text-8xl text-orange-500/10 group-hover:text-orange-500/20 transition-all"></i>
+                            </button>
+                        </div>
+                    );
+                } else {
+                    return (
+                        <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
+                             <button onClick={() => handleUpgrade('parallelogram')} className="bg-slate-800 hover:bg-blue-900/50 p-4 rounded-2xl border border-slate-600 hover:border-blue-500 transition-all text-center flex flex-col items-center justify-center gap-2">
+                                <i className="fas fa-undo text-2xl text-blue-400"></i>
+                                <span className="font-bold text-sm">חזור למקבילית</span>
+                            </button>
+                            {currentShape !== 'rectangle' && (
+                                <button onClick={() => handleUpgrade('rectangle')} className="bg-slate-800 hover:bg-purple-900/50 p-4 rounded-2xl border border-slate-600 hover:border-purple-500 transition-all text-center flex flex-col items-center justify-center gap-2">
+                                    <i className="fas fa-vector-square text-2xl text-purple-400"></i>
+                                    <span className="font-bold text-sm">עבור למלבן</span>
+                                </button>
+                            )}
+                            {currentShape !== 'rhombus' && (
+                                <button onClick={() => handleUpgrade('rhombus')} className="bg-slate-800 hover:bg-orange-900/50 p-4 rounded-2xl border border-slate-600 hover:border-orange-500 transition-all text-center flex flex-col items-center justify-center gap-2">
+                                    <i className="fas fa-border-all text-2xl text-orange-400"></i>
+                                    <span className="font-bold text-sm">עבור למעויין</span>
+                                </button>
+                            )}
+                            <button onClick={() => handleUpgrade('square')} className={`p-4 rounded-2xl border transition-all text-center flex flex-col items-center justify-center gap-2 col-span-2 md:col-span-1 ${currentShape === 'square' ? 'bg-yellow-900/40 border-yellow-500 ring-2 ring-yellow-500/50' : 'bg-gradient-to-br from-yellow-700 to-yellow-600 border-yellow-400 hover:scale-105 shadow-lg'}`}>
+                                <i className={`fas fa-crown text-2xl ${currentShape === 'square' ? 'text-yellow-400' : 'text-white'}`}></i>
+                                <span className={`font-bold text-sm ${currentShape === 'square' ? 'text-yellow-100' : 'text-white'}`}>{currentShape === 'square' ? 'אתה בריבוע' : 'שדרג לריבוע'}</span>
+                            </button>
+                        </div>
+                    );
+                }
+            };
+
+            return (
+                <div className="min-h-screen flex flex-col max-w-[1600px] mx-auto p-4">
+                    
+                    <nav className="flex flex-wrap gap-4 justify-between items-center bg-slate-800 p-4 rounded-2xl mb-6 shadow-lg border border-slate-700 sticky top-0 z-50">
+                        <div className="flex items-center gap-3">
+                            <div className="bg-blue-600 w-12 h-12 rounded-xl flex items-center justify-center text-2xl shadow-lg">
+                                <i className="fas fa-shapes text-white"></i>
+                            </div>
+                            <div>
+                                <h1 className="text-2xl md:text-3xl font-black tracking-tight hidden md:block text-white">משפחת המקביליות</h1>
+                                <p className="text-xs text-blue-300 hidden md:block font-bold">המסע המלא לשליטה בגיאומטריה</p>
+                            </div>
+                        </div>
+                        <div className="flex gap-2 bg-slate-900 p-1 rounded-xl overflow-x-auto">
+                            {[
+                                {id: 'explore', label: 'חקירה ושדרוג', icon: 'search'},
+                                {id: 'family', label: 'עץ המשפחה', icon: 'sitemap'},
+                                {id: 'table', label: 'טבלת השוואה', icon: 'table'},
+                                {id: 'quiz', label: 'מבחן הזמן', icon: 'stopwatch'}
+                            ].map(tab => (
+                                <button key={tab.id} onClick={() => setView(tab.id)} className={`flex items-center gap-2 px-6 py-3 rounded-lg font-bold transition-all whitespace-nowrap ${view === tab.id ? 'bg-blue-600 text-white shadow-lg scale-105' : 'text-gray-400 hover:text-white hover:bg-slate-800'}`}>
+                                    <i className={`fas fa-${tab.icon}`}></i> {tab.label}
+                                </button>
+                            ))}
+                        </div>
+                    </nav>
+
+                    <main className="flex-1">
+                        {view === 'quiz' && <QuizMode onExit={() => setView('explore')} />}
+                        {view === 'family' && <FamilyTreeAnim />}
+                        {view === 'table' && <ComparisonTable />}
+
+                        {view === 'explore' && (
+                            <div className="grid grid-cols-1 lg:grid-cols-12 gap-8 animate-in fade-in">
+                                
+                                <div className="lg:col-span-5 flex flex-col gap-6 lg:sticky lg:top-28 h-fit">
+                                    <div className="bg-slate-800 p-2 rounded-[2rem] shadow-2xl border border-slate-700">
+                                        <ShapeDisplay shapeId={currentShape} highlightedFeature={highlightedFeature} showSummary={showSummary} />
+                                    </div>
+                                    
+                                    {!showSummary && (
+                                        <div className="bg-slate-900 p-6 rounded-2xl border-r-8 border-green-500 shadow-2xl genetic-pulse relative overflow-hidden">
+                                            <div className="absolute -right-4 -top-4 text-8xl opacity-10 text-green-500"><i className="fas fa-dna"></i></div>
+                                            <h3 className="text-2xl font-black text-green-400 mb-2 flex items-center gap-3 relative z-10">
+                                                <i className="fas fa-dna"></i> תורשה גנטית
+                                            </h3>
+                                            <p className="text-white text-lg font-medium leading-relaxed relative z-10">{shape.inheritance}</p>
+                                        </div>
+                                    )}
+                                </div>
+
+                                <div className="lg:col-span-7 flex flex-col gap-6">
+                                    
+                                    {!showSummary && (
+                                        <div>
+                                            <div className="flex items-center gap-3 mb-2">
+                                                <span className="bg-blue-900 text-blue-300 px-3 py-1 rounded-full text-sm font-bold border border-blue-700">רמה {shape.level}</span>
+                                                {currentShape === 'square' && <span className="bg-yellow-900 text-yellow-300 px-3 py-1 rounded-full text-sm font-bold border border-yellow-700 animate-pulse">הבוס הסופי</span>}
+                                            </div>
+                                            <h2 className={`text-6xl font-black mb-2 ${currentShape === 'square' ? 'text-yellow-400 drop-shadow-[0_4px_0_rgba(0,0,0,0.5)]' : 'text-white'}`}>
+                                                {shape.name}
+                                            </h2>
+                                            <p className="text-2xl text-gray-400 font-light">{shape.desc}</p>
+                                        </div>
+                                    )}
+
+                                    {/* Feature List / Controls OR Summary List in RIGHT COLUMN */}
+                                    {showSummary ? (
+                                        <div className="bg-slate-900 p-6 rounded-2xl border-2 border-yellow-500 shadow-2xl overflow-hidden animate-in slide-in-from-right">
+                                            <h3 className="text-2xl font-black text-yellow-400 mb-4 border-b border-yellow-500/30 pb-2">
+                                                ריכוז תכונות מתמטיות: {shape.name}
+                                            </h3>
+                                            <div className="flex flex-col gap-3 max-h-[500px] overflow-y-auto pr-2 custom-scrollbar">
+                                                {shape.features.map(f => (
+                                                    <div key={f.id} className="bg-slate-800 p-4 rounded-xl border border-slate-700 flex flex-col gap-2">
+                                                        <div className="text-gray-200 font-bold text-lg mb-1 border-b border-gray-700 pb-1">{f.text}</div>
+                                                        <div className="math-font text-yellow-300 text-xl dir-ltr text-left bg-black/20 p-2 rounded-lg">
+                                                            {f.math.split('\n').map((line, i) => {
+                                                                if (line.includes('frac(')) {
+                                                                    const parts = line.match(/frac\((.*?)\)\((.*?)\)/);
+                                                                    if (parts) {
+                                                                        return (
+                                                                            <div key={i} className="flex items-center gap-3 my-1">
+                                                                                <span className="mb-1 font-bold text-white/70">S = </span>
+                                                                                <div className="flex flex-col items-center">
+                                                                                    <span className="border-b-2 border-yellow-300 px-2 pb-1 text-center">{parts[1]}</span>
+                                                                                    <span className="pt-1 text-center">{parts[2]}</span>
+                                                                                </div>
+                                                                            </div>
+                                                                        );
+                                                                    }
+                                                                }
+                                                                return <div key={i}>{line}</div>;
+                                                            })}
+                                                        </div>
+                                                        {f.tip && <div className="text-green-300 text-sm mt-1">{f.tip}</div>}
+                                                    </div>
+                                                ))}
+                                            </div>
+                                            <button onClick={() => setShowSummary(false)} className="w-full mt-6 bg-slate-700 hover:bg-slate-600 py-4 rounded-xl font-bold text-xl">סגור סיכום</button>
+                                        </div>
+                                    ) : (
+                                        <div className="bg-slate-800 p-8 rounded-3xl shadow-xl border border-slate-700">
+                                            <h3 className="text-xl font-bold mb-6 text-gray-400 border-b border-gray-700 pb-2">לחצו על תכונה כדי לראות אותה על הצורה:</h3>
+                                            <div className="flex flex-col gap-4">
+                                                {shape.features.map(feat => (
+                                                    <button 
+                                                        key={feat.id}
+                                                        onClick={() => {
+                                                            setHighlightedFeature(feat.id === highlightedFeature ? null : feat.id);
+                                                            setShowSummary(false);
+                                                        }}
+                                                        className={`flex items-center gap-6 p-5 rounded-2xl border-2 text-right transition-all transform hover:scale-[1.01] active:scale-[0.99] ${highlightedFeature === feat.id ? 'bg-blue-600 border-blue-400 shadow-lg ring-4 ring-blue-500/20' : 'bg-slate-700/30 border-slate-700 hover:border-slate-500 hover:bg-slate-700/50'}`}
+                                                    >
+                                                        <div className={`w-14 h-14 rounded-2xl flex items-center justify-center text-2xl shrink-0 transition-colors ${highlightedFeature === feat.id ? 'bg-white text-blue-600' : 'bg-slate-800 text-gray-500'}`}>
+                                                            <i className={`fas fa-${feat.icon}`}></i>
+                                                        </div>
+                                                        <div className="flex-1">
+                                                            <span className={`text-xl font-bold block ${highlightedFeature === feat.id ? 'text-white' : 'text-gray-300'}`}>
+                                                                {feat.text}
+                                                            </span>
+                                                        </div>
+                                                        {highlightedFeature === feat.id && <i className="fas fa-eye text-white text-2xl animate-pulse"></i>}
+                                                    </button>
+                                                ))}
+
+                                                <button 
+                                                    onClick={toggleSummary}
+                                                    className="mt-4 bg-gradient-to-r from-yellow-600 to-orange-600 hover:from-yellow-500 hover:to-orange-500 text-white font-black text-xl py-4 rounded-2xl shadow-lg transform transition hover:scale-105 border-2 border-yellow-400/30 flex items-center justify-center gap-3"
+                                                >
+                                                    <i className="fas fa-list-check"></i> סיכום תכונות {shape.name}
+                                                </button>
+                                            </div>
+                                        </div>
+                                    )}
+
+                                    {!showSummary && (
+                                        <div className="mt-auto pt-8 border-t border-slate-700">
+                                            <h3 className="text-sm font-bold text-gray-500 uppercase mb-4 tracking-widest">נתיב ההתפתחות (לחצו למעבר)</h3>
+                                            <UpgradePanel />
+                                        </div>
+                                    )}
+                                </div>
+                            </div>
+                        )}
+                    </main>
+                </div>
+            );
+        };
+
+        const root = ReactDOM.createRoot(document.getElementById('root'));
+        root.render(<App />);
+    </script>
+</body>
+</html>

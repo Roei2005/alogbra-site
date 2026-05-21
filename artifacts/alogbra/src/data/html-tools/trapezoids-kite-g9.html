@@ -1,0 +1,935 @@
+  <!DOCTYPE html>
+  <html lang="he" dir="rtl">
+  <head>
+      <meta charset="UTF-8">
+      <meta name="viewport" content="width=device-width, initial-scale=1.0">
+      <title>עולם הדלתונים והטרפזים - כיתה ט'</title>
+      <!-- React & ReactDOM -->
+      <script crossorigin src="https://unpkg.com/react@18/umd/react.production.min.js"></script>
+      <script crossorigin src="https://unpkg.com/react-dom@18/umd/react-dom.production.min.js"></script>
+      <!-- Babel -->
+      <script src="https://unpkg.com/@babel/standalone/babel.min.js"></script>
+      <!-- Tailwind CSS -->
+      <script src="https://cdn.tailwindcss.com"></script>
+      <!-- Fonts -->
+      <link href="https://fonts.googleapis.com/css2?family=Rubik:wght@300;400;700;900&display=swap" rel="stylesheet">
+      <link href="https://fonts.googleapis.com/css2?family=Noto+Sans+Math&display=swap" rel="stylesheet">
+      <!-- Icons -->
+      <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+
+      <style>
+          body { font-family: 'Rubik', sans-serif; background-color: #0f172a; color: white; overflow-x: hidden; overflow-y: auto; margin: 0; padding: 0; }
+          .math-font { font-family: 'Noto Sans Math', 'Times New Roman', serif; direction: ltr; display: block; line-height: 1.6; }
+
+          /* Smooth SVG Transitions */
+          .shape-path { transition: d 0.8s cubic-bezier(0.34, 1.56, 0.64, 1), fill 0.5s ease, stroke 0.5s ease; }
+
+          /* Animations */
+          .highlight-pulse { animation: highlightPulse 2s infinite; }
+          @keyframes highlightPulse {
+              0% { stroke-opacity: 1; stroke-width: 3; }
+              50% { stroke-opacity: 0.6; stroke-width: 5; }
+              100% { stroke-opacity: 1; stroke-width: 3; }
+          }
+
+          .bonus-alert { animation: popIn 0.6s cubic-bezier(0.175, 0.885, 0.32, 1.275) forwards, fadeOut 0.5s ease-in 2.5s forwards; }
+          @keyframes popIn { 0% { transform: scale(0) rotate(-10deg); opacity: 0; } 100% { transform: scale(1) rotate(0deg); opacity: 1; } }
+          @keyframes fadeOut { to { opacity: 0; transform: scale(1.5); } }
+
+          .draw-height { stroke-dasharray: 200; stroke-dashoffset: 200; animation: drawLine 2s forwards ease-in-out; }
+          @keyframes drawLine { to { stroke-dashoffset: 0; } }
+
+          .fade-in-delayed { opacity: 0; animation: fadeIn 1s forwards 1.5s; }
+          .fade-in { animation: fadeIn 0.5s ease-out forwards; }
+          @keyframes fadeIn { from { opacity: 0; } to { opacity: 1; } }
+
+          .custom-scrollbar::-webkit-scrollbar { width: 8px; }
+          .custom-scrollbar::-webkit-scrollbar-track { background: #1e293b; border-radius: 4px; }
+          .custom-scrollbar::-webkit-scrollbar-thumb { background: #475569; border-radius: 4px; }
+
+          button { user-select: none; -webkit-tap-highlight-color: transparent; }
+      </style>
+  </head>
+  <body>
+      <div id="root"></div>
+
+      <script type="text/babel">
+          const { useState, useEffect, useRef, useMemo, useCallback } = React;
+
+          // --- CONSTANTS & DATA ---
+
+          // Animation Sequences
+          const KITE_SEQ = [
+              { text: 'ניקח משולש שווה שוקיים עליון...', type: 'tri1' },
+              { text: 'נחבר לו משולש שווה שוקיים תחתון (בסיס משותף)', type: 'tri2' },
+              { text: 'וקיבלנו דלתון! שתי צלעות למעלה שוות, ושתי צלעות למטה שוות.', type: 'kite' },
+              { text: 'האלכסון הראשי הוא ציר הסימטריה: חוצה את זוויות הראש ואת האלכסון המשני.', type: 'sym' }
+          ];
+
+          const TRAP_SEQ = [
+              { text: 'נתחיל מטרפז כללי: זוג אחד של צלעות מקבילות', type: 'gen' },
+              { text: 'סכום הזוויות ליד כל שוק הוא 180 מעלות (חד-צדדיות)', type: 'angles_sum' },
+              { text: 'אם השוקיים שוות... נקבל טרפז שווה שוקיים!', type: 'iso' },
+              { text: 'בטרפז שווה שוקיים: האלכסונים שווים וזוויות הבסיס שוות!', type: 'iso_props' },
+              { text: 'נוריד גבהים: נוצר מלבן ושני משולשים חופפים (פיתגורס)!', type: 'iso_heights' },
+              { text: 'ואם ניישר שוק אחת ל-90 מעלות... טרפז ישר זווית!', type: 'right' }
+          ];
+
+          // Shapes Data - Optimized for visual balance and label placement
+          const SHAPES = {
+              kite: {
+                  id: 'kite',
+                  name: 'דלתון',
+                  type: 'kite',
+                  color: 'pink', 
+                  coords: { A: [150, 30], B: [250, 130], C: [150, 330], D: [50, 130] }, 
+                  labelOffsets: { A: [0, -25], B: [25, 0], C: [0, 30], D: [-25, 0] },
+                  desc: 'מרובע המורכב משני משולשים שווי שוקיים בעלי בסיס משותף.',
+                  features: [
+                      { id: 'sides', icon: 'border-all', text: 'שני זוגות של צלעות סמוכות שוות', math: 'AB = AD\nCB = CD' },
+                      { id: 'diagonals_perp', icon: 'compress-arrows-alt', text: 'האלכסונים מאונכים זה לזה', math: 'AC ⊥ BD' },
+                      { id: 'main_diag', icon: 'crown', text: 'האלכסון הראשי (סימטריה)', math: 'חוצה את האלכסון המשני (BO=DO)\nחוצה את זוויות הראש (∢A, ∢C)\nשימו לב: ∢A ≠ ∢C' },
+                      { id: 'angles_equal', icon: 'angle-left', text: 'הזוויות הצדדיות שוות', math: '∢B = ∢D' },
+                      { id: 'area', icon: 'ruler-combined', text: 'שטח והיקף', math: 'P = 2(a + b)\nS = frac(AC • BD)(2)', tip: 'שטח דלתון הוא מכפלת האלכסונים חלקי 2.' }
+                  ]
+              },
+              trapezoid_gen: {
+                  id: 'trapezoid_gen',
+                  name: 'טרפז כללי',
+                  type: 'trapezoid',
+                  color: 'green',
+                  coords: { A: [70, 60], B: [210, 60], C: [280, 260], D: [20, 260] },
+                  labelOffsets: { A: [-15, -15], B: [15, -15], C: [15, 25], D: [-15, 25] },
+                  desc: 'מרובע שיש לו זוג אחד בלבד של צלעות מקבילות.',
+                  features: [
+                      { id: 'bases', icon: 'equals', text: 'בסיסים מקבילים (אך לא שווים)', math: 'AB || DC' },
+                      { id: 'legs_non_parallel', icon: 'times', text: 'השוקיים אינן מקבילות', math: 'AD ∦ BC', color: 'red' },
+                      { id: 'legs_angles', icon: 'arrows-alt-h', text: 'סכום זוויות ליד אותו שוק הוא 180°', math: '∢A + ∢D = 180°\n∢B + ∢C = 180°' },
+                      { id: 'inheritance', icon: 'sitemap', text: 'תורשה', tip: 'כל התכונות הללו עוברות לכל הטרפזים!' },
+                      { id: 'area', icon: 'ruler-combined', text: 'שטח והיקף', math: 'P = a + b + c + d\nS = frac((AB + DC) • h)(2)', tip: 'שטח טרפז: סכום הבסיסים כפול הגובה, לחלק ל-2.' }
+                  ]
+              },
+              trapezoid_iso: {
+                  id: 'trapezoid_iso',
+                  name: 'טרפז שווה שוקיים',
+                  type: 'trapezoid',
+                  color: 'teal',
+                  coords: { A: [80, 60], B: [220, 60], C: [260, 260], D: [40, 260] },
+                  labelOffsets: { A: [-15, -15], B: [15, -15], C: [15, 25], D: [-15, 25] },
+                  desc: 'טרפז שבו השוקיים שוות זו לזו (יורש את כל תכונות הטרפז הכללי).',
+                  features: [
+                      { id: 'legs_equal', icon: 'border-all', text: 'השוקיים שוות באורכן', math: 'AD = BC' },
+                      { id: 'base_angles', icon: 'angle-double-up', text: 'זוויות הבסיס שוות', math: '∢A = ∢B\n∢C = ∢D' },
+                      { id: 'diagonals_equal', icon: 'ruler-horizontal', text: 'האלכסונים שווים זה לזה', math: 'AC = BD' },
+                      { id: 'pythagoras_tip', icon: 'lightbulb', text: 'טיפ לפתרון (גבהים)', tip: 'בניית עזר של שני גבהים יוצרת מלבן במרכז ושני משולשים ישרי זווית בצדדים. בטרפז שווה שוקיים, המשולשים הללו חופפים. לכן, הקטעים הקטנים בבסיס שווים, וניתן לחשב צלעות בעזרת משפט פיתגורס.' },
+                      { id: 'area', icon: 'ruler-combined', text: 'שטח והיקף', math: 'S = frac((AB+DC)•h)(2)', tip: 'אותה נוסחת שטח כמו בטרפז רגיל.' }
+                  ]
+              },
+              trapezoid_right: {
+                  id: 'trapezoid_right',
+                  name: 'טרפז ישר זווית',
+                  type: 'trapezoid',
+                  color: 'cyan',
+                  coords: { A: [60, 60], B: [200, 60], C: [260, 260], D: [60, 260] }, 
+                  labelOffsets: { A: [-15, -15], B: [15, -15], C: [15, 25], D: [-15, 25] },
+                  desc: 'טרפז שבו אחת השוקיים מאונכת לבסיסים (יורש את כל תכונות הטרפז הכללי).',
+                  features: [
+                      { id: 'right_angles', icon: 'expand', text: 'שתי זוויות ישרות (90°)', math: '∢A = 90°\n∢D = 90°' },
+                      { id: 'perp_leg', icon: 'ruler-vertical', text: 'השוק הישרה היא גם הגובה', math: 'AD = h' },
+                      { id: 'area', icon: 'ruler-combined', text: 'שטח והיקף', math: 'S = frac((AB+DC)•AD)(2)', tip: 'כאן הגובה הוא פשוט הצלע המאונכת (AD).' }
+                  ]
+              }
+          };
+
+          // --- STRICTLY FILTERED QUESTION POOLS (No Definitions, No Identification, Only Props/Calc) ---
+
+          const TEXT_POOL = [
+              // Kite Properties
+              { type: 'prop', q: 'האם האלכסונים בדלתון מאונכים זה לזה?', opts: ['כן', 'לא', 'רק אם הוא מעויין', 'רק אם הוא ריבוע'], correctAns: 'כן', diff: 'text', exp: 'תכונה של דלתון: האלכסונים תמיד מאונכים (90 מעלות).' },
+              { type: 'prop', q: 'האם האלכסון הראשי בדלתון חוצה את האלכסון המשני?', opts: ['כן', 'לא', 'רק בחלק מהמקרים', 'רק בדלתון קעור'], correctAns: 'כן', diff: 'text', exp: 'האלכסון הראשי הוא ציר הסימטריה ולכן חוצה את המשני.' },
+              { type: 'prop', q: 'מה נכון לגבי הזוויות הצדדיות בדלתון?', opts: ['הן שוות זו לזו', 'הן משלימות ל-180', 'הן ישרות', 'אין קשר ביניהן'], correctAns: 'הן שוות זו לזו', diff: 'text', exp: 'הזוויות בין הצלעות הלא-שוות (הצדדיות) תמיד שוות.' },
+              { type: 'prop', q: 'האם האלכסון הראשי בדלתון חוצה את זוויות הראש?', opts: ['כן', 'לא', 'רק זווית אחת', 'תלוי באורך הצלעות'], correctAns: 'כן', diff: 'text', exp: 'כן, האלכסון הראשי חוצה את זוויות הראש (A ו-C).' },
+
+              // Trapezoid Properties (General)
+              { type: 'prop', q: 'בטרפז כללי, מה סכום הזוויות ליד אותה שוק?', opts: ['180 מעלות', '90 מעלות', '360 מעלות', 'הן שוות'], correctAns: '180 מעלות', diff: 'text', exp: 'אלו זוויות חד-צדדיות בין ישרים מקבילים.' },
+              { type: 'prop', q: 'האם האלכסונים בטרפז כללי חוצים זה את זה?', opts: ['לא', 'כן', 'תמיד', 'רק אם הוא ישר זווית'], correctAns: 'לא', diff: 'text', exp: 'האלכסונים נחתכים אך לא חוצים זה את זה לשני חלקים שווים.' },
+
+              // Isosceles Trapezoid Properties
+              { type: 'prop', q: 'בטרפז שווה שוקיים, מה נכון לגבי האלכסונים?', opts: ['הם שווים באורכם', 'הם מאונכים', 'הם חוצים זה את זה', 'הם מקבילים'], correctAns: 'הם שווים באורכם', diff: 'text', exp: 'תכונה של טרפז שווה שוקיים: האלכסונים שווים.' },
+              { type: 'prop', q: 'בטרפז שווה שוקיים, מה נכון לגבי זוויות הבסיס?', opts: ['הן שוות זו לזו', 'סכומן 180', 'הן נגדיות', 'הן ישרות'], correctAns: 'הן שוות זו לזו', diff: 'text', exp: 'הזוויות שליד אותו בסיס שוות זו לזו.' },
+
+              // Right Trapezoid Properties
+              { type: 'prop', q: 'כמה זוויות ישרות יש בטרפז ישר זווית?', opts: ['2', '1', '3', '4'], correctAns: '2', diff: 'text', exp: 'יש בדיוק שתי זוויות ישרות בצד של השוק המאונכת.' },
+
+              // Area & General Props
+              { type: 'prop', q: 'איך מחשבים שטח דלתון?', opts: ['מכפלת האלכסונים חלקי 2', 'צלע כפול גובה', 'סכום האלכסונים', 'מכפלת הצלעות'], correctAns: 'מכפלת האלכסונים חלקי 2', diff: 'text', exp: 'נוסחת שטח דלתון: (d1 * d2) / 2.' },
+              { type: 'prop', q: 'מהו סכום הזוויות בטרפז ובדלתון?', opts: ['360 מעלות', '180 מעלות', '90 מעלות', '540 מעלות'], correctAns: '360 מעלות', diff: 'text', exp: 'סכום הזוויות בכל מרובע הוא 360 מעלות.' }
+          ];
+
+          const CALC_POOL = [
+              { type: 'visual_calc', q: 'בדלתון, האלכסונים הם 10 ו-6. חשבו את השטח.', shape: 'kite', data: { show_diagonals: true, label_AC: '10', label_BD: '6' }, opts: ['30', '60', '16', '32'], correctAns: '30', exp: '(10 • 6) : 2 = 30.', diff: 'calc' },
+              { type: 'visual_calc', q: 'בטרפז, הבסיסים הם 4 ו-6, הגובה הוא 5. חשבו את השטח.', shape: 'trapezoid_gen', data: { show_height: true, label_h: '5', label_top: '4', label_bottom: '6' }, opts: ['25', '50', '24', '15'], correctAns: '25', exp: '((4+6) • 5) : 2 = 25.', diff: 'calc' },
+              { type: 'visual_calc', q: 'בטרפז ישר זווית, זווית אחת היא 70 מעלות. חשבו את הזווית הקהה.', shape: 'trapezoid_right', data: { C_angle: '70°', show_C: true, show_B: true }, opts: ['110', '70', '90', '20'], correctAns: '110', exp: '180 - 70 = 110 (סכום זוויות ליד שוק).', diff: 'calc' },
+              { type: 'visual_calc', q: 'בטרפז שווה שוקיים, זווית בסיס אחת היא 50. כמה שווה זווית הבסיס השנייה?', shape: 'trapezoid_iso', data: { D_angle: '50°', show_D: true, show_C: true }, opts: ['50', '130', '90', '100'], correctAns: '50', exp: 'זוויות הבסיס שוות זו לזו.', diff: 'calc' },
+              { type: 'visual_calc', q: 'בדלתון, זווית ראש אחת היא 80. האלכסון הראשי חוצה אותה. מה גודל חצי הזווית?', shape: 'kite', data: { A_angle: '80°', show_half_angle: true }, opts: ['40', '20', '80', '45'], correctAns: '40', exp: '80 חלקי 2 שווה 40.', diff: 'calc' },
+              { type: 'visual_calc', q: 'טרפז שווה שוקיים: בסיסים 5 ו-10, שוק 4. חשבו את ההיקף.', shape: 'trapezoid_iso', data: { show_sides: true, label_leg: '4', label_top: '5', label_bottom: '10' }, opts: ['23', '19', '20', '25'], correctAns: '23', exp: '5 + 10 + 4 + 4 = 23.', diff: 'calc' },
+              { type: 'visual_calc', q: 'שטח הטרפז הוא 30. סכום הבסיסים הוא 10. חשבו את הגובה.', shape: 'trapezoid_right', data: { show_sides: true, label_sum: '10', label_area: '30' }, opts: ['6', '3', '5', '10'], correctAns: '6', exp: '30 = (10 כפול גובה) חלקי 2. הגובה הוא 6.', diff: 'calc' },
+              { type: 'visual_calc', q: 'בטרפז, זווית אחת היא 100. חשבו את הזווית שמתחתיה (באותו צד).', shape: 'trapezoid_gen', data: { A_angle: '100°', show_A: true, show_D: true }, opts: ['80', '100', '90', '180'], correctAns: '80', exp: '180 פחות 100 שווה 80.', diff: 'calc' },
+              { type: 'visual_calc', q: 'בדלתון זווית צד ימין היא 110. כמה שווה זווית צד שמאל?', shape: 'kite', data: { B_angle: '110°', show_B: true, show_D: true }, opts: ['110', '70', '55', '220'], correctAns: '110', exp: 'הזוויות הצדדיות שוות זו לזו.', diff: 'calc' }
+          ];
+
+          const CHALLENGE_POOL = [
+              { type: 'visual_calc', q: 'זווית אחת בטרפז היא X והשנייה באותו צד היא X+20. חשבו את X.', shape: 'trapezoid_gen', data: { A_angle: 'X', D_angle: 'X+20', show_A: true, show_D: true }, opts: ['80', '100', '90', '60'], correctAns: '80', exp: 'X + (X+20) = 180 -> 2X = 160 -> X = 80.', diff: 'challenge' },
+              { type: 'visual_calc', q: 'שטח דלתון 24. האלכסון הראשי הוא 8. חשבו את אורך האלכסון השני.', shape: 'kite', data: { show_diagonals: true, label_area: '24', label_AC: '8' }, opts: ['6', '3', '12', '4'], correctAns: '6', exp: '(8 כפול ?) חלקי 2 שווה 24. התשובה 6.', diff: 'challenge' },
+              { type: 'visual_calc', q: 'בטרפז ישר זווית, הזווית הקהה גדולה פי 2 מהחדה. חשבו את החדה.', shape: 'trapezoid_right', data: { C_angle: '?', B_angle: '??', show_C: true, show_B: true }, opts: ['60', '30', '45', '120'], correctAns: '60', exp: 'X + 2X = 180 -> 3X = 180 -> X = 60.', diff: 'challenge' },
+              { type: 'visual_calc', q: 'בדלתון, זוויות הראש הן 40 ו-60. חשבו את גודל הזווית הצדדית.', shape: 'kite', data: { A_angle: '40°', C_angle: '60°', show_A: true, show_C: true, show_B: true }, opts: ['130', '100', '110', '50'], correctAns: '130', exp: '360 - 40 - 60 = 260. נחלק ב-2 ונקבל 130.', diff: 'challenge' }
+          ];
+
+          // --- GEOMETRY HELPERS ---
+
+          const getAngleVisuals = (pCenter, p1, p2, radius = 25) => {
+              if (!pCenter || !p1 || !p2) return { d: "", textPos: [0,0] };
+              const v1 = [p1[0] - pCenter[0], p1[1] - pCenter[1]];
+              const v2 = [p2[0] - pCenter[0], p2[1] - pCenter[1]];
+              const len1 = Math.sqrt(v1[0]*v1[0] + v1[1]*v1[1]);
+              const len2 = Math.sqrt(v2[0]*v2[0] + v2[1]*v2[1]);
+              const nv1 = [v1[0]/len1, v1[1]/len1];
+              const nv2 = [v2[0]/len2, v2[1]/len2];
+              const ang1 = Math.atan2(nv1[1], nv1[0]);
+              const ang2 = Math.atan2(nv2[1], nv2[0]);
+              let bx = nv1[0] + nv2[0];
+              let by = nv1[1] + nv2[1];
+              const bLen = Math.sqrt(bx*bx + by*by);
+              if (bLen > 0.0001) { bx /= bLen; by /= bLen; } else { bx = -nv1[1]; by = nv1[0]; }
+              let diff = ang2 - ang1;
+              while (diff <= -Math.PI) diff += 2 * Math.PI;
+              while (diff > Math.PI) diff -= 2 * Math.PI;
+              const sweep = diff > 0 ? 1 : 0;
+              const startX = pCenter[0] + radius * Math.cos(ang1);
+              const startY = pCenter[1] + radius * Math.sin(ang1);
+              const endX = pCenter[0] + radius * Math.cos(ang2);
+              const endY = pCenter[1] + radius * Math.sin(ang2);
+              const d = `M ${startX} ${startY} A ${radius} ${radius} 0 0 ${sweep} ${endX} ${endY}`;
+              const textRadius = radius + 20;
+              const textPos = [pCenter[0] + bx * textRadius, pCenter[1] + by * textRadius];
+              return { d, textPos };
+          };
+
+          const getSideTickData = (p1, p2, double) => {
+              const mx = (p1[0] + p2[0]) / 2;
+              const my = (p1[1] + p2[1]) / 2;
+              const angle = Math.atan2(p2[1] - p1[1], p2[0] - p1[0]) * (180 / Math.PI);
+              return { x: mx, y: my, rot: angle + 90, double };
+          };
+
+          // --- COMPONENTS ---
+
+          const RenderMathFormula = ({ math, tip }) => {
+              if (!math) return null;
+              return (
+                  <div className="bg-slate-900 border-2 border-blue-500 rounded-2xl p-4 text-center shadow-lg animate-in slide-in-from-bottom-2">
+                      <div className="text-gray-400 text-sm mb-2 font-bold">כתיב מתמטי:</div>
+                      <div className="math-font text-2xl text-yellow-300 font-bold tracking-wider space-y-2" style={{ direction: 'ltr' }}>
+                          {math.split('\n').map((line, i) => {
+                              if (line.includes('frac(')) {
+                                  const parts = line.match(/frac\((.*?)\)\((.*?)\)/);
+                                  if (parts) {
+                                      const prefix = line.split('frac')[0].replace('=', '').trim();
+                                      return (
+                                          <div key={i} className="flex items-center justify-center gap-3">
+                                              <span className="mb-1">{prefix ? prefix + ' = ' : 'S = '}</span>
+                                              <div className="flex flex-col items-center">
+                                                  <span className="border-b-2 border-yellow-300 px-2 pb-1">{parts[1]}</span>
+                                                  <span className="pt-1">{parts[2]}</span>
+                                              </div>
+                                          </div>
+                                      );
+                                  }
+                              }
+                              return <div key={i}>{line}</div>;
+                          })}
+                      </div>
+                      {tip && (
+                          <div className="mt-3 pt-3 border-t border-gray-700 text-green-300 font-medium text-lg leading-snug" style={{ direction: 'rtl' }}>
+                              <i className="fas fa-lightbulb text-yellow-400 ml-2"></i>
+                              {tip}
+                          </div>
+                      )}
+                  </div>
+              );
+          };
+
+          const ShapeDisplay = ({ shapeId, highlightedFeature, showSummary }) => {
+              if (!SHAPES[shapeId]) return null;
+
+              const data = SHAPES[shapeId];
+              const { A, B, C, D } = data.coords;
+              const labelOffsets = data.labelOffsets || { A:[0,-15], B:[15,0], C:[0,25], D:[-15,0] }; // Fallback
+              const color = data.color === 'pink' ? '#ec4899' : data.color === 'cyan' ? '#06b6d4' : data.color === 'teal' ? '#14b8a6' : '#22c55e';
+              const mid = (p1, p2) => [(p1[0]+p2[0])/2, (p1[1]+p2[1])/2];
+              const center = shapeId === 'kite' ? [150, 130] : mid(A, C); 
+
+              const showSides = highlightedFeature === 'sides' || highlightedFeature === 'legs_equal' || highlightedFeature === 'bases' || showSummary;
+              const showDiagonals = highlightedFeature?.includes('diag') || highlightedFeature === 'main_diag' || showSummary;
+              const showAngles = highlightedFeature?.includes('angles') || highlightedFeature === 'right_angles' || highlightedFeature === 'base_angles' || showSummary;
+              const showHeight = highlightedFeature === 'area' || highlightedFeature === 'perp_leg' || showSummary;
+              const showNonParallel = highlightedFeature === 'legs_non_parallel' || showSummary;
+              const showPythagorasTip = highlightedFeature === 'pythagoras_tip' || showSummary;
+
+              const currentFeatureData = useMemo(() => {
+                   if (showSummary) return null;
+                   return data.features.find(f => f.id === highlightedFeature);
+              }, [highlightedFeature, showSummary, data]);
+
+              const RenderTick = ({p1, p2, type}) => {
+                  const {x, y, rot} = getSideTickData(p1, p2);
+                  return (
+                      <g transform={`translate(${x},${y}) rotate(${rot})`}>
+                          <line x1="-6" y1="0" x2="6" y2="0" stroke="yellow" strokeWidth="4" />
+                          {type === 'double' && <line x1="-6" y1="-5" x2="6" y2="-5" stroke="yellow" strokeWidth="4" />}
+                      </g>
+                  );
+              };
+
+              const RenderHeight = () => {
+                  if (shapeId.includes('trapezoid')) {
+                      const hY = D[1];
+                      return (
+                          <g className="fade-in">
+                              <line x1={A[0]} y1={A[1]} x2={A[0]} y2={hY} stroke="white" strokeWidth="2" strokeDasharray="5" />
+                              <rect x={A[0]} y={hY-15} width="15" height="15" fill="none" stroke="white" />
+                              <text x={A[0]+5} y={(A[1]+hY)/2} fill="white" fontSize="16" fontWeight="bold">h</text>
+                          </g>
+                      );
+                  }
+                  return null;
+              };
+
+              const RenderPythagorasTip = () => {
+                  if (shapeId !== 'trapezoid_iso') return null;
+                  const hY = D[1];
+                  return (
+                      <g className="fade-in">
+                           <line x1={A[0]} y1={A[1]} x2={A[0]} y2={hY} stroke="yellow" strokeWidth="2" strokeDasharray="4" />
+                           <line x1={B[0]} y1={B[1]} x2={B[0]} y2={hY} stroke="yellow" strokeWidth="2" strokeDasharray="4" />
+                           <path d={`M${D[0]},${D[1]} L${A[0]},${hY} L${A[0]},${A[1]} Z`} fill="rgba(255, 255, 0, 0.2)" stroke="none" />
+                           <path d={`M${C[0]},${C[1]} L${B[0]},${hY} L${B[0]},${B[1]} Z`} fill="rgba(255, 255, 0, 0.2)" stroke="none" />
+                      </g>
+                  );
+              };
+
+              const RenderAngles = () => {
+                  const angA = getAngleVisuals(A, D, B, 25);
+                  const angB = getAngleVisuals(B, A, C, 25);
+                  const angC = getAngleVisuals(C, B, D, 25);
+                  const angD = getAngleVisuals(D, C, A, 25);
+
+                  let colA = "white", colB = "white", colC = "white", colD = "white";
+                  if (shapeId === 'trapezoid_iso') { colA = colB = "#4ade80"; colC = colD = "#c084fc"; } 
+                  else if (shapeId === 'kite') { colB = colD = "#fbbf24"; }
+
+                  const StrokeArc = ({vis, col}) => <path d={vis.d} stroke={col} fill="none" strokeWidth="3" />;
+
+                  return (
+                      <g>
+                          {(shapeId !== 'trapezoid_right') && (
+                              <>
+                                  <StrokeArc vis={angA} col={colA} />
+                                  <StrokeArc vis={angB} col={colB} />
+                                  <StrokeArc vis={angC} col={colC} />
+                                  <StrokeArc vis={angD} col={colD} />
+                              </>
+                          )}
+                          {shapeId === 'trapezoid_right' && (
+                               <>
+                                  <rect x={A[0]} y={A[1]} width="20" height="20" stroke="cyan" fill="none" strokeWidth="2"/>
+                                  <rect x={D[0]} y={D[1]-20} width="20" height="20" stroke="cyan" fill="none" strokeWidth="2"/>
+                               </>
+                          )}
+                      </g>
+                  );
+              };
+
+              const RenderTrapezoidSum180 = () => {
+                  const angA = getAngleVisuals(A, D, B, 30);
+                  const angD = getAngleVisuals(D, A, C, 30);
+                  const angB = getAngleVisuals(B, A, C, 30);
+                  const angC = getAngleVisuals(C, B, D, 30);
+                  return (
+                      <g>
+                          <path d={angA.d} stroke="orange" fill="none" strokeWidth="3" />
+                          <path d={angD.d} stroke="orange" fill="none" strokeWidth="3" />
+                          <path d="M 10,100 Q -5,160 10,220" stroke="orange" fill="none" strokeWidth="2" strokeDasharray="4" />
+                          <text x="-15" y="165" fill="orange" fontSize="16" fontWeight="bold">180°</text>
+
+                          <path d={angB.d} stroke="orange" fill="none" strokeWidth="3" />
+                          <path d={angC.d} stroke="orange" fill="none" strokeWidth="3" />
+                          <path d="M 290,100 Q 305,160 290,220" stroke="orange" fill="none" strokeWidth="2" strokeDasharray="4" />
+                          <text x="310" y="165" fill="orange" fontSize="16" fontWeight="bold">180°</text>
+                      </g>
+                  );
+              }
+
+              return (
+                  <div className="flex flex-col gap-4">
+                      <div className="relative w-full h-[400px] bg-slate-900 rounded-3xl border-4 border-slate-700 flex justify-center items-center overflow-hidden transition-all duration-500 shadow-2xl">
+                          <svg viewBox="-20 -20 340 380" className="w-full h-full max-w-[500px] select-none">
+                              <path d={`M${A[0]},${A[1]} L${B[0]},${B[1]} L${C[0]},${C[1]} L${D[0]},${D[1]} Z`} fill={color} fillOpacity="0.15" stroke={color} strokeWidth="4" strokeLinejoin="round" className="shape-path" />
+
+                              {showDiagonals && (
+                                  <g className="highlight-pulse">
+                                      <line x1={A[0]} y1={A[1]} x2={C[0]} y2={C[1]} stroke="#fbbf24" strokeWidth="2" strokeDasharray="5,5" />
+                                      <line x1={B[0]} y1={B[1]} x2={D[0]} y2={D[1]} stroke="#fbbf24" strokeWidth="2" strokeDasharray="5,5" />
+                                      {shapeId === 'kite' && highlightedFeature === 'main_diag' && (
+                                          <>
+                                              <line x1={A[0]} y1={A[1]} x2={C[0]} y2={C[1]} stroke="#34D399" strokeWidth="4" />
+                                              <path d={`M${A[0]-15},${A[1]+25} Q${A[0]},${A[1]+35} ${A[0]+15},${A[1]+25}`} stroke="orange" fill="none" strokeWidth="2" />
+                                              <path d={`M${C[0]-15},${C[1]-25} Q${C[0]},${C[1]-35} ${C[0]+15},${C[1]-25}`} stroke="#4ade80" fill="none" strokeWidth="2" />
+                                              <line x1="200" y1="125" x2="200" y2="135" stroke="yellow" strokeWidth="3" />
+                                              <line x1="100" y1="125" x2="100" y2="135" stroke="yellow" strokeWidth="3" />
+                                          </>
+                                      )}
+                                      {shapeId === 'kite' && (
+                                          <>
+                                              <path d={`M${center[0]-15},${center[1]} L${center[0]},${center[1]-15} L${center[0]+15},${center[1]} L${center[0]},${center[1]+15} Z`} fill="rgba(255,0,0,0.4)" stroke="red" strokeWidth="2" />
+                                              <circle cx={center[0]} cy={center[1]} r="4" fill="white" />
+                                              <text x={center[0]+10} y={center[1]-10} fill="white" fontSize="16" fontWeight="bold">O</text>
+                                          </>
+                                      )}
+                                  </g>
+                              )}
+
+                              {showSides && (
+                                  <g>
+                                      {shapeId === 'kite' && (
+                                          <>
+                                              <RenderTick p1={A} p2={B} type="single" />
+                                              <RenderTick p1={A} p2={D} type="single" />
+                                              <RenderTick p1={C} p2={B} type="double" />
+                                              <RenderTick p1={C} p2={D} type="double" />
+                                          </>
+                                      )}
+                                      {shapeId === 'trapezoid_iso' && (
+                                          <>
+                                              <RenderTick p1={D} p2={A} type="single" />
+                                              <RenderTick p1={B} p2={C} type="single" />
+                                          </>
+                                      )}
+                                  </g>
+                              )}
+
+                              {showAngles && <RenderAngles />}
+
+                              {highlightedFeature === 'legs_angles' && (
+                                  <RenderTrapezoidSum180 />
+                              )}
+
+                              {showHeight && <RenderHeight />}
+
+                              {showNonParallel && (
+                                  <g>
+                                      <text x={(A[0]+D[0])/2 - 20} y={(A[1]+D[1])/2} fill="red" fontSize="24" fontWeight="bold">∦</text>
+                                      <text x={(B[0]+C[0])/2 + 10} y={(B[1]+C[1])/2} fill="red" fontSize="24" fontWeight="bold">∦</text>
+                                  </g>
+                              )}
+
+                              {showPythagorasTip && <RenderPythagorasTip />}
+
+                              {/* Labels with tight positioning */}
+                              <g style={{ textShadow: '2px 2px 4px black', pointerEvents: 'none', fontWeight: 'bold', fill: 'white', fontSize: '18px' }}>
+                                  <text x={A[0] + labelOffsets.A[0]} y={A[1] + labelOffsets.A[1]} textAnchor="middle">A</text>
+                                  <text x={B[0] + labelOffsets.B[0]} y={B[1] + labelOffsets.B[1]} textAnchor="middle">B</text>
+                                  <text x={C[0] + labelOffsets.C[0]} y={C[1] + labelOffsets.C[1]} textAnchor="middle">C</text>
+                                  <text x={D[0] + labelOffsets.D[0]} y={D[1] + labelOffsets.D[1]} textAnchor="middle">D</text>
+                              </g>
+                          </svg>
+
+                          {currentFeatureData && !showSummary && (
+                              <div className="absolute bottom-4 left-0 right-0 mx-auto w-max max-w-[90%] bg-black/80 px-6 py-3 rounded-full text-xl font-bold border border-white/20 animate-in fade-in slide-in-from-bottom-4 text-center z-10 shadow-2xl">
+                                  {currentFeatureData.text}
+                              </div>
+                          )}
+                          {showSummary && (
+                              <div className="absolute top-4 bg-yellow-600/90 px-6 py-3 rounded-full text-xl font-bold border border-yellow-200 animate-pulse text-center z-10">
+                                  סיכום תכונות: {data.name}
+                              </div>
+                          )}
+                      </div>
+
+                      {!showSummary && currentFeatureData && (
+                          <RenderMathFormula math={currentFeatureData.math} tip={currentFeatureData.tip} />
+                      )}
+                  </div>
+              );
+          };
+
+          const FamilyTreeAnim = ({ group }) => {
+              const [stage, setStage] = useState(0);
+              const sequence = group === 'kite' ? KITE_SEQ : TRAP_SEQ;
+
+              useEffect(() => {
+                  const interval = setInterval(() => {
+                      setStage(prev => (prev + 1) % sequence.length);
+                  }, 5000);
+                  return () => clearInterval(interval);
+              }, [group, sequence.length]); 
+
+              const current = sequence[stage];
+
+              const RenderAnimShape = () => {
+                  if (group === 'kite') {
+                      const A=[150,20], B=[250,120], C=[150,320], D=[50,120];
+                      return (
+                          <svg viewBox="0 0 300 350" className="w-full h-full max-w-[400px]">
+                              <path d={`M${D[0]},${D[1]} L${A[0]},${A[1]} L${B[0]},${B[1]} Z`} fill="rgba(236, 72, 153, 0.3)" stroke="pink" strokeWidth="3" className={`transition-opacity duration-1000 ${stage >= 0 ? 'opacity-100' : 'opacity-0'}`} />
+                              <path d={`M${D[0]},${D[1]} L${C[0]},${C[1]} L${B[0]},${B[1]} Z`} fill="rgba(236, 72, 153, 0.3)" stroke="pink" strokeWidth="3" className={`transition-opacity duration-1000 ${stage >= 1 ? 'opacity-100' : 'opacity-0'}`} />
+                              <line x1={D[0]} y1={D[1]} x2={B[0]} y2={B[1]} stroke="white" strokeDasharray="5" className={`transition-opacity ${stage >= 1 ? 'opacity-50' : 'opacity-0'}`} />
+                              <line x1={A[0]} y1={A[1]} x2={C[0]} y2={C[1]} stroke="yellow" strokeWidth="4" className={`transition-opacity ${stage === 3 ? 'opacity-100' : 'opacity-0'}`} />
+                          </svg>
+                      );
+                  } else {
+                      let d = "M80,60 L220,60 L280,260 L20,260 Z"; // Gen
+                      if (current.type === 'iso' || current.type === 'iso_props' || current.type === 'iso_heights') {
+                          d = "M80,60 L220,60 L260,260 L40,260 Z";
+                      }
+                      if (current.type === 'right') d = "M60,60 L200,60 L260,260 L60,260 Z";
+
+                      return (
+                          <svg viewBox="0 0 300 300" className="w-full h-full max-w-[400px]">
+                              <path d={d} fill="rgba(34, 197, 94, 0.3)" stroke="#4ade80" strokeWidth="4" className="shape-path" />
+                          </svg>
+                      );
+                  }
+              };
+
+              return (
+                  <div className="flex flex-col items-center justify-center h-full bg-slate-800 rounded-3xl p-8 border border-slate-700 shadow-xl">
+                      <div className="h-[300px] w-full flex items-center justify-center">
+                          <RenderAnimShape />
+                      </div>
+                      <h2 className="text-3xl font-black text-center mt-6 animate-pulse text-yellow-300 h-24 flex items-center justify-center p-4 leading-tight">{current.text}</h2>
+                  </div>
+              );
+          };
+
+          const VisualQuizShape = ({ shapeId, data }) => {
+              if (!SHAPES[shapeId]) return null;
+              const s = SHAPES[shapeId];
+              const { A, B, C, D } = s.coords;
+              const labelOffsets = s.labelOffsets || { A:[0,-15], B:[15,0], C:[0,25], D:[-15,0] };
+
+              const lA = getAngleVisuals(A, D, B, 30);
+              const lB = getAngleVisuals(B, A, C, 30);
+              const lC = getAngleVisuals(C, B, D, 30);
+              const lD = getAngleVisuals(D, C, A, 30);
+
+              const RenderQuizAngle = ({ visible, label, visData }) => {
+                  if (!visible && !label) return null;
+                  return (
+                      <g>
+                          <path d={visData.d} stroke="#fbbf24" fill="none" strokeWidth="2" />
+                          <text x={visData.textPos[0]} y={visData.textPos[1]} textAnchor="middle" dominantBaseline="middle" fill="#fbbf24" fontSize="18" fontWeight="bold">{label}</text>
+                      </g>
+                  );
+              };
+
+              return (
+                  <svg viewBox="-30 -30 360 410" className="w-full h-[350px] max-w-[500px] mx-auto my-4 bg-slate-900/50 rounded-xl border border-slate-600 select-none">
+                      <path d={`M${A[0]},${A[1]} L${B[0]},${B[1]} L${C[0]},${C[1]} L${D[0]},${D[1]} Z`} fill="none" stroke="white" strokeWidth="3" />
+
+                      {/* Consistent Labels with Correct Offsets */}
+                      <g style={{ fontWeight: 'bold', fill: 'gray', fontSize: '18px' }}>
+                          <text x={A[0] + labelOffsets.A[0]} y={A[1] + labelOffsets.A[1]} textAnchor="middle">A</text>
+                          <text x={B[0] + labelOffsets.B[0]} y={B[1] + labelOffsets.B[1]} textAnchor="middle">B</text>
+                          <text x={C[0] + labelOffsets.C[0]} y={C[1] + labelOffsets.C[1]} textAnchor="middle">C</text>
+                          <text x={D[0] + labelOffsets.D[0]} y={D[1] + labelOffsets.D[1]} textAnchor="middle">D</text>
+                      </g>
+
+                      {data.show_diagonals && (
+                          <g>
+                              <line x1={A[0]} y1={A[1]} x2={C[0]} y2={C[1]} stroke="yellow" strokeWidth="2" />
+                              <line x1={B[0]} y1={B[1]} x2={D[0]} y2={D[1]} stroke="yellow" strokeWidth="2" />
+                              {data.label_AC && <text x={150} y={150} fill="yellow" fontSize="20" fontWeight="bold">{data.label_AC}</text>}
+                              {data.label_BD && <text x={180} y={180} fill="yellow" fontSize="20" fontWeight="bold">{data.label_BD}</text>}
+                          </g>
+                      )}
+
+                      {data.show_height && (
+                          <g>
+                              <line x1={A[0]} y1={A[1]} x2={A[0]} y2={D[1]} stroke="cyan" strokeWidth="2" strokeDasharray="4" />
+                              <text x={A[0]-15} y={(A[1]+D[1])/2} fill="cyan" fontSize="16" fontWeight="bold">{data.label_h || 'h'}</text>
+                          </g>
+                      )}
+
+                      {(data.A_angle || data.show_A) && <RenderQuizAngle visible={true} label={data.A_angle} visData={lA} />}
+                      {(data.B_angle || data.show_B) && <RenderQuizAngle visible={true} label={data.B_angle} visData={lB} />}
+                      {(data.C_angle || data.show_C) && <RenderQuizAngle visible={true} label={data.C_angle} visData={lC} />}
+                      {(data.D_angle || data.show_D) && <RenderQuizAngle visible={true} label={data.D_angle} visData={lD} />}
+
+                      {data.show_half_angle && (
+                           <g>
+                               <path d={`M${A[0]-10},${A[1]+25} Q${A[0]},${A[1]+30} ${A[0]+10},${A[1]+25}`} stroke="#fbbf24" fill="none" strokeWidth="2" />
+                               <text x={A[0]} y={A[1]+50} fill="#fbbf24" fontSize="18" textAnchor="middle" fontWeight="bold">{data.A_angle}</text>
+                           </g>
+                      )}
+
+                      {data.label_top && <text x={(A[0]+B[0])/2} y={A[1]-10} fill="lime" fontSize="18" fontWeight="bold" textAnchor="middle">{data.label_top}</text>}
+                      {data.label_bottom && <text x={(D[0]+C[0])/2} y={C[1]+20} fill="lime" fontSize="18" fontWeight="bold" textAnchor="middle">{data.label_bottom}</text>}
+                      {data.label_leg && <text x={(A[0]+D[0])/2 - 15} y={(A[1]+D[1])/2} fill="lime" fontSize="18" fontWeight="bold" textAnchor="end">{data.label_leg}</text>}
+                      {data.label_sum && <text x={150} y={300} fill="lime" fontSize="18" fontWeight="bold" textAnchor="middle">סכום בסיסים: {data.label_sum}</text>}
+                      {data.label_area && <text x={150} y={330} fill="white" fontSize="18" fontWeight="bold" textAnchor="middle">S = {data.label_area}</text>}
+
+                      {data.show_sides && !data.label_top && !data.label_sum && (
+                           <text x={(A[0]+B[0])/2} y={(A[1]+B[1])/2 - 10} fill="lime" fontSize="20" fontWeight="bold">?</text>
+                      )}
+                  </svg>
+              );
+          };
+
+          const QuizMode = ({ onExit }) => {
+              const [questions, setQuestions] = useState([]);
+              const [qIndex, setQIndex] = useState(0);
+              const [score, setScore] = useState(0);
+              const [timer, setTimer] = useState(0);
+              const [gameState, setGameState] = useState('intro');
+              const [selectedAns, setSelectedAns] = useState(null);
+              const [isCorrect, setIsCorrect] = useState(false);
+              const [showBonus, setShowBonus] = useState(false);
+
+              useEffect(() => {
+                  if (gameState === 'intro') {
+                      // Prepare pools
+                      const sText = [...TEXT_POOL].sort(() => Math.random() - 0.5);
+                      const sCalc = [...CALC_POOL].sort(() => Math.random() - 0.5);
+                      const sChal = [...CHALLENGE_POOL].sort(() => Math.random() - 0.5);
+
+                      // Combine standard questions
+                      const standardPool = [...sText, ...sCalc].sort(() => Math.random() - 0.5);
+
+                      const organizedQuestions = [];
+                      let stdIndex = 0;
+                      let chalIndex = 0;
+
+                      // Build sequence: 5 standard, then 1 challenge
+                      while (stdIndex < standardPool.length) {
+                          // Add up to 5 standard questions
+                          for (let k = 0; k < 5 && stdIndex < standardPool.length; k++) {
+                              organizedQuestions.push(standardPool[stdIndex++]);
+                          }
+
+                          // Add 1 challenge question if available and we added some standard questions
+                          if (chalIndex < sChal.length) {
+                              organizedQuestions.push(sChal[chalIndex++]);
+                          }
+                      }
+
+                      const final = organizedQuestions.map((q, i) => {
+                          let opts = [];
+                          let correctIdx = 0;
+                          if (q.type === 'tf') {
+                              opts = ['נכון', 'לא נכון'];
+                              correctIdx = q.ans === 'נכון' ? 0 : 1;
+                          } else if (q.opts) {
+                              opts = [...q.opts].sort(() => Math.random() - 0.5);
+                              correctIdx = opts.indexOf(q.correctAns);
+                          }
+
+                          let t = 30; 
+                          if (q.diff === 'calc') t = 60;
+                          if (q.diff === 'challenge') t = 90;
+
+                          return { ...q, id: i, finalOpts: opts, finalCorrectIndex: correctIdx, timeLimit: t };
+                      });
+
+                      setQuestions(final);
+                  }
+              }, [gameState]);
+
+              useEffect(() => {
+                  let interval;
+                  if (gameState === 'playing' && timer > 0) {
+                      interval = setInterval(() => setTimer(prev => prev - 1), 1000);
+                  } else if (timer === 0 && gameState === 'playing') {
+                      setGameState('feedback'); 
+                      setSelectedAns(-1); 
+                      setIsCorrect(false);
+                  }
+                  return () => clearInterval(interval);
+              }, [timer, gameState]);
+
+              useEffect(() => {
+                  if (gameState === 'playing' && questions[qIndex]?.diff === 'challenge') {
+                      setShowBonus(true);
+                      const t = setTimeout(() => setShowBonus(false), 3000);
+                      return () => clearTimeout(t);
+                  }
+              }, [qIndex, gameState, questions]);
+
+              const handleAnswer = (idx) => {
+                  if (gameState !== 'playing') return;
+                  setGameState('feedback');
+                  setSelectedAns(idx);
+                  const isC = idx === questions[qIndex].finalCorrectIndex;
+                  setIsCorrect(isC);
+                  if (isC) setScore(s => s + 10);
+              };
+
+              const nextQ = () => {
+                  if (qIndex < questions.length - 1) {
+                      setQIndex(i => i + 1);
+                      setTimer(questions[qIndex+1].timeLimit);
+                      setGameState('playing');
+                      setSelectedAns(null);
+                      setShowBonus(false);
+                  } else {
+                      setGameState('finished');
+                  }
+              };
+
+              const start = () => {
+                  if (questions.length === 0) return;
+                  setQIndex(0);
+                  setTimer(questions[0].timeLimit);
+                  setGameState('playing');
+              };
+
+              if (gameState === 'intro') {
+                  return (
+                      <div className="flex flex-col items-center justify-center h-full text-center animate-in fade-in p-8">
+                          <h2 className="text-5xl font-black text-white mb-6">אתגר הדלתונים והטרפזים</h2>
+                          <p className="text-2xl text-gray-300 mb-8">50 שאלות: תכונות וחישובים בלבד.<br/>ללא הוכחות, ללא זיהוי צורות.<br/>מתאים לכיתה ט'. מוכנים?</p>
+                          <button onClick={start} className="bg-blue-600 hover:bg-blue-500 text-white text-3xl font-bold py-4 px-12 rounded-3xl shadow-lg transform transition hover:scale-105">התחל!</button>
+                      </div>
+                  );
+              }
+
+              if (gameState === 'finished') {
+                  return (
+                      <div className="flex flex-col items-center justify-center h-full text-center animate-in zoom-in">
+                          <h2 className="text-5xl font-black text-yellow-400 mb-4">כל הכבוד!</h2>
+                          <p className="text-3xl text-white">ניקוד סופי: {score}</p>
+                          <button onClick={onExit} className="mt-8 bg-slate-700 hover:bg-slate-600 text-white font-bold py-3 px-8 rounded-xl">יציאה</button>
+                      </div>
+                  );
+              }
+
+              if (!questions.length) return <div>טוען...</div>;
+              const curr = questions[qIndex];
+
+              return (
+                  <div className="max-w-4xl mx-auto w-full h-full flex flex-col justify-center relative">
+                      {showBonus && (
+                          <div className="absolute inset-0 flex items-center justify-center z-50 pointer-events-none">
+                              <div className="bonus-alert bg-gradient-to-r from-red-600 to-orange-600 text-white text-6xl font-black p-12 rounded-[3rem] border-8 border-yellow-300 shadow-[0_0_100px_rgba(255,0,0,0.8)] transform rotate-[-5deg]">
+                                  שאלת בונוס!
+                              </div>
+                          </div>
+                      )}
+
+                      <div className="flex justify-between items-center mb-6 bg-slate-800 p-4 rounded-2xl border border-slate-700">
+                          <span className="text-xl font-bold text-gray-400">שאלה {qIndex+1}/50</span>
+                          <div className="text-3xl font-bold text-yellow-400">{score}</div>
+                          <div className={`text-3xl font-mono font-bold ${timer < 10 ? 'text-red-500 animate-pulse' : 'text-white'}`}>{timer}</div>
+                      </div>
+
+                      <div className="bg-slate-800 rounded-3xl p-8 border border-slate-700 shadow-2xl relative">
+                          <h3 className="text-2xl font-bold mb-6 text-center">{curr.q}</h3>
+
+                          {(curr.diff === 'calc' || curr.diff === 'challenge') && (
+                              <VisualQuizShape shapeId={curr.shape} data={curr.data} />
+                          )}
+
+                          <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mt-6">
+                              {curr.finalOpts.map((opt, i) => (
+                                  <button
+                                      key={i}
+                                      onClick={() => handleAnswer(i)}
+                                      disabled={gameState !== 'playing'}
+                                      className={`p-6 rounded-2xl text-xl font-bold transition-all ${
+                                          gameState !== 'playing' 
+                                              ? (i === curr.finalCorrectIndex 
+                                                  ? 'bg-green-600 text-white' 
+                                                  : i === selectedAns ? 'bg-red-600 opacity-80' : 'bg-slate-700 opacity-30')
+                                              : 'bg-slate-700 hover:bg-slate-600 border-2 border-slate-600 hover:border-blue-400'
+                                      }`}
+                                  >
+                                      {opt}
+                                  </button>
+                              ))}
+                          </div>
+
+                          {gameState === 'feedback' && (
+                              <div className="mt-6 bg-black/50 p-4 rounded-xl text-center fade-in">
+                                  <p className="text-lg text-white mb-4 font-bold">{isCorrect ? 'נכון מאוד!' : 'לא נורא...'}</p>
+                                  <p className="text-md text-gray-300 mb-4">{curr.exp}</p>
+                                  <button onClick={nextQ} className="bg-blue-600 hover:bg-blue-500 text-white font-bold py-3 px-8 rounded-xl">הבא</button>
+                              </div>
+                          )}
+                      </div>
+                  </div>
+              );
+          };
+
+          const App = () => {
+              const [mode, setMode] = useState('menu'); 
+              const [currentShape, setCurrentShape] = useState(null);
+              const [highlightedFeature, setHighlightedFeature] = useState(null);
+              const [showSummary, setShowSummary] = useState(false);
+              const [subView, setSubView] = useState('explore'); 
+
+              useEffect(() => {
+                  setHighlightedFeature(null);
+                  setShowSummary(false);
+                  setSubView('explore');
+              }, [mode]);
+
+              const NavBar = () => (
+                  <nav className="flex flex-wrap justify-between items-center bg-slate-800 p-4 rounded-2xl mb-6 shadow-lg border border-slate-700 gap-2">
+                      <button onClick={() => setMode('menu')} className="bg-slate-700 hover:bg-slate-600 text-white px-4 py-2 rounded-xl font-bold transition-colors">
+                          <i className="fas fa-home ml-2"></i> תפריט
+                      </button>
+                      <h1 className="text-2xl font-black hidden md:block">
+                          {mode === 'kite_world' ? 'עולם הדלתון' : 'משפחת הטרפזים'}
+                      </h1>
+                      <div className="flex gap-2">
+                          <button onClick={() => setSubView('explore')} className={`px-4 py-2 rounded-xl font-bold transition-all ${subView === 'explore' ? 'bg-blue-600' : 'bg-slate-700'}`}>חקירה</button>
+                          <button onClick={() => setSubView('family')} className={`px-4 py-2 rounded-xl font-bold transition-all ${subView === 'family' ? 'bg-purple-600' : 'bg-slate-700'}`}>אבולוציה</button>
+                          <button onClick={() => setSubView('quiz')} className={`px-4 py-2 rounded-xl font-bold transition-all ${subView === 'quiz' ? 'bg-green-600' : 'bg-slate-700'}`}>מבחן</button>
+                      </div>
+                  </nav>
+              );
+
+              const TrapSelector = () => (
+                  <div className="flex flex-wrap gap-2 justify-center mb-6">
+                      {[
+                          {id: 'trapezoid_gen', label: 'טרפז כללי'},
+                          {id: 'trapezoid_iso', label: 'שווה שוקיים'},
+                          {id: 'trapezoid_right', label: 'ישר זווית'}
+                      ].map(s => (
+                          <button 
+                              key={s.id}
+                              onClick={() => { 
+                                  setCurrentShape(s.id); 
+                                  setHighlightedFeature(null); 
+                                  setShowSummary(false); 
+                              }}
+                              className={`px-4 py-2 rounded-xl font-bold transition-all ${currentShape === s.id ? 'bg-blue-600 text-white scale-105' : 'bg-slate-700 text-gray-300 hover:bg-slate-600'}`}
+                          >
+                              {s.label}
+                          </button>
+                      ))}
+                  </div>
+              );
+
+              if (mode === 'menu') {
+                  return (
+                      <div className="min-h-screen flex flex-col items-center justify-center p-4">
+                          <h1 className="text-5xl md:text-6xl font-black mb-12 text-center text-transparent bg-clip-text bg-gradient-to-r from-blue-400 to-purple-600 drop-shadow-lg">
+                              גיאומטריה אינטראקטיבית
+                          </h1>
+                          <div className="grid grid-cols-1 md:grid-cols-2 gap-8 w-full max-w-4xl">
+                              <button onClick={() => {
+                                  setMode('kite_world');
+                                  setCurrentShape('kite');
+                              }} className="group bg-slate-800 p-10 rounded-[3rem] border-4 border-slate-700 hover:border-pink-500 transition-all hover:scale-105 flex flex-col items-center shadow-2xl">
+                                  <div className="text-8xl mb-6 group-hover:animate-bounce">🪁</div>
+                                  <h2 className="text-4xl font-black text-white">עולם הדלתון</h2>
+                                  <p className="text-xl text-gray-400 mt-2">סימטריה, אלכסונים ומשולשים</p>
+                              </button>
+                              <button onClick={() => {
+                                  setMode('trap_world');
+                                  setCurrentShape('trapezoid_gen');
+                              }} className="group bg-slate-800 p-10 rounded-[3rem] border-4 border-slate-700 hover:border-green-500 transition-all hover:scale-105 flex flex-col items-center shadow-2xl">
+                                  <div className="text-8xl mb-6 group-hover:animate-bounce">🏗️</div>
+                                  <h2 className="text-4xl font-black text-white">משפחת הטרפזים</h2>
+                                  <p className="text-xl text-gray-400 mt-2">כללי, שווה שוקיים וישר זווית</p>
+                              </button>
+                          </div>
+                          
+                      </div>
+                  );
+              }
+
+              return (
+                  <div className="min-h-screen flex flex-col max-w-[1600px] mx-auto p-4">
+                      <NavBar />
+
+                      {subView === 'quiz' && <QuizMode onExit={() => setSubView('explore')} />}
+
+                      {subView === 'family' && (
+                          <div className="flex-1 animate-in fade-in flex items-center justify-center">
+                              <div className="w-full max-w-4xl">
+                                  <FamilyTreeAnim group={mode === 'kite_world' ? 'kite' : 'trap'} />
+                              </div>
+                          </div>
+                      )}
+
+                      {subView === 'explore' && currentShape && (
+                          <div className="flex-1 animate-in fade-in">
+                              {mode === 'trap_world' && <TrapSelector />}
+
+                              <div className="grid grid-cols-1 lg:grid-cols-12 gap-8 items-start">
+                                  {/* Visual Side */}
+                                  <div className="lg:col-span-5 lg:sticky lg:top-4">
+                                      <ShapeDisplay shapeId={currentShape} highlightedFeature={highlightedFeature} showSummary={showSummary} />
+                                  </div>
+
+                                  {/* Controls Side */}
+                                  <div className="lg:col-span-7">
+                                      {!showSummary && SHAPES[currentShape] && (
+                                          <>
+                                              <div className="mb-6">
+                                                  <h2 className="text-5xl font-black text-white mb-2">{SHAPES[currentShape].name}</h2>
+                                                  <p className="text-xl text-gray-400">{SHAPES[currentShape].desc}</p>
+                                              </div>
+                                              <div className="bg-slate-800 p-6 rounded-3xl border border-slate-700 grid gap-4">
+                                                  {SHAPES[currentShape].features.map(f => (
+                                                      <button 
+                                                          key={f.id}
+                                                          onClick={() => setHighlightedFeature(f.id === highlightedFeature ? null : f.id)}
+                                                          className={`flex items-center gap-4 p-4 rounded-xl border-2 text-right transition-all ${highlightedFeature === f.id ? 'bg-blue-600 border-blue-400 shadow-lg scale-[1.02]' : 'bg-slate-700/50 border-slate-600 hover:bg-slate-700'}`}
+                                                      >
+                                                          <div className="text-2xl w-10 text-center"><i className={`fas fa-${f.icon}`}></i></div>
+                                                          <div className="font-bold text-lg">{f.text}</div>
+                                                      </button>
+                                                  ))}
+                                                  <button onClick={() => { setShowSummary(true); setHighlightedFeature(null); }} className="mt-4 bg-gradient-to-r from-yellow-600 to-orange-600 text-white font-black text-xl py-4 rounded-xl shadow-lg transform transition hover:scale-105">
+                                                      סיכום תכונות מלא
+                                                  </button>
+                                              </div>
+                                          </>
+                                      )}
+
+                                      {showSummary && SHAPES[currentShape] && (
+                                          <div className="bg-slate-900 p-6 rounded-2xl border-2 border-yellow-500 shadow-2xl h-full flex flex-col">
+                                              <div className="flex justify-between items-center mb-6 border-b border-yellow-500/30 pb-4">
+                                                  <h3 className="text-3xl font-black text-yellow-400">סיכום: {SHAPES[currentShape].name}</h3>
+                                                  <button onClick={() => setShowSummary(false)} className="bg-slate-700 hover:bg-slate-600 p-2 rounded-full text-white"><i className="fas fa-times"></i></button>
+                                              </div>
+                                              <div className="flex-1 overflow-y-auto pr-2 custom-scrollbar space-y-4 max-h-[600px]">
+                                                  {SHAPES[currentShape].features.map(f => (
+                                                      <div key={f.id} className="bg-slate-800 p-4 rounded-xl border border-slate-700">
+                                                          <div className="text-gray-200 font-bold text-lg mb-2 flex items-center gap-2">
+                                                              <i className={`fas fa-${f.icon} text-yellow-500`}></i> {f.text}
+                                                          </div>
+                                                          <RenderMathFormula math={f.math} />
+                                                          {f.tip && <div className="text-green-400 text-sm mt-2 font-bold"><i className="fas fa-lightbulb ml-1"></i> {f.tip}</div>}
+                                                      </div>
+                                                  ))}
+                                              </div>
+                                          </div>
+                                      )}
+                                  </div>
+                              </div>
+                          </div>
+                      )}
+                      
+                  </div>
+              );
+          };
+
+          const root = ReactDOM.createRoot(document.getElementById('root'));
+          root.render(<App />);
+      </script>
+  </body>
+  </html>

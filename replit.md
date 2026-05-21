@@ -64,9 +64,19 @@ A Hebrew math education platform for Israeli middle school students (grades 7–
 
 ## How to add new HTML tools
 
-1. Drop the HTML file into `artifacts/alogbra/public/tools/grade8/` (or grade9, etc.)
-2. Add an entry to `artifacts/alogbra/src/data/tools.ts` in the appropriate grade/category
-3. The tool will automatically appear on the grade hub page
+**Option A — HTML tools from html-library (recommended for new tools pasted from Gemini):**
+1. Save the HTML file as `artifacts/alogbra/src/data/html-tools/<id>.html`
+2. Add one import line to `artifacts/alogbra/src/data/html-library.ts`:
+   `import myTool from './html-tools/<id>.html?raw';`
+3. Add one entry to the `htmlLibrary` array in the same file with `html: myTool`
+4. The tool appears automatically on the grade hub page (served as a blob URL in an iframe)
+
+**Option B — Static file tools (for the original public/tools/ files):**
+1. Drop the HTML file into `artifacts/alogbra/public/tools/grade8/` (or grade9/)
+2. Add an entry to `artifacts/alogbra/src/data/tools.ts`
+
+Note: The html-library approach is preferred for new tools because it avoids the escaping issues
+with backticks in JSX template literals inside the HTML files.
 
 ## Pointers
 
