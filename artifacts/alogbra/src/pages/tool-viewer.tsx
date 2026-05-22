@@ -11,36 +11,36 @@ export default function ToolViewer() {
   const [iframeSrcdoc, setIframeSrcdoc] = useState<string | null>(null);
   const [title, setTitle] = useState<string>("");
 
+  // Resolve grade for rendering — called in component body so it's available in JSX.
+  // getGradeWithLibrary returns a new object each call; we intentionally don't put it
+  // in a useEffect dep array to avoid infinite re-renders.
+  const grade = gradeId ? getGradeWithLibrary(Number(gradeId)) : undefined;
+
   useEffect(() => {
     if (!gradeId || !toolId) return;
 
-    const grade = getGradeWithLibrary(Number(gradeId));
-    if (!grade) return;
+    const g = getGradeWithLibrary(Number(gradeId));
+    if (!g) return;
 
     setIframeSrc(null);
     setIframeSrcdoc(null);
 
     // Final exam shortcut
-    if (toolId === "mivhan" && grade.finalExam) {
-      setIframeSrc(grade.finalExam.file);
-      setTitle(grade.finalExam.title);
+    if (toolId === "mivhan" && g.finalExam) {
+      setIframeSrc(g.finalExam.file);
+      setTitle(g.finalExam.title);
       return;
     }
 
     // Find the tool across all categories
-    for (const cat of grade.categories) {
+    for (const cat of g.categories) {
       const tool = cat.tools.find((t) => t.id === toolId);
       if (tool) {
         setTitle(tool.title);
-
         if (tool.file.startsWith("__html__")) {
-          // Inline HTML from html-library.ts — render via srcdoc to preserve CDN access
-          const libraryEntry = htmlLibrary.find((t) => t.id === toolId);
-          if (libraryEntry) {
-            setIframeSrcdoc(libraryEntry.html);
-          }
+          const entry = htmlLibrary.find((t) => t.id === toolId);
+          if (entry) setIframeSrcdoc(entry.html);
         } else {
-          // Static file from public/tools/
           setIframeSrc(tool.file);
         }
         return;
@@ -50,8 +50,8 @@ export default function ToolViewer() {
 
   if (!grade || (!iframeSrc && !iframeSrcdoc)) {
     return (
-      <div className="min-h-screen flex flex-col items-center justify-center">
-        <h1 className="text-2xl font-bold mb-4">הכלי לא נמצא</h1>
+      <div className="min-h-screen flex flex-col items-center justify-center gap-4">
+        <h1 className="text-2xl font-bold">הכלי לא נמצא</h1>
         <Link href={grade ? `/grade/${grade.id}` : "/"} className="text-primary hover:underline">
           חזרה
         </Link>
@@ -64,18 +64,18 @@ export default function ToolViewer() {
       <div className="h-14 shrink-0 bg-background border-b border-border flex items-center px-4 justify-between">
         <Link
           href={`/grade/${grade.id}`}
-          className="inline-flex items-center justify-center gap-2 text-sm font-semibold hover:bg-secondary px-3 py-1.5 rounded-lg transition-colors"
+          className="inline-flex items-center gap-2 text-sm font-semibold hover:bg-secondary px-3 py-1.5 rounded-lg transition-colors"
         >
           <ArrowRight className="w-4 h-4 rtl:rotate-180" />
           חזרה לכיתה {grade.id === 8 ? "ח׳" : "ט׳"}
         </Link>
-        <div className="font-bold text-foreground">{title}</div>
-        <div className="w-20" />
+        <div className="font-bold text-foreground truncate max-w-[50%] text-center">{title}</div>
+        <div className="w-28" />
       </div>
       <div className="flex-1 bg-white relative">
         {iframeSrcdoc ? (
           <iframe
-            key={iframeSrcdoc.slice(0, 40)}
+            key={iframeSrcdoc.slice(0, 60)}
             srcDoc={iframeSrcdoc}
             className="w-full h-full border-none absolute inset-0"
             sandbox="allow-scripts allow-same-origin allow-forms allow-popups"
@@ -86,7 +86,7 @@ export default function ToolViewer() {
             key={iframeSrc!}
             src={iframeSrc!}
             className="w-full h-full border-none absolute inset-0"
-            sandbox="allow-scripts allow-same-origin allow-forms"
+            sandbox="allow-scripts allow-same-origin allow-forms allow-popups"
             title={title}
           />
         )}
