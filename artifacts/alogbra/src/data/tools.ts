@@ -38,16 +38,16 @@ export const grades: Grade[] = [
     categories: [
       {
         id: "algebra8",
-        title: "אלגברה (משוואות וטכניקה)",
+        title: "אלגברה",
         emoji: "🧮",
         color: "orange",
         tools: [
-          { id: "misvaot1", title: "משוואות - הבסיס", description: "סיכום ותרגול (ללא מכנה)", file: "/tools/grade8/algebra/misvaot1.html", emoji: "1️⃣", premium: false },
-          { id: "misvaot2", title: "משוואות עם מכנה", description: "כולל תחום הגדרה", file: "/tools/grade8/algebra/misvaot2.html", emoji: "2️⃣", premium: true },
-          { id: "marhetmisvaot", title: "מערכת משוואות", description: "שני נעלמים", file: "/tools/grade8/algebra/marhetmisvaot.html", emoji: "🔄", premium: true },
-          { id: "algebrageometrit", title: "בעיות מילוליות", description: "בשילוב גאומטריה", file: "/tools/grade8/algebra/algebrageometrit.html", emoji: "📐", premium: true },
-          { id: "ahozim", title: "אחוזים", description: "תרגול והבנה", file: "/tools/grade8/algebra/ahozim.html", emoji: "%", premium: true },
-          { id: "mivdak8-algebra", title: "בוחן מסכם - אלגברה", file: "/tools/grade8/algebra/mivdak1.html", emoji: "📝", premium: false, isQuiz: true },
+          { id: "misvaot1",       title: "משוואות — הבסיס",         description: "סיכום ותרגול ללא מכנה",           file: "/tools/grade8/algebra/misvaot1.html",       emoji: "⚖️",  premium: false },
+          { id: "misvaot2",       title: "משוואות עם מכנה",          description: "כולל תחום הגדרה",                  file: "/tools/grade8/algebra/misvaot2.html",       emoji: "➗",  premium: false },
+          { id: "marhetmisvaot",  title: "מערכת משוואות",            description: "שני נעלמים",                        file: "/tools/grade8/algebra/marhetmisvaot.html",  emoji: "🔄",  premium: false },
+          { id: "algebrageometrit",title:"בעיות מילוליות",           description: "בשילוב גאומטריה",                   file: "/tools/grade8/algebra/algebrageometrit.html",emoji: "🏗️", premium: false },
+          { id: "ahozim",         title: "אחוזים",                   description: "תרגול והבנה",                       file: "/tools/grade8/algebra/ahozim.html",         emoji: "💯",  premium: false },
+          { id: "mivdak8-algebra",title: "בוחן מסכם — אלגברה",                                                        file: "/tools/grade8/algebra/mivdak1.html",        emoji: "📝",  premium: false, isQuiz: true },
         ],
       },
       {
@@ -56,12 +56,12 @@ export const grades: Grade[] = [
         emoji: "📐",
         color: "green",
         tools: [
-          { id: "zaviot1", title: "סוגי זוויות (הסבר מפורט)", file: "/tools/grade8/geometry/zaviot1.html", emoji: "📏", premium: false },
-          { id: "zaviot2", title: "תרגול זוויות", file: "/tools/grade8/geometry/zaviot2.html", emoji: "✏️", premium: false },
-          { id: "masash", title: "משולש שווה שוקיים", file: "/tools/grade8/geometry/masash.html", emoji: "⛺", premium: true },
-          { id: "pythgoras", title: "משפט פיתגורס", file: "/tools/grade8/geometry/pythgoras.html", emoji: "📐", premium: true },
-          { id: "hafifa", title: "חפיפת משולשים", file: "/tools/grade8/geometry/hafifa.html", emoji: "🔼", premium: true },
-          { id: "mivdak8-geo", title: "בוחן מסכם - גאומטריה", file: "/tools/grade8/geometry/mivdakgeo.html", emoji: "📝", premium: false, isQuiz: true },
+          { id: "zaviot1",     title: "סוגי זוויות",              description: "הסבר מפורט",                 file: "/tools/grade8/geometry/zaviot1.html",    emoji: "📏",  premium: false },
+          { id: "zaviot2",     title: "תרגול זוויות",                                                         file: "/tools/grade8/geometry/zaviot2.html",    emoji: "🎯",  premium: false },
+          { id: "masash",      title: "משולש שווה שוקיים",                                                    file: "/tools/grade8/geometry/masash.html",     emoji: "🔺",  premium: false },
+          { id: "pythgoras",   title: "משפט פיתגורס",                                                         file: "/tools/grade8/geometry/pythgoras.html",  emoji: "🟦",  premium: false },
+          { id: "hafifa",      title: "חפיפת משולשים",                                                        file: "/tools/grade8/geometry/hafifa.html",     emoji: "🔷",  premium: false },
+          { id: "mivdak8-geo", title: "בוחן מסכם — גאומטריה",                                                file: "/tools/grade8/geometry/mivdakgeo.html",  emoji: "📋",  premium: false, isQuiz: true },
         ],
       },
       {
@@ -70,10 +70,10 @@ export const grades: Grade[] = [
         emoji: "📈",
         color: "blue",
         tools: [
-          { id: "mandb", title: "מהם m ו-b?", description: "הסבר על הפרמטרים", file: "/tools/grade8/kavit/mandb.html", emoji: "🧠", premium: false },
-          { id: "kavit2", title: "משוואת הישר", description: "דוגמאות והסבר", file: "/tools/grade8/kavit/kavit2.html", emoji: "📉", premium: true },
-          { id: "kavithesber", title: "הסבר מפורט", description: "סיכום מלא של הנושא", file: "/tools/grade8/kavit/kavithesber.html", emoji: "1️⃣", premium: true },
-          { id: "mivdak8-kavit", title: "בוחן מסכם - פונקציות", file: "/tools/grade8/kavit/mivdak2.html", emoji: "📊", premium: false, isQuiz: true },
+          { id: "mandb",         title: "מהם m ו-b?",              description: "הסבר על הפרמטרים",           file: "/tools/grade8/kavit/mandb.html",        emoji: "🧠",  premium: false },
+          { id: "kavit2",        title: "משוואת הישר",              description: "דוגמאות והסבר",              file: "/tools/grade8/kavit/kavit2.html",       emoji: "📉",  premium: false },
+          { id: "kavithesber",   title: "סיכום מלא",                description: "הסבר מפורט לנושא כולו",      file: "/tools/grade8/kavit/kavithesber.html",  emoji: "📖",  premium: false },
+          { id: "mivdak8-kavit", title: "בוחן מסכם — פונקציות",                                               file: "/tools/grade8/kavit/mivdak2.html",      emoji: "🗂️", premium: false, isQuiz: true },
         ],
       },
     ],
@@ -87,16 +87,16 @@ export const grades: Grade[] = [
     categories: [
       {
         id: "algebra9",
-        title: "אלגברה (משוואות וטכניקה)",
+        title: "אלגברה",
         emoji: "🧮",
         color: "orange",
         tools: [
-          { id: "algebra1", title: "חוק הפילוג המורחב", file: "/tools/grade9/algebra/algebra1.html", emoji: "1️⃣", premium: false },
-          { id: "algebra2", title: "נוסחאות כפל מקוצר", file: "/tools/grade9/algebra/algebra2.html", emoji: "2️⃣", premium: false },
-          { id: "algebra3", title: "פירוק לגורמים", file: "/tools/grade9/algebra/algebra3.html", emoji: "3️⃣", premium: true },
-          { id: "algebra4", title: "טרינום", file: "/tools/grade9/algebra/algebra4.html", emoji: "4️⃣", premium: true },
-          { id: "algebra5", title: "כפל, חילוק וצמצום שברים", description: "כולל סיכום מקיף", file: "/tools/grade9/algebra/algebra5.html", emoji: "5️⃣", premium: true },
-          { id: "mivdak9-algebra", title: "בוחן מסכם - אלגברה", file: "/tools/grade9/algebra/mivdak.html", emoji: "📝", premium: false, isQuiz: true },
+          { id: "algebra1",        title: "חוק הפילוג המורחב",                                                  file: "/tools/grade9/algebra/algebra1.html",  emoji: "↗️",  premium: false },
+          { id: "algebra2",        title: "נוסחאות כפל מקוצר",                                                  file: "/tools/grade9/algebra/algebra2.html",  emoji: "✖️",  premium: false },
+          { id: "algebra3",        title: "פירוק לגורמים",                                                       file: "/tools/grade9/algebra/algebra3.html",  emoji: "🔓",  premium: false },
+          { id: "algebra4",        title: "טרינום",                                                              file: "/tools/grade9/algebra/algebra4.html",  emoji: "🔢",  premium: false },
+          { id: "algebra5",        title: "כפל, חילוק וצמצום שברים", description: "כולל סיכום מקיף",           file: "/tools/grade9/algebra/algebra5.html",  emoji: "🧩",  premium: false },
+          { id: "mivdak9-algebra", title: "בוחן מסכם — אלגברה",                                                 file: "/tools/grade9/algebra/mivdak.html",    emoji: "📝",  premium: false, isQuiz: true },
         ],
       },
       {
@@ -105,14 +105,14 @@ export const grades: Grade[] = [
         emoji: "📐",
         color: "purple",
         tools: [
-          { id: "makbilit", title: "מקבילית", file: "/tools/grade9/geometry/makbilit.html", emoji: "▱", premium: false },
-          { id: "malben", title: "מלבן", file: "/tools/grade9/geometry/malben.html", emoji: "▭", premium: false },
-          { id: "dalton", title: "דלתון", file: "/tools/grade9/geometry/dalton.html", emoji: "🪁", premium: true },
-          { id: "trapez", title: "טרפז", file: "/tools/grade9/geometry/trapez.html", emoji: "⏢", premium: true },
-          { id: "meoian", title: "מעוין", file: "/tools/grade9/geometry/meoian.html", emoji: "🔷", premium: true },
-          { id: "riboa", title: "ריבוע", file: "/tools/grade9/geometry/riboa.html", emoji: "⬜", premium: true },
-          { id: "teana", title: "איך כותבים טענה ונימוק?", file: "/tools/grade9/geometry/teana.html", emoji: "📝", premium: false },
-          { id: "mivdak9-geo", title: "בוחן מסכם - גאומטריה", file: "/tools/grade9/geometry/mivdak2.html", emoji: "📐", premium: false, isQuiz: true },
+          { id: "makbilit",     title: "מקבילית",                                                               file: "/tools/grade9/geometry/makbilit.html", emoji: "▱",  premium: false },
+          { id: "malben",       title: "מלבן",                                                                  file: "/tools/grade9/geometry/malben.html",   emoji: "▭",  premium: false },
+          { id: "dalton",       title: "דלתון",                                                                 file: "/tools/grade9/geometry/dalton.html",   emoji: "🪁",  premium: false },
+          { id: "trapez",       title: "טרפז",                                                                  file: "/tools/grade9/geometry/trapez.html",   emoji: "⏢",  premium: false },
+          { id: "meoian",       title: "מעוין",                                                                 file: "/tools/grade9/geometry/meoian.html",   emoji: "💎",  premium: false },
+          { id: "riboa",        title: "ריבוע",                                                                 file: "/tools/grade9/geometry/riboa.html",    emoji: "⬛",  premium: false },
+          { id: "teana",        title: "איך כותבים טענה ונימוק?",                                              file: "/tools/grade9/geometry/teana.html",    emoji: "✍️", premium: false },
+          { id: "mivdak9-geo",  title: "בוחן מסכם — גאומטריה",                                                 file: "/tools/grade9/geometry/mivdak2.html",  emoji: "📋",  premium: false, isQuiz: true },
         ],
       },
       {
@@ -121,10 +121,10 @@ export const grades: Grade[] = [
         emoji: "📈",
         color: "indigo",
         tools: [
-          { id: "abckp", title: "מה זה פרבולה? (הקדמה)", file: "/tools/grade9/functions/a,b,c,k,p.html", emoji: "P", premium: false },
-          { id: "parabola", title: "הסבר מקיף לפרבולה", file: "/tools/grade9/functions/parabola.html", emoji: "∪", premium: true },
-          { id: "parabola2", title: "הסבר נוסף לפרבולה", description: "חיזוק והעמקה", file: "/tools/grade9/functions/parabola2.html", emoji: "💡", premium: true },
-          { id: "mivdak9-func", title: "בוחן מסכם - פרבולות", file: "/tools/grade9/functions/mivdak3.html", emoji: "📊", premium: false, isQuiz: true },
+          { id: "abckp",           title: "מה זה פרבולה? (הקדמה)",                                              file: "/tools/grade9/functions/a,b,c,k,p.html", emoji: "🌊",  premium: false },
+          { id: "parabola",        title: "הסבר מקיף לפרבולה",                                                  file: "/tools/grade9/functions/parabola.html",  emoji: "∪",  premium: false },
+          { id: "parabola2",       title: "הסבר נוסף לפרבולה",        description: "חיזוק והעמקה",             file: "/tools/grade9/functions/parabola2.html", emoji: "💡",  premium: false },
+          { id: "mivdak9-func",    title: "בוחן מסכם — פרבולות",                                                file: "/tools/grade9/functions/mivdak3.html",   emoji: "🗂️", premium: false, isQuiz: true },
         ],
       },
     ],
@@ -150,68 +150,42 @@ export function getGradeWithLibrary(id: number): Grade | undefined {
   }
 
   const categoryColorMap: Record<string, Grade["categories"][0]["color"]> = {
-    algebra: "orange",
-    geometry: "green",
-    kavit: "blue",
-    functions: "indigo",
-    statistics: "purple",
-    other: "purple",
+    algebra: "orange", geometry: "green", kavit: "blue",
+    functions: "indigo", statistics: "purple", other: "purple",
   };
-
   const categoryTitleMap: Record<string, string> = {
-    algebra: "אלגברה",
-    geometry: "גאומטריה",
-    kavit: "פונקציה קווית",
-    functions: "פונקציות",
-    statistics: "סטטיסטיקה",
-    other: "כלים נוספים",
+    algebra: "אלגברה", geometry: "גאומטריה", kavit: "פונקציה קווית",
+    functions: "פונקציות", statistics: "סטטיסטיקה", other: "כלים נוספים",
   };
-
   const categoryEmojiMap: Record<string, string> = {
-    algebra: "🧮",
-    geometry: "📐",
-    kavit: "📈",
-    functions: "📈",
-    statistics: "📊",
-    other: "📄",
+    algebra: "🧮", geometry: "📐", kavit: "📈",
+    functions: "📈", statistics: "📊", other: "📄",
   };
 
-  // Start with existing categories, add library tools to matching ones
   const updatedCategories = base.categories.map((cat) => {
-    const catKey = cat.id.replace(/\d+$/, ""); // strip trailing grade number
+    const catKey = cat.id.replace(/\d+$/, "");
     const matchingKey = Object.keys(byCategory).find((k) => catKey.includes(k));
     if (!matchingKey) return cat;
     const newTools: Tool[] = byCategory[matchingKey].map((t) => ({
-      id: t.id,
-      title: t.title,
-      description: t.description,
-      file: `__html__${t.id}`,
-      emoji: t.emoji ?? "📄",
-      premium: t.premium,
-      isQuiz: t.isQuiz,
+      id: t.id, title: t.title, description: t.description,
+      file: `__html__${t.id}`, emoji: t.emoji ?? "📄",
+      premium: t.premium, isQuiz: t.isQuiz,
     }));
     delete byCategory[matchingKey];
     return { ...cat, tools: [...cat.tools, ...newTools] };
   });
 
-  // Create new categories for unmatched library categories
-  const newCategories: Grade["categories"] = Object.entries(byCategory).map(
-    ([key, tools]) => ({
-      id: `lib-${key}-${id}`,
-      title: categoryTitleMap[key] ?? key,
-      emoji: categoryEmojiMap[key] ?? "📄",
-      color: categoryColorMap[key] ?? "purple",
-      tools: tools.map((t) => ({
-        id: t.id,
-        title: t.title,
-        description: t.description,
-        file: `__html__${t.id}`,
-        emoji: t.emoji ?? "📄",
-        premium: t.premium,
-        isQuiz: t.isQuiz,
-      })),
-    })
-  );
+  const newCategories: Grade["categories"] = Object.entries(byCategory).map(([key, tools]) => ({
+    id: `lib-${key}-${id}`,
+    title: categoryTitleMap[key] ?? key,
+    emoji: categoryEmojiMap[key] ?? "📄",
+    color: categoryColorMap[key] ?? "purple",
+    tools: tools.map((t) => ({
+      id: t.id, title: t.title, description: t.description,
+      file: `__html__${t.id}`, emoji: t.emoji ?? "📄",
+      premium: t.premium, isQuiz: t.isQuiz,
+    })),
+  }));
 
   return { ...base, categories: [...updatedCategories, ...newCategories] };
 }

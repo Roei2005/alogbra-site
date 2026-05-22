@@ -1,7 +1,12 @@
 import { useEffect, useState } from "react";
 import { Sparkles } from "lucide-react";
 
-type StepId = "intro" | "meet" | "overlap" | "sss_explain" | "sss_show" | "sss_overlap" | "asa_explain" | "asa_show" | "asa_overlap" | "sas_explain" | "sas_show" | "sas_overlap" | "outro";
+type StepId =
+  | "intro" | "meet" | "overlap"
+  | "sss_explain" | "sss_show" | "sss_overlap"
+  | "asa_explain" | "asa_show" | "asa_overlap"
+  | "sas_explain" | "sas_show" | "sas_overlap"
+  | "outro";
 
 interface Step {
   id: StepId;
@@ -14,46 +19,71 @@ const B = ({ children }: { children: React.ReactNode }) => (
   <span className="font-black text-foreground bg-accent/15 px-1.5 rounded-md">{children}</span>
 );
 
+// Matching-pair colors
+const RED    = "#ef4444";
+const GREEN  = "#22c55e";
+const BLUE   = "#3b82f6";
+const ORANGE = "#f97316";
+const PURPLE = "#a855f7";
+
 const STEPS: Step[] = [
-  { id: "intro", title: "דוגמא לדברים שתמצאו אצלנו:", duration: 2800 },
-  { id: "meet", title: <><B>משולשים חופפים</B>. שמעתם על זה?</>, caption: "יופי — בואו נבין מה זה באמת אומר.", duration: 4200 },
-  { id: "overlap", title: <> שני משולשים נקראים <B>חופפים</B> אם הם <B>מכסים אחד את השני בדיוק</B>.</>, caption: "אותן צלעות, אותן זוויות — בלי שום הבדל.", duration: 5200 },
-  { id: "sss_explain", title: <> משפט ראשון: <B>צ.צ.צ</B> — שלוש צלעות שוות.</>, caption: <> אם הצלחנו להראות ש<B>שלוש הצלעות</B> של משולש אחד שוות לשלוש הצלעות של השני — <B>הם חופפים ישר</B>. בלי לבדוק זוויות בכלל.</>, duration: 6500 },
-  { id: "sss_show", title: <> רואים? אותן <B>שלוש צלעות</B> בדיוק.</>, caption: "כל סימן כזה  | , || , |||  אומר: 'הצלעות האלה שוות'.", duration: 4600 },
-  { id: "sss_overlap", title: <> ועכשיו — בואו נראה ש<B>הם באמת חופפים</B>.</>, caption: "המשולש האדום מחליק על הכחול. בדיוק אותו דבר.", duration: 4800 },
-  { id: "asa_explain", title: <> משפט שני: <B>ז.צ.ז</B> — זווית, צלע, זווית.</>, caption: <><B>שתי זוויות</B> והצלע <B>שביניהן</B> שוות → המשולשים חופפים.</>, duration: 5200 },
-  { id: "asa_show", title: <> הסתכלו: <B>שתי הזוויות</B> וה<B>צלע שביניהן</B>.</>, duration: 3800 },
-  { id: "asa_overlap", title: <>חופפים. <B>אותו דבר בדיוק.</B></>, duration: 4200 },
-  { id: "sas_explain", title: <> משפט שלישי: <B>צ.ז.צ</B> — צלע, זווית, צלע.</>, caption: <><B>שתי צלעות</B> והזווית <B>שביניהן</B> שוות → המשולשים חופפים.</>, duration: 5200 },
-  { id: "sas_show", title: <><B>שתי הצלעות</B> וה<B>זווית</B> שביניהן.</>, duration: 3800 },
-  { id: "sas_overlap", title: <>שוב — <B>חפיפה מושלמת.</B></>, duration: 4200 },
-  { id: "outro", title: "נו? השתכנעתם?", caption: "ככה לומדים אצלנו. רואים — לא משננים.", duration: 4200 },
+  { id: "intro",       title: "דוגמא לדברים שתמצאו אצלנו:",                                                                                                                    duration: 1800 },
+  { id: "meet",        title: <><B>משולשים חופפים</B>. שמעתם על זה?</>,                                         caption: "יופי — בואו נבין מה זה באמת אומר.",                 duration: 2600 },
+  { id: "overlap",     title: <> שני משולשים נקראים <B>חופפים</B> אם הם <B>מכסים אחד את השני בדיוק</B>.</>,   caption: "אותן צלעות, אותן זוויות — בלי שום הבדל.",           duration: 3800 },
+  { id: "sss_explain", title: <> משפט <B>צ.צ.צ</B> — שלוש צלעות שוות.</>,                                      caption: <> אם <B>שלוש הצלעות</B> של △ABC שוות לשלוש הצלעות של △DEF — <B>הם חופפים</B>.</>, duration: 4200 },
+  { id: "sss_show",    title: <> כל זוג צלעות מסומן ב<B>צבע אחר</B>.</>,                                        caption: "שלושה זוגות — שלושה צבעים. הסימנים מראים שוויון.",    duration: 3800 },
+  { id: "sss_overlap", title: <> △ABC ≅ △DEF — <B>חפיפה מושלמת</B>!</>,                                        caption: "לפי משפט צ.צ.צ — ללא בדיקת זוויות.",                  duration: 3200 },
+  { id: "asa_explain", title: <> משפט <B>ז.צ.ז</B> — זווית, צלע, זווית.</>,                                    caption: <><B>שתי זוויות</B> והצלע <B>שביניהן</B> שוות → חפיפה.</>, duration: 4200 },
+  { id: "asa_show",    title: <> הצבעים מראים: <B>שתי זוויות</B> + ה<B>צלע שביניהן</B>.</>,                                                                                    duration: 3400 },
+  { id: "asa_overlap", title: <> △ABC ≅ △DEF לפי <B>ז.צ.ז</B>.</>,                                                                                                            duration: 3000 },
+  { id: "sas_explain", title: <> משפט <B>צ.ז.צ</B> — צלע, זווית, צלע.</>,                                     caption: <><B>שתי צלעות</B> והזווית <B>שביניהן</B> שוות → חפיפה.</>, duration: 4200 },
+  { id: "sas_show",    title: <> <B>שתי הצלעות</B> בצבע, <B>הזווית שביניהן</B> בכתום.</>,                                                                                     duration: 3400 },
+  { id: "sas_overlap", title: <> △ABC ≅ △DEF לפי <B>צ.ז.צ</B>.</>,                                                                                                            duration: 3000 },
+  { id: "outro",       title: "נו? השתכנעתם?",                                                                  caption: "ככה לומדים אצלנו. רואים — לא משננים.",                duration: 3000 },
 ];
 
-const P0 = { x: 110, y: 22 };
-const P1 = { x: 190, y: 168 };
-const P2 = { x: 22, y: 168 };
+// Triangle vertex positions (in SVG coordinate space)
+const P0 = { x: 110, y: 28 };  // top (A / D)
+const P1 = { x: 194, y: 172 }; // bottom-right (B / E)
+const P2 = { x: 26,  y: 172 }; // bottom-left  (C / F)
 
-const AngleArc = ({ cx, cy, startAngle, endAngle, radius, color }: { cx: number; cy: number; startAngle: number; endAngle: number; radius: number; color: string }) => {
+const SIDES = [
+  [P0, P1], // side 0: AB / DE
+  [P1, P2], // side 1: BC / EF
+  [P2, P0], // side 2: CA / FD
+] as const;
+
+const ANGLE_CFGS = [
+  { cx: P0.x, cy: P0.y, sa: 60,  ea: 120, r: 26 }, // angle at A/D
+  { cx: P1.x, cy: P1.y, sa: 184, ea: 240, r: 26 }, // angle at B/E
+  { cx: P2.x, cy: P2.y, sa: 300, ea: 356, r: 26 }, // angle at C/F
+];
+
+const AngleArc = ({ cx, cy, startAngle, endAngle, radius, color }: {
+  cx: number; cy: number; startAngle: number; endAngle: number; radius: number; color: string;
+}) => {
   const toRad = (d: number) => (d * Math.PI) / 180;
   const x1 = cx + radius * Math.cos(toRad(startAngle));
   const y1 = cy + radius * Math.sin(toRad(startAngle));
   const x2 = cx + radius * Math.cos(toRad(endAngle));
   const y2 = cy + radius * Math.sin(toRad(endAngle));
-  const largeArc = Math.abs(endAngle - startAngle) > 180 ? 1 : 0;
-  return <path d={`M ${x1} ${y1} A ${radius} ${radius} 0 ${largeArc} 1 ${x2} ${y2}`} fill="none" stroke={color} strokeWidth={3} strokeLinecap="round" />;
+  return (
+    <path
+      d={`M ${x1} ${y1} A ${radius} ${radius} 0 0 1 ${x2} ${y2}`}
+      fill="none" stroke={color} strokeWidth={3.5} strokeLinecap="round"
+    />
+  );
 };
 
-const TickMark = ({ p1, p2, count, color }: { p1: { x: number; y: number }; p2: { x: number; y: number }; count: number; color: string }) => {
+const TickMark = ({ p1, p2, count, color }: {
+  p1: { x: number; y: number }; p2: { x: number; y: number }; count: number; color: string;
+}) => {
   const midX = (p1.x + p2.x) / 2;
   const midY = (p1.y + p2.y) / 2;
-  const dx = p2.x - p1.x;
-  const dy = p2.y - p1.y;
+  const dx = p2.x - p1.x; const dy = p2.y - p1.y;
   const len = Math.sqrt(dx * dx + dy * dy);
-  const nx = -dy / len;
-  const ny = dx / len;
-  const size = 7;
-  const gap = 5;
+  const nx = -dy / len; const ny = dx / len;
+  const size = 7; const gap = 5;
   const start = -((count - 1) * gap) / 2;
   return (
     <g>
@@ -67,104 +97,182 @@ const TickMark = ({ p1, p2, count, color }: { p1: { x: number; y: number }; p2: 
   );
 };
 
-const Triangle = ({ fill, stroke, highlightSides = [], highlightAngles = [], showTicks = false }: { fill: string; stroke: string; highlightSides?: number[]; highlightAngles?: number[]; showTicks?: boolean }) => {
-  const sideColor = "hsl(var(--accent))";
-  const angleColor = "#f59e0b";
-  return (
-    <svg width="210" height="190" viewBox="0 0 210 190">
-      <path d={`M${P0.x},${P0.y} L${P1.x},${P1.y} L${P2.x},${P2.y} Z`} fill={fill} stroke={stroke} strokeWidth={3} strokeLinejoin="round" />
-      {highlightSides.includes(0) && <line x1={P0.x} y1={P0.y} x2={P1.x} y2={P1.y} stroke={sideColor} strokeWidth={6} strokeLinecap="round" />}
-      {highlightSides.includes(1) && <line x1={P1.x} y1={P1.y} x2={P2.x} y2={P2.y} stroke={sideColor} strokeWidth={6} strokeLinecap="round" />}
-      {highlightSides.includes(2) && <line x1={P2.x} y1={P2.y} x2={P0.x} y2={P0.y} stroke={sideColor} strokeWidth={6} strokeLinecap="round" />}
-      {highlightAngles.includes(0) && <AngleArc cx={P0.x} cy={P0.y} startAngle={62} endAngle={118} radius={26} color={angleColor} />}
-      {highlightAngles.includes(1) && <AngleArc cx={P1.x} cy={P1.y} startAngle={182} endAngle={242} radius={26} color={angleColor} />}
-      {highlightAngles.includes(2) && <AngleArc cx={P2.x} cy={P2.y} startAngle={302} endAngle={358} radius={26} color={angleColor} />}
-      {showTicks && (
-        <>
-          <TickMark p1={P0} p2={P1} count={1} color="hsl(var(--foreground))" />
-          <TickMark p1={P1} p2={P2} count={2} color="hsl(var(--foreground))" />
-          <TickMark p1={P2} p2={P0} count={3} color="hsl(var(--foreground))" />
-        </>
-      )}
-    </svg>
-  );
-};
+interface TriProps {
+  fill: string; stroke: string;
+  sideColors?: Record<number, string>;
+  angleColors?: Record<number, string>;
+  showTicks?: boolean;
+  labels: [string, string, string];
+}
 
-const stepConfig = (id: StepId) => {
-  let position: "hidden" | "split" | "overlap" = "split";
-  if (id === "intro") position = "hidden";
-  else if (id === "overlap" || id === "sss_overlap" || id === "asa_overlap" || id === "sas_overlap" || id === "outro") position = "overlap";
-  let props: { highlightSides?: number[]; highlightAngles?: number[]; showTicks?: boolean } = {};
-  if (id === "sss_show" || id === "sss_overlap") props = { showTicks: true, highlightSides: [0, 1, 2] };
-  else if (id === "asa_show" || id === "asa_overlap") props = { highlightSides: [1], highlightAngles: [1, 2] };
-  else if (id === "sas_show" || id === "sas_overlap") props = { highlightSides: [0, 2], highlightAngles: [0] };
-  return { position, props };
-};
+const Triangle = ({ fill, stroke, sideColors = {}, angleColors = {}, showTicks = false, labels }: TriProps) => (
+  <svg width="220" height="200" viewBox="-14 -20 248 212">
+    {/* Base shape */}
+    <path d={`M${P0.x},${P0.y} L${P1.x},${P1.y} L${P2.x},${P2.y} Z`} fill={fill} stroke={stroke} strokeWidth={2.5} strokeLinejoin="round" />
+    {/* Highlighted sides */}
+    {SIDES.map(([pa, pb], i) =>
+      sideColors[i] ? <line key={i} x1={pa.x} y1={pa.y} x2={pb.x} y2={pb.y} stroke={sideColors[i]} strokeWidth={6.5} strokeLinecap="round" /> : null
+    )}
+    {/* Angle arcs */}
+    {ANGLE_CFGS.map((cfg, i) =>
+      angleColors[i] ? <AngleArc key={i} cx={cfg.cx} cy={cfg.cy} startAngle={cfg.sa} endAngle={cfg.ea} radius={cfg.r} color={angleColors[i]} /> : null
+    )}
+    {/* Tick marks on sides */}
+    {showTicks && <>
+      <TickMark p1={P0} p2={P1} count={1} color={sideColors[0] ?? RED} />
+      <TickMark p1={P1} p2={P2} count={2} color={sideColors[1] ?? GREEN} />
+      <TickMark p1={P2} p2={P0} count={3} color={sideColors[2] ?? BLUE} />
+    </>}
+    {/* Vertex labels */}
+    <text x={P0.x}      y={P0.y - 16} textAnchor="middle" fontSize="16" fontWeight="900" fill={stroke} fontFamily="system-ui, sans-serif">{labels[0]}</text>
+    <text x={P1.x + 18} y={P1.y + 6}  textAnchor="middle" fontSize="16" fontWeight="900" fill={stroke} fontFamily="system-ui, sans-serif">{labels[1]}</text>
+    <text x={P2.x - 18} y={P2.y + 6}  textAnchor="middle" fontSize="16" fontWeight="900" fill={stroke} fontFamily="system-ui, sans-serif">{labels[2]}</text>
+  </svg>
+);
 
-const currentTheorem = (id: StepId): "sss" | "asa" | "sas" | null => {
-  if (id.startsWith("sss")) return "sss";
-  if (id.startsWith("asa")) return "asa";
-  if (id.startsWith("sas")) return "sas";
-  return null;
+type Legend = { color: string; label: string }[];
+
+interface StepCfg {
+  position: "hidden" | "split" | "overlap";
+  leftProps:  Partial<TriProps>;
+  rightProps: Partial<TriProps>;
+  legend:     Legend;
+  congruence: string | null;
+}
+
+const getStepCfg = (id: StepId): StepCfg => {
+  const OVERLAP_IDS: StepId[] = ["overlap", "sss_overlap", "asa_overlap", "sas_overlap", "outro"];
+  const position =
+    id === "intro"                    ? "hidden"
+    : OVERLAP_IDS.includes(id)        ? "overlap"
+    : "split";
+
+  let leftProps:  Partial<TriProps> = {};
+  let rightProps: Partial<TriProps> = {};
+  let legend:     Legend            = [];
+  let congruence: string | null     = null;
+
+  if (id === "sss_show" || id === "sss_overlap") {
+    const sc = { 0: RED, 1: GREEN, 2: BLUE };
+    leftProps  = { sideColors: sc, showTicks: true };
+    rightProps = { sideColors: sc, showTicks: true };
+    legend = [{ color: RED, label: "AB = DE" }, { color: GREEN, label: "BC = EF" }, { color: BLUE, label: "CA = FD" }];
+    congruence = "△ABC ≅ △DEF  |  צ.צ.צ";
+  } else if (id === "asa_show" || id === "asa_overlap") {
+    const sc = { 1: GREEN }; const ac = { 1: ORANGE, 2: PURPLE };
+    leftProps  = { sideColors: sc, angleColors: ac };
+    rightProps = { sideColors: sc, angleColors: ac };
+    legend = [{ color: ORANGE, label: "∠B = ∠E" }, { color: GREEN, label: "BC = EF" }, { color: PURPLE, label: "∠C = ∠F" }];
+    congruence = "△ABC ≅ △DEF  |  ז.צ.ז";
+  } else if (id === "sas_show" || id === "sas_overlap") {
+    const sc = { 0: RED, 2: BLUE }; const ac = { 0: ORANGE };
+    leftProps  = { sideColors: sc, angleColors: ac };
+    rightProps = { sideColors: sc, angleColors: ac };
+    legend = [{ color: RED, label: "AB = DE" }, { color: ORANGE, label: "∠A = ∠D" }, { color: BLUE, label: "CA = FD" }];
+    congruence = "△ABC ≅ △DEF  |  צ.ז.צ";
+  }
+
+  return { position, leftProps, rightProps, legend, congruence };
 };
 
 const TriangleShowcase = () => {
   const [stepIdx, setStepIdx] = useState(0);
   const step = STEPS[stepIdx];
+
   useEffect(() => {
     const t = setTimeout(() => setStepIdx((i) => (i + 1) % STEPS.length), step.duration);
     return () => clearTimeout(t);
   }, [stepIdx, step.duration]);
-  const { position, props } = stepConfig(step.id);
-  const theorem = currentTheorem(step.id);
+
+  const { position, leftProps, rightProps, legend, congruence } = getStepCfg(step.id);
+  const theorem = step.id.startsWith("sss") ? "sss" : step.id.startsWith("asa") ? "asa" : step.id.startsWith("sas") ? "sas" : null;
+
+  const leftFill   = "hsl(234 75% 35% / 0.10)"; const leftStroke  = "hsl(234 75% 35%)";
+  const rightFill  = "hsl(0 84% 60% / 0.12)";   const rightStroke = "hsl(0 84% 60%)";
+
   return (
     <div className="relative max-w-5xl mx-auto" dir="rtl">
       <div className="relative rounded-[2.5rem] bg-card border border-border shadow-2xl overflow-hidden">
         <div className="absolute -top-32 -left-32 w-72 h-72 rounded-full bg-accent/10 blur-3xl pointer-events-none" />
         <div className="absolute -bottom-32 -right-32 w-72 h-72 rounded-full bg-yellow-400/10 blur-3xl pointer-events-none" />
-        <div className="relative px-6 md:px-10 pt-10 pb-4 text-center min-h-[180px] flex flex-col items-center justify-center">
-          <div className="inline-flex items-center gap-2 px-3 py-1 rounded-full bg-accent/10 text-accent text-sm font-semibold mb-4">
-            <Sparkles className="w-3.5 h-3.5" />
-            דוגמא חיה
+
+        {/* Text */}
+        <div className="relative px-6 md:px-10 pt-8 pb-3 text-center min-h-[140px] flex flex-col items-center justify-center gap-2">
+          <div className="inline-flex items-center gap-2 px-3 py-1 rounded-full bg-accent/10 text-accent text-sm font-semibold">
+            <Sparkles className="w-3.5 h-3.5" /> דוגמא חיה
           </div>
-          <h3 key={`title-${stepIdx}`} className="text-3xl md:text-5xl font-extrabold text-foreground leading-[1.15] tracking-tight max-w-3xl transition-all">{step.title}</h3>
-          {step.caption && <p key={`cap-${stepIdx}`} className="text-lg md:text-2xl text-muted-foreground mt-4 max-w-3xl leading-relaxed">{step.caption}</p>}
+          <h3 key={`t-${stepIdx}`} className="text-2xl md:text-4xl font-extrabold text-foreground leading-[1.2] tracking-tight max-w-3xl">
+            {step.title}
+          </h3>
+          {step.caption && (
+            <p key={`c-${stepIdx}`} className="text-base md:text-lg text-muted-foreground max-w-2xl leading-relaxed">
+              {step.caption}
+            </p>
+          )}
+          {congruence && (
+            <div className="mt-1 px-5 py-2 rounded-full bg-foreground/8 border border-border text-base md:text-lg font-black tracking-wide" dir="ltr">
+              {congruence}
+            </div>
+          )}
         </div>
-        <div className="relative h-[320px] md:h-[360px] flex items-center justify-center">
+
+        {/* Triangle stage */}
+        <div className="relative h-[260px] md:h-[300px] flex items-center justify-center">
           {position !== "hidden" && (
             <>
-              <div className="absolute transition-all duration-[1100ms] ease-out" style={{ transform: position === "split" ? "translateX(-150px)" : "translateX(0)", filter: "drop-shadow(0 12px 30px hsl(234 75% 35% / 0.25))" }}>
-                <Triangle fill="hsl(234 75% 35% / 0.10)" stroke="hsl(234 75% 35%)" {...props} />
+              <div className="absolute transition-all duration-[850ms] ease-out"
+                style={{ transform: position === "split" ? "translateX(-110px)" : "translateX(0)", filter: "drop-shadow(0 10px 24px hsl(234 75% 35% / 0.28))" }}>
+                <Triangle fill={leftFill} stroke={leftStroke} labels={["A", "B", "C"]} {...leftProps} />
               </div>
-              <div className="absolute transition-all duration-[1100ms] ease-out" style={{ transform: position === "split" ? "translateX(150px)" : "translateX(0)", filter: "drop-shadow(0 12px 30px hsl(0 84% 60% / 0.28))", opacity: position === "overlap" ? 0.75 : 1 }}>
-                <Triangle fill="hsl(0 84% 60% / 0.12)" stroke="hsl(0 84% 60%)" {...props} />
+              <div className="absolute transition-all duration-[850ms] ease-out"
+                style={{ transform: position === "split" ? "translateX(110px)" : "translateX(0)", filter: "drop-shadow(0 10px 24px hsl(0 84% 60% / 0.28))", opacity: position === "overlap" ? 0.72 : 1 }}>
+                <Triangle fill={rightFill} stroke={rightStroke} labels={["D", "E", "F"]} {...rightProps} />
               </div>
               {position === "overlap" && (
-                <div className="absolute bottom-3 px-5 py-2 rounded-full bg-foreground text-background text-base font-bold shadow-lg">✓ בדיוק אותו דבר — חופפים</div>
+                <div className="absolute bottom-3 px-5 py-2 rounded-full bg-foreground text-background text-sm font-bold shadow-lg">
+                  ✓ בדיוק אותו דבר — חופפים
+                </div>
               )}
             </>
           )}
           {step.id === "intro" && (
-            <div key="intro-vis" className="text-center flex flex-col items-center gap-4">
-              <div className="flex gap-3 items-end">
+            <div className="text-center flex flex-col items-center gap-4">
+              <div className="flex gap-3 items-center">
                 {[0, 1, 2].map((i) => <span key={i} className="w-3 h-3 rounded-full bg-accent animate-pulse" style={{ animationDelay: `${i * 200}ms` }} />)}
               </div>
-              <p className="text-muted-foreground text-base">בעוד רגע מתחילים…</p>
+              <p className="text-muted-foreground text-sm">בעוד רגע מתחילים…</p>
             </div>
           )}
         </div>
-        <div className="relative px-8 pb-7 pt-2 flex items-center justify-center gap-2 flex-wrap">
+
+        {/* Color legend */}
+        {legend.length > 0 && (
+          <div className="relative px-6 pb-3 flex items-center justify-center gap-4 md:gap-8 flex-wrap">
+            {legend.map((item, i) => (
+              <div key={i} className="flex items-center gap-2 text-sm md:text-base font-bold">
+                <div className="w-6 h-3 rounded-full" style={{ background: item.color }} />
+                <span style={{ color: item.color }} dir="ltr">{item.label}</span>
+              </div>
+            ))}
+          </div>
+        )}
+
+        {/* Theorem pills */}
+        <div className="relative px-8 pb-6 pt-2 flex items-center justify-center gap-2 flex-wrap">
           {(["sss", "asa", "sas"] as const).map((s) => (
-            <span key={s} className={`px-5 py-2 rounded-full text-base font-bold transition-all duration-500 ${theorem === s ? "bg-foreground text-background scale-110 shadow-lg" : "bg-secondary text-muted-foreground"}`}>
-              {s === "sss" && "צ.צ.צ"}{s === "asa" && "ז.צ.ז"}{s === "sas" && "צ.ז.צ"}
+            <span key={s} className={`px-4 py-1.5 rounded-full text-sm font-bold transition-all duration-400 ${theorem === s ? "bg-foreground text-background scale-110 shadow-lg" : "bg-secondary text-muted-foreground"}`}>
+              {s === "sss" ? "צ.צ.צ" : s === "asa" ? "ז.צ.ז" : "צ.ז.צ"}
             </span>
           ))}
         </div>
+
+        {/* Progress bar */}
         <div className="absolute bottom-0 left-0 right-0 h-1 bg-secondary">
-          <div key={stepIdx} className="h-full bg-gradient-to-r from-primary to-accent" style={{ animation: `showcaseProgress ${step.duration}ms linear forwards` }} />
+          <div key={stepIdx} className="h-full bg-gradient-to-r from-primary to-accent"
+            style={{ animation: `showcaseProgress ${step.duration}ms linear forwards` }} />
         </div>
       </div>
-      <style>{`@keyframes showcaseProgress { from { width: 0%; } to { width: 100%; } }`}</style>
+      <style>{`@keyframes showcaseProgress { from { width: 0% } to { width: 100% } }`}</style>
     </div>
   );
 };
